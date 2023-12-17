@@ -1,0 +1,2 @@
+struct ExceptionMiddleware:
+    pass

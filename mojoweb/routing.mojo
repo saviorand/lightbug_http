@@ -1,0 +1,2 @@
+struct Router:
+    pass
