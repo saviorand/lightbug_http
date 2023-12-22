@@ -4,7 +4,7 @@ from mojoweb.middleware.errors import ServerErrorMiddleware
 from mojoweb.middleware.exceptions import ExceptionMiddleware
 from mojoweb.request.request import Request
 from mojoweb.response.response import Response
-from mojoweb.routing import BaseRoute, Router
+from mojoweb.routing import Router
 
 
 struct App:

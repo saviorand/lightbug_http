@@ -4,92 +4,89 @@ from mojoweb.request.connection import Connection, Scope
 
 
 @value
-struct HTTPConnection(Connection):
-    var scope: Scope
-    # var __headers: Dict[String, String]
-
-    fn __init__(inout self, scope: Scope) raises -> None:
-        self.scope = scope
-        # self.__headers = Dict[String, String]()
-
-    fn __getitem__(self, key: String) -> String:
-        return self.scope.value
-
-    # fn __iter__(self) raises -> ConnectionIterator:
-    #     return ConnectionIterator(self.scope)
-
-
-# trait Request(Connection):
-#     fn __init__(
-#         inout self,
-#         charset: CharSet = CharSet.utf8,
-#         content: String = "",
-#     ) raises -> None:
-#         ...
-
-#     # fn __iter__(self) -> None:
-#     #     pass
-
-#     # fn __repr__(self) -> String:
-#     #     pass
-
-#     fn _to_bytes(self) raises -> DynamicVector[Int8]:
-#         ...
-
-#     @always_inline
-#     fn body(self) -> String:
-#         ...
-
-#     @always_inline
-#     fn status(self) -> Int:
-#         ...
-
-
-@value
-struct MediaType:
-    var value: String
-
-    alias empty = MediaType("")
-    alias plain = MediaType("text/plain")
-    alias json = MediaType("application/json")
-
-
-@value
-struct CharSet:
-    var value: String
-
-    alias utf8 = CharSet("utf-8")
-
-
-@value
-struct HTTPResponse(Response):
+struct TCPRequest:
     var __body: String
-    var media_type: MediaType
-    var charset: CharSet
-    var status_code: Int
 
-    fn __init__(
-        inout self,
-        charset: CharSet = CharSet.utf8,
-        status_code: Int = 200,
-        body: String = "",
-        # headers: typing.Optional[typing.Mapping[str, str]] = None,
-    ) raises -> None:
-        self.__body = self.__body
-        self.media_type = self.media_type
-        self.charset = charset
-        self.status_code = status_code
-        # self.init_headers(headers)
-
-    fn _to_bytes(self) raises -> DynamicVector[Int8]:
-        if self.charset.value != "utf-8":
-            raise Error("Only utf-8 is supported for now")
-        return self.__body._buffer
+    fn __init__(inout self, body: String) -> None:
+        self.__body = body
 
     @always_inline
     fn body(self) -> String:
         return self.__body
 
-    @always_inline
-    fn status(self) -> Int:
-        return self.status_code
+    fn to_bytes(self, py_builtins: PythonObject) raises -> PythonObject:
+        let byte_string = py_builtins.bytes(self.body(), "utf-8")
+        return byte_string
+
+
+@value
+struct Request:
+    var __body: VariadicList[StringLiteral]
+    var __scope: Scope
+    var __receive: fn () -> Coroutine[VariadicList[StringLiteral]]
+    var __send: fn (message: String) -> NoneType
+    var __consumed: Bool
+    var __is_disconnected: Bool
+    # var __form: String
+
+    fn __init__(
+        inout self,
+        scope: Scope,
+        send: fn (message: String) -> NoneType,
+        receive: fn () -> Coroutine[VariadicList[StringLiteral]],
+    ) raises -> None:
+        self.__body = VariadicList[StringLiteral]()
+        self.__scope = scope
+        self.__receive = receive
+        self.__send = send
+        self.__consumed = False
+        self.__is_disconnected = False
+        # self.__form = None
+
+    fn __getitem__(self, key: String) -> String:
+        return ""
+
+    fn __setitem__(inout self, key: String, value: String) -> NoneType:
+        return None
+
+    fn method(self) -> String:
+        return self.__scope.method.value
+
+    fn receive(self) -> fn () -> Coroutine[VariadicList[StringLiteral]]:
+        return self.__receive
+
+    # TODO: what should this return?
+    async def stream(self) -> VariadicList[StringLiteral]:
+        if len(self.__body) > 0:
+            return self.__body
+        if self.__consumed:
+            raise Error("Body was consumed")
+        while not self.__consumed:
+            let message: VariadicList[StringLiteral] = await self.__receive()
+            # TODO: does this make sense? getting by index
+            if message[0] == "http.request":
+                self.__setitem__("body", message[0])
+                self.__consumed = True
+                return self.__body
+            elif message[0] == "http.disconnect":
+                self.__is_disconnected = True
+                return ""
+            else:
+                # raise Error("Unexpected message type: " + message[0])
+                return ""
+        return self.__body
+
+    fn body(self) -> VariadicList[StringLiteral]:
+        # TODO: implement this
+        # if len(self.__body) == 0:
+        # let chunks = VariadicList[StringLiteral]()
+        # async for chunk in self.stream():
+        #     chunks.append(chunk)
+        # without async
+        # while True:
+        #     let chunk = await self.stream()
+        #     if len(chunk) == 0:
+        #         break
+        #     chunks[0] = chunks[0] + chunk[0]
+        # self._body = b"".join(chunks)
+        return self.__body
