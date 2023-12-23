@@ -1,34 +1,3 @@
-@noncapturing
-async fn empty_app() raises -> Tuple[Receive, Send]:
-    raise Error("empty app")
-
-
-@value
-struct ASGIApp:
-    fn __call__(
-        self, scope: Scope, receive: Receive, send: Send
-    ) -> RaisingCoroutine[Tuple[Receive, Send]]:
-        return empty_app()
-
-
-@value
-struct Message:
-    var type: String
-
-    alias empty = Message("")
-    alias http_start = Message("http.response.start")
-
-
-@value
-struct Receive:
-    pass
-
-
-@value
-struct Send:
-    pass
-
-
 @value
 struct Scope:
     var type: ScopeType
@@ -67,19 +36,3 @@ struct ScopeMethod:
     alias head = ScopeMethod("HEAD")
     alias patch = ScopeMethod("PATCH")
     alias options = ScopeMethod("OPTIONS")
-
-
-@value
-struct MediaType:
-    var value: String
-
-    alias empty = MediaType("")
-    alias plain = MediaType("text/plain")
-    alias json = MediaType("application/json")
-
-
-@value
-struct CharSet:
-    var value: String
-
-    alias utf8 = CharSet("utf-8")

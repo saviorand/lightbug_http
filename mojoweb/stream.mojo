@@ -1,0 +1,2 @@
+struct StreamReader:
+    pass
