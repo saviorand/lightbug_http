@@ -387,6 +387,22 @@ struct ResponseHeader:
     # TODO: var mul_header
 
     # TODO: var cookies
+    fn __init__(
+        inout self,
+    ) -> None:
+        self.disable_normalization = False
+        self.no_http_1_1 = False
+        self.__connection_close = False
+        self.no_default_content_type = False
+        self.no_default_date = False
+        self.__status_code = 200
+        self.__status_message = Bytes()
+        self.__protocol = Bytes()
+        self.content_length = 0
+        self.content_length_bytes = Bytes()
+        self.content_type = Bytes()
+        self.content_encoding = Bytes()
+        self.server = Bytes()
 
     fn __init__(
         inout self,
