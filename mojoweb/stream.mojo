@@ -1,2 +1,3 @@
+@value
 struct StreamReader:
     pass

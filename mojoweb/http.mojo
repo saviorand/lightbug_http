@@ -33,12 +33,38 @@ struct Request:
 
     var disable_redirect_path_normalization: Bool
 
-    fn __init__(inout self, header: RequestHeader, uri: URI) -> None:
+    fn __init__(
+        inout self,
+        header: RequestHeader,
+        uri: URI,
+        post_args: Args,
+        body: Bytes,
+        server_is_tls: Bool,
+        timeout: Duration,
+        disable_redirect_path_normalization: Bool,
+    ):
         self.header = header
         self.uri = uri
+        self.post_args = post_args
+        self.body_stream = StreamReader()
+        self.w = RequestBodyWriter()
+        self.body = Body()
+        self.body_raw = body
+        self.server_is_tls = server_is_tls
+        self.timeout = timeout
+        self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
     fn set_host(self, host: String) -> Self:
-        return Self(self, self.uri.set_host(host))
+        var new_uri = self.uri
+        return Self(
+            self.header,
+            new_uri.set_host(host),
+            self.post_args,
+            self.body_raw,
+            self.server_is_tls,
+            self.timeout,
+            self.disable_redirect_path_normalization,
+        )
 
 
 struct Response:
