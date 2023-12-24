@@ -117,16 +117,16 @@ struct URI:
         self.__username = username
         self.__password = password
 
-    fn path_original(inout self) -> Bytes:
+    fn path_original(self) -> Bytes:
         return self.__path_original
 
-    fn path(inout self) -> Bytes:
+    fn path(self) -> Bytes:
         var processed_path = self.__path
         if len(processed_path) == 0:
             processed_path = strSlash
         return processed_path
 
-    fn set_path(inout self, path: String) -> Self:
+    fn set_path(self, path: String) -> Self:
         return Self(
             path._buffer,
             normalise_path(path._buffer, self.__path_original),
@@ -141,7 +141,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_path_bytes(inout self, path: Bytes) -> Self:
+    fn set_path_bytes(self, path: Bytes) -> Self:
         return Self(
             path,
             normalise_path(path, self.__path_original),
@@ -156,7 +156,7 @@ struct URI:
             self.__password,
         )
 
-    fn scheme(inout self) -> Bytes:
+    fn scheme(self) -> Bytes:
         var processed_scheme = self.__scheme
         if len(processed_scheme) == 0:
             processed_scheme = strHttp
@@ -176,7 +176,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_scheme_bytes(inout self, scheme: Bytes) -> Self:
+    fn set_scheme_bytes(self, scheme: Bytes) -> Self:
         return Self(
             self.__path,
             scheme,
@@ -190,13 +190,13 @@ struct URI:
             self.__password,
         )
 
-    fn is_https(inout self) -> Bool:
+    fn is_https(self) -> Bool:
         return bytes_equal(self.__scheme, strHttps)
 
-    fn is_http(inout self) -> Bool:
+    fn is_http(self) -> Bool:
         return bytes_equal(self.__scheme, strHttp) or len(self.__scheme) == 0
 
-    fn set_query_string(inout self, query_string: String) -> Self:
+    fn set_query_string(self, query_string: String) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -211,7 +211,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_query_string_bytes(inout self, query_string: Bytes) -> Self:
+    fn set_query_string_bytes(self, query_string: Bytes) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -226,10 +226,10 @@ struct URI:
             self.__password,
         )
 
-    fn hash(inout self) -> Bytes:
+    fn hash(self) -> Bytes:
         return self.__hash
 
-    fn set_hash(inout self, hash: String) -> Self:
+    fn set_hash(self, hash: String) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -243,7 +243,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_hash_bytes(inout self, hash: Bytes) -> Self:
+    fn set_hash_bytes(self, hash: Bytes) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -257,10 +257,10 @@ struct URI:
             self.__password,
         )
 
-    fn host(inout self) -> Bytes:
+    fn host(self) -> Bytes:
         return self.__host
 
-    fn set_host(inout self, host: String) -> Self:
+    fn set_host(self, host: String) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -274,7 +274,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_host_bytes(inout self, host: Bytes) -> Self:
+    fn set_host_bytes(self, host: Bytes) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -291,7 +291,11 @@ struct URI:
     # TODO: fn parse()
     # TODO: fn parse_host()
 
-    fn set_username(inout self, username: String) -> Self:
+    fn request_uri(self) -> Bytes:
+        # TODO: implement processing logic
+        return self.__request_uri
+
+    fn set_username(self, username: String) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -305,7 +309,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_username_bytes(inout self, username: Bytes) -> Self:
+    fn set_username_bytes(self, username: Bytes) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -319,7 +323,7 @@ struct URI:
             self.__password,
         )
 
-    fn set_password(inout self, password: String) -> Self:
+    fn set_password(self, password: String) -> Self:
         return Self(
             self.__path,
             self.__scheme,
@@ -333,7 +337,7 @@ struct URI:
             password._buffer,
         )
 
-    fn set_password_bytes(inout self, password: Bytes) -> Self:
+    fn set_password_bytes(self, password: Bytes) -> Self:
         return Self(
             self.__path,
             self.__scheme,

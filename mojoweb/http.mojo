@@ -79,12 +79,11 @@ struct Request:
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    # TODO: is inout needed here?
-    fn host(inout self) -> String:
+    fn host(self) -> String:
         return self.uri.host()
 
     fn set_host(self, host: String) -> Self:
-        var new_uri = self.uri
+        let new_uri = self.uri
         return Self(
             self.header,
             new_uri.set_host(host),
@@ -96,7 +95,7 @@ struct Request:
         )
 
     fn set_host_bytes(self, host: Bytes) -> Self:
-        var new_uri = self.uri
+        let new_uri = self.uri
         return Self(
             self.header,
             new_uri.set_host_bytes(host),
@@ -107,13 +106,32 @@ struct Request:
             self.disable_redirect_path_normalization,
         )
 
+    fn request_uri(self) -> String:
+        if self.parsed_uri:
+            self.set_request_uri_bytes(self.uri.request_uri())
+        return self.header.request_uri()
+
     fn set_request_uri(self, request_uri: String) -> Self:
         let new_header = self.header
         return Self(
-            new_header.set_request_uri(request_uri),
+            new_header.set_request_uri(request_uri._buffer),
             self.uri,
             self.post_args,
             self.body_raw,
+            False,
+            self.server_is_tls,
+            self.timeout,
+            self.disable_redirect_path_normalization,
+        )
+
+    fn set_request_uri_bytes(self, request_uri: Bytes) -> Self:
+        let new_header = self.header
+        return Self(
+            new_header.set_request_uri_bytes(request_uri),
+            self.uri,
+            self.post_args,
+            self.body_raw,
+            False,
             self.server_is_tls,
             self.timeout,
             self.disable_redirect_path_normalization,
