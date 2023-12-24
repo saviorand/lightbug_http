@@ -8,7 +8,7 @@ alias statusOK = 200
 struct RequestHeader:
     var disable_normalization: Bool
     var no_http_1_1: Bool
-    var connection_close: Bool
+    var __connection_close: Bool
     var no_default_content_type: Bool
 
     var cookies_collected: Bool
@@ -47,7 +47,7 @@ struct RequestHeader:
     ) -> None:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = False
-        self.connection_close = connection_close
+        self.__connection_close = connection_close
         self.no_default_content_type = no_default_content_type
         self.cookies_collected = cookies_collected
         self.content_length = content_length
@@ -80,7 +80,7 @@ struct RequestHeader:
     ) -> None:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = no_http_1_1
-        self.connection_close = connection_close
+        self.__connection_close = connection_close
         self.no_default_content_type = no_default_content_type
         self.cookies_collected = cookies_collected
         self.content_length = content_length
@@ -99,7 +99,7 @@ struct RequestHeader:
     fn set_content_type(self, content_type: String) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -116,7 +116,7 @@ struct RequestHeader:
     fn set_content_type_bytes(self, content_type: Bytes) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -136,7 +136,7 @@ struct RequestHeader:
     fn set_host(self, host: String) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -153,7 +153,7 @@ struct RequestHeader:
     fn set_host_bytes(self, host: Bytes) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -173,7 +173,7 @@ struct RequestHeader:
     fn set_user_agent(self, user_agent: String) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -190,7 +190,7 @@ struct RequestHeader:
     fn set_user_agent_bytes(self, user_agent: Bytes) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -212,7 +212,7 @@ struct RequestHeader:
     fn set_method(self, method: String) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -229,7 +229,7 @@ struct RequestHeader:
     fn set_method_bytes(self, method: Bytes) -> Self:
         return Self(
             disable_normalization=self.disable_normalization,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             cookies_collected=self.cookies_collected,
             content_length=self.content_length,
@@ -252,7 +252,7 @@ struct RequestHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=bytes_equal(method._buffer, strHttp11),
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             cookies_collected=self.cookies_collected,
             no_default_content_type=self.no_default_content_type,
             content_length=self.content_length,
@@ -270,7 +270,7 @@ struct RequestHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=bytes_equal(method, strHttp11),
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             cookies_collected=self.cookies_collected,
             no_default_content_type=self.no_default_content_type,
             content_length=self.content_length,
@@ -293,7 +293,7 @@ struct RequestHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=self.no_http_1_1,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             cookies_collected=self.cookies_collected,
             no_default_content_type=self.no_default_content_type,
             content_length=self.content_length,
@@ -311,7 +311,7 @@ struct RequestHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=self.no_http_1_1,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             cookies_collected=self.cookies_collected,
             no_default_content_type=self.no_default_content_type,
             content_length=self.content_length,
@@ -325,12 +325,53 @@ struct RequestHeader:
             raw_headers=self.raw_headers,
         )
 
+    fn connection_close(self) -> Bool:
+        return self.__connection_close
+
+    fn set_connection_close(self) -> Self:
+        return Self(
+            disable_normalization=self.disable_normalization,
+            no_http_1_1=self.no_http_1_1,
+            connection_close=True,
+            cookies_collected=self.cookies_collected,
+            no_default_content_type=self.no_default_content_type,
+            content_length=self.content_length,
+            content_length_bytes=self.content_length_bytes,
+            method=self.__method,
+            request_uri=self.__request_uri,
+            proto=self.proto,
+            host=self.__host,
+            content_type=self.__content_type,
+            user_agent=self.__user_agent,
+            raw_headers=self.raw_headers,
+        )
+
+    fn reset_connection_close(self) -> Self:
+        if self.__connection_close == False:
+            return self
+        return Self(
+            disable_normalization=self.disable_normalization,
+            no_http_1_1=self.no_http_1_1,
+            connection_close=False,
+            cookies_collected=self.cookies_collected,
+            no_default_content_type=self.no_default_content_type,
+            content_length=self.content_length,
+            content_length_bytes=self.content_length_bytes,
+            method=self.__method,
+            request_uri=self.__request_uri,
+            proto=self.proto,
+            host=self.__host,
+            content_type=self.__content_type,
+            user_agent=self.__user_agent,
+            raw_headers=self.raw_headers,
+        )
+
 
 @value
 struct ResponseHeader:
     var disable_normalization: Bool
     var no_http_1_1: Bool
-    var connection_close: Bool
+    var __connection_close: Bool
     var no_default_content_type: Bool
     var no_default_date: Bool
 
@@ -365,7 +406,7 @@ struct ResponseHeader:
     ) -> None:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = no_http_1_1
-        self.connection_close = connection_close
+        self.__connection_close = connection_close
         self.no_default_content_type = no_default_content_type
         self.no_default_date = no_default_date
         self.__status_code = status_code
@@ -386,7 +427,7 @@ struct ResponseHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=self.no_http_1_1,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             no_default_date=self.no_default_date,
             status_code=code,
@@ -406,7 +447,7 @@ struct ResponseHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=self.no_http_1_1,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             no_default_date=self.no_default_date,
             status_code=self.__status_code,
@@ -428,12 +469,51 @@ struct ResponseHeader:
         return Self(
             disable_normalization=self.disable_normalization,
             no_http_1_1=self.no_http_1_1,
-            connection_close=self.connection_close,
+            connection_close=self.__connection_close,
             no_default_content_type=self.no_default_content_type,
             no_default_date=self.no_default_date,
             status_code=self.__status_code,
             status_message=self.__status_message,
             protocol=protocol,
+            content_length=self.content_length,
+            content_length_bytes=self.content_length_bytes,
+            content_type=self.content_type,
+            content_encoding=self.content_encoding,
+            server=self.server,
+        )
+
+    fn connection_close(self) -> Bool:
+        return self.__connection_close
+
+    fn set_connection_close(self) -> Self:
+        return Self(
+            disable_normalization=self.disable_normalization,
+            no_http_1_1=self.no_http_1_1,
+            connection_close=True,
+            no_default_content_type=self.no_default_content_type,
+            no_default_date=self.no_default_date,
+            status_code=self.__status_code,
+            status_message=self.__status_message,
+            protocol=self.__protocol,
+            content_length=self.content_length,
+            content_length_bytes=self.content_length_bytes,
+            content_type=self.content_type,
+            content_encoding=self.content_encoding,
+            server=self.server,
+        )
+
+    fn reset_connection_close(self) -> Self:
+        if self.__connection_close == False:
+            return self
+        return Self(
+            disable_normalization=self.disable_normalization,
+            no_http_1_1=self.no_http_1_1,
+            connection_close=False,
+            no_default_content_type=self.no_default_content_type,
+            no_default_date=self.no_default_date,
+            status_code=self.__status_code,
+            status_message=self.__status_message,
+            protocol=self.__protocol,
             content_length=self.content_length,
             content_length_bytes=self.content_length_bytes,
             content_type=self.content_type,

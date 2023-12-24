@@ -3,7 +3,7 @@ from mojoweb.uri import URI
 from mojoweb.args import Args
 from mojoweb.stream import StreamReader
 from mojoweb.body import Body, RequestBodyWriter, ResponseBodyWriter
-from mojoweb.utils import Bytes, Duration, Addr
+from mojoweb.utils import Bytes, Duration, TCPAddr
 
 
 struct Request:
@@ -137,6 +137,22 @@ struct Request:
             self.disable_redirect_path_normalization,
         )
 
+    fn connection_close(self) -> Bool:
+        return self.header.connection_close()
+
+    fn set_connection_close(self, connection_close: Bool) -> Self:
+        let new_header = self.header
+        return Self(
+            new_header.set_connection_close(),
+            self.uri,
+            self.post_args,
+            self.body_raw,
+            self.parsed_uri,
+            self.server_is_tls,
+            self.timeout,
+            self.disable_redirect_path_normalization,
+        )
+
 
 struct Response:
     var header: ResponseHeader
@@ -153,5 +169,37 @@ struct Response:
 
     # TODO: var keep_body_buffer: Bool
 
-    var raddr: Addr
-    var laddr: Addr
+    var raddr: TCPAddr
+    var laddr: TCPAddr
+
+    fn __init__(inout self, header: ResponseHeader, body: Bytes):
+        self.header = header
+        self.stream_immediate_header_flush = False
+        self.stream_body = False
+        self.body_stream = StreamReader()
+        self.w = ResponseBodyWriter()
+        self.body = Body()
+        self.body_raw = body
+        self.skip_reading_writing_body = False
+        self.raddr = TCPAddr()
+        self.laddr = TCPAddr()
+
+    fn status_code(self) -> Int:
+        return self.header.status_code()
+
+    fn set_status_code(self, status_code: Int) -> Self:
+        let new_header = self.header
+        return Self(
+            new_header.set_status_code(status_code),
+            self.body_raw,
+        )
+
+    fn connection_close(self) -> Bool:
+        return self.header.connection_close()
+
+    fn set_connection_close(self, connection_close: Bool) -> Self:
+        let new_header = self.header
+        return Self(
+            new_header.set_connection_close(),
+            self.body_raw,
+        )
