@@ -20,7 +20,7 @@ struct Request:
     # TODO: var multipart_form
     # TODO: var multipart_form_boundary
 
-    # TODO: var parsed_uri: Bool
+    var parsed_uri: Bool
     # TODO: var parsed_post_args: Bool
 
     # TODO: var keep_body_buffer: Bool
@@ -50,6 +50,31 @@ struct Request:
         self.w = RequestBodyWriter()
         self.body = Body()
         self.body_raw = body
+        self.parsed_uri = False
+        self.server_is_tls = server_is_tls
+        self.timeout = timeout
+        self.disable_redirect_path_normalization = disable_redirect_path_normalization
+
+    # assign parsed uri
+    fn __init__(
+        inout self,
+        header: RequestHeader,
+        uri: URI,
+        post_args: Args,
+        body: Bytes,
+        parsed_uri: Bool,
+        server_is_tls: Bool,
+        timeout: Duration,
+        disable_redirect_path_normalization: Bool,
+    ):
+        self.header = header
+        self.uri = uri
+        self.post_args = post_args
+        self.body_stream = StreamReader()
+        self.w = RequestBodyWriter()
+        self.body = Body()
+        self.body_raw = body
+        self.parsed_uri = parsed_uri
         self.server_is_tls = server_is_tls
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
@@ -83,10 +108,10 @@ struct Request:
         )
 
     fn set_request_uri(self, request_uri: String) -> Self:
-        var new_uri = self.uri
+        let new_header = self.header
         return Self(
-            self.header,
-            new_uri.set_request_uri(request_uri),
+            new_header.set_request_uri(request_uri),
+            self.uri,
             self.post_args,
             self.body_raw,
             self.server_is_tls,
