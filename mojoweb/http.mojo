@@ -54,11 +54,39 @@ struct Request:
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
+    # TODO: is inout needed here?
+    fn host(inout self) -> String:
+        return self.uri.host()
+
     fn set_host(self, host: String) -> Self:
         var new_uri = self.uri
         return Self(
             self.header,
             new_uri.set_host(host),
+            self.post_args,
+            self.body_raw,
+            self.server_is_tls,
+            self.timeout,
+            self.disable_redirect_path_normalization,
+        )
+
+    fn set_host_bytes(self, host: Bytes) -> Self:
+        var new_uri = self.uri
+        return Self(
+            self.header,
+            new_uri.set_host_bytes(host),
+            self.post_args,
+            self.body_raw,
+            self.server_is_tls,
+            self.timeout,
+            self.disable_redirect_path_normalization,
+        )
+
+    fn set_request_uri(self, request_uri: String) -> Self:
+        var new_uri = self.uri
+        return Self(
+            self.header,
+            new_uri.set_request_uri(request_uri),
             self.post_args,
             self.body_raw,
             self.server_is_tls,
