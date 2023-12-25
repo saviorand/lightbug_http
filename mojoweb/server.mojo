@@ -3,6 +3,7 @@ from mojoweb.error import Error
 from mojoweb.utils import Duration
 from mojoweb.listen import Listener
 
+alias DefaultConcurrency: Int = 256 * 1024
 
 struct Server:
     var handler: RequestHandler
@@ -84,9 +85,16 @@ struct Server:
 
         self.ln = DynamicVector[Listener]()
     
+    fn get_concurrency(self) -> Int:
+        var concurrency = self.max_concurrent_connections
+        if concurrency <= 0:
+            concurrency = DefaultConcurrency
+        return concurrency
+
     fn listen_and_serve(self, address: String) raises -> None:
         # TODO: implement
         ...
     
     fn serve(self, ln: Listener) raises -> None:
+        # max_number_of_workers := self.max_concurrent_connections
 
