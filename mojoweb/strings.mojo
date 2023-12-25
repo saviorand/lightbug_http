@@ -13,3 +13,20 @@ struct CharSet:
     var value: String
 
     alias utf8 = CharSet("utf-8")
+
+
+@value
+struct MediaType:
+    var value: String
+
+    alias empty = MediaType("")
+    alias plain = MediaType("text/plain")
+    alias json = MediaType("application/json")
+
+
+@value
+struct Message:
+    var type: String
+
+    alias empty = Message("")
+    alias http_start = Message("http.response.start")
