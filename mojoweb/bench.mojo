@@ -1,9 +1,4 @@
 import benchmark
-from time import sleep
-from mojoweb.uri import URI
-
-import benchmark
-from time import sleep
 from benchmark import Unit
 from mojoweb.utils import Bytes
 
