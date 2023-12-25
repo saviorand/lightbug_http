@@ -34,6 +34,19 @@ struct Request:
 
     var disable_redirect_path_normalization: Bool
 
+    fn __init__(inout self, uri: URI):
+        self.header = RequestHeader()
+        self.uri = uri
+        self.post_args = Args()
+        self.body_stream = StreamReader()
+        self.w = RequestBodyWriter()
+        self.body = Body()
+        self.body_raw = Bytes()
+        self.parsed_uri = False
+        self.server_is_tls = False
+        self.timeout = Duration()
+        self.disable_redirect_path_normalization = False
+
     fn __init__(
         inout self,
         header: RequestHeader,

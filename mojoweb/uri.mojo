@@ -34,6 +34,26 @@ struct URI:
 
     fn __init__(
         inout self,
+        scheme: String,
+        host: String,
+        path: String,
+    ) -> None:
+        self.__path_original = path._buffer
+        self.__scheme = scheme._buffer
+        self.__path = normalise_path(path._buffer, self.__path_original)
+        self.__query_string = Bytes()
+        self.__hash = Bytes()
+        self.__host = host._buffer
+        self.__query_args = Args()
+        self.parsed_query_args = False
+        self.disable_path_normalization = False
+        self.__full_uri = Bytes()
+        self.__request_uri = Bytes()
+        self.__username = Bytes()
+        self.__password = Bytes()
+
+    fn __init__(
+        inout self,
         path_original: Bytes,
         path: Bytes,
         scheme: Bytes,

@@ -29,6 +29,22 @@ struct RequestHeader:
     # immutable copy of original headers
     var raw_headers: Bytes
 
+    fn __init__(inout self) -> None:
+        self.disable_normalization = False
+        self.no_http_1_1 = False
+        self.__connection_close = False
+        self.no_default_content_type = False
+        self.cookies_collected = False
+        self.content_length = 0
+        self.content_length_bytes = Bytes()
+        self.__method = Bytes()
+        self.__request_uri = Bytes()
+        self.proto = Bytes()
+        self.__host = Bytes()
+        self.__content_type = Bytes()
+        self.__user_agent = Bytes()
+        self.raw_headers = Bytes()
+
     fn __init__(
         inout self,
         disable_normalization: Bool,
