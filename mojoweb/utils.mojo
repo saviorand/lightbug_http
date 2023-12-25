@@ -16,6 +16,7 @@ trait Addr:
         ...
 
 
+@value
 struct TCPAddr:
     var ip: String
     var port: Int

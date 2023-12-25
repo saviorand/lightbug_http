@@ -6,6 +6,7 @@ from mojoweb.body import Body, RequestBodyWriter, ResponseBodyWriter
 from mojoweb.utils import Bytes, Duration, TCPAddr
 
 
+@value
 struct Request:
     var header: RequestHeader
     var uri: URI
@@ -39,29 +40,6 @@ struct Request:
         uri: URI,
         post_args: Args,
         body: Bytes,
-        server_is_tls: Bool,
-        timeout: Duration,
-        disable_redirect_path_normalization: Bool,
-    ):
-        self.header = header
-        self.uri = uri
-        self.post_args = post_args
-        self.body_stream = StreamReader()
-        self.w = RequestBodyWriter()
-        self.body = Body()
-        self.body_raw = body
-        self.parsed_uri = False
-        self.server_is_tls = server_is_tls
-        self.timeout = timeout
-        self.disable_redirect_path_normalization = disable_redirect_path_normalization
-
-    # assign parsed uri
-    fn __init__(
-        inout self,
-        header: RequestHeader,
-        uri: URI,
-        post_args: Args,
-        body: Bytes,
         parsed_uri: Bool,
         server_is_tls: Bool,
         timeout: Duration,
@@ -79,81 +57,40 @@ struct Request:
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
+    fn set_host(inout self, host: String) -> Self:
+        self.uri.set_host(host)
+        return self
+
+    fn set_host_bytes(inout self, host: Bytes) -> Self:
+        self.uri.set_host_bytes(host)
+        return self
+
     fn host(self) -> String:
         return self.uri.host()
 
-    fn set_host(self, host: String) -> Self:
-        let new_uri = self.uri
-        return Self(
-            self.header,
-            new_uri.set_host(host),
-            self.post_args,
-            self.body_raw,
-            self.server_is_tls,
-            self.timeout,
-            self.disable_redirect_path_normalization,
-        )
+    fn set_request_uri(inout self, request_uri: String) -> Self:
+        self.header.set_request_uri(request_uri._buffer)
+        self.parsed_uri = False
+        return self
 
-    fn set_host_bytes(self, host: Bytes) -> Self:
-        let new_uri = self.uri
-        return Self(
-            self.header,
-            new_uri.set_host_bytes(host),
-            self.post_args,
-            self.body_raw,
-            self.server_is_tls,
-            self.timeout,
-            self.disable_redirect_path_normalization,
-        )
+    fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
+        self.header.set_request_uri_bytes(request_uri)
+        return self
 
-    fn request_uri(self) -> String:
+    fn request_uri(inout self) -> String:
         if self.parsed_uri:
             self.set_request_uri_bytes(self.uri.request_uri())
         return self.header.request_uri()
 
-    fn set_request_uri(self, request_uri: String) -> Self:
-        let new_header = self.header
-        return Self(
-            new_header.set_request_uri(request_uri._buffer),
-            self.uri,
-            self.post_args,
-            self.body_raw,
-            False,
-            self.server_is_tls,
-            self.timeout,
-            self.disable_redirect_path_normalization,
-        )
-
-    fn set_request_uri_bytes(self, request_uri: Bytes) -> Self:
-        let new_header = self.header
-        return Self(
-            new_header.set_request_uri_bytes(request_uri),
-            self.uri,
-            self.post_args,
-            self.body_raw,
-            False,
-            self.server_is_tls,
-            self.timeout,
-            self.disable_redirect_path_normalization,
-        )
+    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+        self.header.set_connection_close()
+        return self
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
 
-    fn set_connection_close(self, connection_close: Bool) -> Self:
-        let new_header = self.header
-        return Self(
-            new_header.set_connection_close(),
-            self.uri,
-            self.post_args,
-            self.body_raw,
-            self.parsed_uri,
-            self.server_is_tls,
-            self.timeout,
-            self.disable_redirect_path_normalization,
-        )
 
-
+@value
 struct Response:
     var header: ResponseHeader
 
@@ -184,22 +121,16 @@ struct Response:
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
 
+    fn set_status_code(inout self, status_code: Int) -> Self:
+        self.header.set_status_code(status_code)
+        return self
+
     fn status_code(self) -> Int:
         return self.header.status_code()
 
-    fn set_status_code(self, status_code: Int) -> Self:
-        let new_header = self.header
-        return Self(
-            new_header.set_status_code(status_code),
-            self.body_raw,
-        )
+    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+        self.header.set_connection_close()
+        return self
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
-
-    fn set_connection_close(self, connection_close: Bool) -> Self:
-        let new_header = self.header
-        return Self(
-            new_header.set_connection_close(),
-            self.body_raw,
-        )
