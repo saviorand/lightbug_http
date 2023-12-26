@@ -1,7 +1,7 @@
 import testing
 
 """
-We should be able to make a request with cookies.
+Handle cookies.
 Validate that the cookies are parsed correctly.
 """
 
