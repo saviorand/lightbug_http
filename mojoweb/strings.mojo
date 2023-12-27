@@ -9,6 +9,28 @@ alias strMethodGet = String("GET")._buffer
 
 
 @value
+struct ConnType:
+    var value: String
+
+    alias empty = ConnType("")
+    alias http = ConnType("http")
+    alias websocket = ConnType("websocket")
+
+
+@value
+struct RequestMethod:
+    var value: String
+
+    alias get = RequestMethod("GET")
+    alias post = RequestMethod("POST")
+    alias put = RequestMethod("PUT")
+    alias delete = RequestMethod("DELETE")
+    alias head = RequestMethod("HEAD")
+    alias patch = RequestMethod("PATCH")
+    alias options = RequestMethod("OPTIONS")
+
+
+@value
 struct CharSet:
     var value: String
 
