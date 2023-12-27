@@ -1,4 +1,4 @@
-from mojoweb.utils import Bytes, bytes_equal
+from mojoweb.io.utils import Bytes, bytes_equal
 from mojoweb.strings import strHttp11, strSlash, strMethodGet
 
 alias statusOK = 200

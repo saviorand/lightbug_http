@@ -1,6 +1,6 @@
 from mojoweb.handler import RequestHandler
 from mojoweb.error import Error
-from mojoweb.utils import Duration
+from mojoweb.io.utils import Duration
 from mojoweb.listen import Listener
 
 alias DefaultConcurrency: Int = 256 * 1024

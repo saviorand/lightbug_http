@@ -1,4 +1,4 @@
-from mojoweb.utils import Bytes, bytes_equal
+from mojoweb.io.utils import Bytes, bytes_equal
 from mojoweb.args import Args
 from mojoweb.strings import strSlash, strHttp, strHttps
 

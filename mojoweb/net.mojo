@@ -1,11 +1,23 @@
-alias Bytes = DynamicVector[Int8]
+@value
+struct ConnType:
+    var value: String
 
-# Time in nanoseconds
-alias Duration = Int
+    alias empty = ConnType("")
+    alias http = ConnType("http")
+    alias websocket = ConnType("websocket")
 
 
-fn bytes_equal(a: Bytes, b: Bytes) -> Bool:
-    return String(a) == String(b)
+@value
+struct RequestMethod:
+    var value: String
+
+    alias get = RequestMethod("GET")
+    alias post = RequestMethod("POST")
+    alias put = RequestMethod("PUT")
+    alias delete = RequestMethod("DELETE")
+    alias head = RequestMethod("HEAD")
+    alias patch = RequestMethod("PATCH")
+    alias options = RequestMethod("OPTIONS")
 
 
 trait Addr:

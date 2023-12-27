@@ -1,4 +1,4 @@
-from mojoweb.utils import Bytes
+from mojoweb.io.utils import Bytes
 
 alias strSlash = String("/")._buffer
 alias strHttp = String("http")._buffer
