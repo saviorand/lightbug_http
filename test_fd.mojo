@@ -9,7 +9,7 @@ fn main():
     let fd = FileDescriptor(file_path)
 
     # Writing to the file descriptor
-    let data_to_write = "Hello, Mojo!"  # Sample data to write
+    let data_to_write = "Hello, Mojo! 日本人 中國的 ~=[]()%+{}@;’#!$_&-  éè  ;∞¥₤€"  # Sample data to write, with non-ASCII characters
     try:
         let num_bytes_written = fd.write(data_to_write)
         print("Written bytes:" + num_bytes_written.__str__())
