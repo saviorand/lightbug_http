@@ -6,12 +6,9 @@ trait Net:
         ...
 
 
-@value
-struct Listener(CollectionElement):
-    var value: String
-
+trait Listener(CollectionElement):
     fn __init__(inout self, value: String):
-        self.value = value
+        ...
 
 
 trait Addr:

@@ -2,6 +2,13 @@ from mojoweb.python import Modules
 from mojoweb.net import Net, Addr, Listener
 from mojoweb.http import Request, Response, Service
 
+@value
+struct PythonListener(Listener):
+    var value: String
+
+    fn __init__(inout self, value: String):
+        self.value = value
+
 struct PythonNet(Net):
     var __py: Modules
     var socket: PythonObject
@@ -67,10 +74,10 @@ struct PythonNet(Net):
         # go back to listening for requests
         self.serve()
 
-    fn serve(self, listener: Listener) raises -> None:
+    fn serve(self, listener: PythonListener) raises -> None:
         ...
 
-    fn listen(self, addr: String) -> Listener:
+    fn listen(self, addr: String) -> PythonListener:
         ...
     
     fn __handle_request(self, raw_request: String, connection: Connection) raises -> Response:

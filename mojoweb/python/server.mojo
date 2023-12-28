@@ -1,4 +1,5 @@
 from mojoweb.server import Server
+from mojoweb.net import Listener
 
 struct PythonServer(Server):
     var __py: Modules
