@@ -1,13 +1,26 @@
 from mojoweb.strings import NetworkType
-
-
-trait Net:
-    fn listen(self, network: NetworkType, addr: String) -> Listener:
-        ...
+from mojoweb.io.bytes import Bytes
 
 
 trait Listener(CollectionElement):
     fn __init__(inout self, value: String):
+        ...
+
+
+trait Connection:
+    fn __init__(inout self, laddr: Addr, raddr: Addr):
+        ...
+
+    fn read(self, buf: Bytes) raises -> Int:
+        ...
+
+    fn write(self, buf: Bytes) raises -> Int:
+        ...
+
+    fn local_addr(self) -> Addr:
+        ...
+
+    fn remote_addr(self) -> Addr:
         ...
 
 
@@ -16,6 +29,11 @@ trait Addr:
         ...
 
     fn string(self) -> String:
+        ...
+
+
+trait Net:
+    fn listen(self, network: NetworkType, addr: String) -> Listener:
         ...
 
 

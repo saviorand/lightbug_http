@@ -7,7 +7,9 @@ alias DefaultConcurrency: Int = 256 * 1024
 
 
 trait Server:
-    fn __init__(inout self, handler: RequestHandler, error_handler: Error):
+    fn __init__(
+        inout self, addr: String, handler: RequestHandler, error_handler: Error
+    ):
         ...
 
     fn get_concurrency(self) -> Int:
