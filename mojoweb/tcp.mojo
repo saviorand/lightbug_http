@@ -1,5 +1,6 @@
 from mojoweb.io.bytes import Bytes
+from mojoweb.io import IoData
 
 
 struct TCPStream:
-    # _io
+    var _io: IoData

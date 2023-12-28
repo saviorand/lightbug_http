@@ -1,3 +1,28 @@
+import time
+from python import Python, PythonObject
+from mojoweb.python.modules import Modules
+from mojoweb.service import Service
+
+
+trait Net:
+    fn listen_and_serve(self, addr: Addr) raises -> None:
+        ...
+
+    fn serve(self, listener: Listener) raises -> None:
+        ...
+
+    fn listen(self, addr: String) -> Listener:
+        ...
+
+
+@value
+struct Listener(CollectionElement):
+    var value: String
+
+    fn __init__(inout self, value: String):
+        self.value = value
+
+
 trait Addr:
     fn network(self) -> String:
         ...
@@ -7,7 +32,7 @@ trait Addr:
 
 
 @value
-struct TCPAddr:
+struct TCPAddr(Addr):
     var ip: String
     var port: Int
 
