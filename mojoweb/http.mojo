@@ -3,8 +3,8 @@ from mojoweb.uri import URI
 from mojoweb.args import Args
 from mojoweb.stream import StreamReader
 from mojoweb.body import Body, RequestBodyWriter, ResponseBodyWriter
-from mojoweb.io.utils import Bytes, Duration
 from mojoweb.net import TCPAddr
+from mojoweb.io.bytes import Bytes
 
 
 @value

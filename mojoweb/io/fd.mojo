@@ -13,28 +13,26 @@ struct FileDescriptor:
     fn __init__(inout self, fd: Int):
         self.fd = fd
 
-    fn __init__(inout self, path: String):
+    fn __init__(inout self, path: StringLiteral):
         let mode: Int = 0o644  # file permission
+        self.fd = external_call["open", Int, StringLiteral, Int](path, mode)
 
-        # Call the open(2) syscall with appropriate flags and mode
-        self.fd = external_call["open", Int, String, Int, Int](path, O_RDWR, mode)
+    # fn __del__(owned self):
+    #     # Call the close(2) syscall
+    #     external_call["close", Int, Int](self.fd)
 
-    fn __del__(owned self):
-        # Call the close(2) syscall
-        external_call["close", Int, Int](self.fd)
+    # fn dup(self) -> Self:
+    #     # Invoke the dup(2) system call
+    #     let new_fd = external_call["dup", Int, Int](self.fd)
+    #     return FileDescriptor(new_fd)
 
-    fn dup(self) -> Self:
-        # Invoke the dup(2) system call
-        let new_fd = external_call["dup", Int, Int](self.fd)
-        return FileDescriptor(new_fd)
+    # fn read(self, buffer: Bytes, count: Int) -> Int:
+    #     # Invoke the read(2) system call
+    #     return external_call["read", Int, Int, Bytes, Int](self.fd, buffer, count)
 
-    fn read(self, buffer: Bytes, count: Int) -> Int:
-        # Invoke the read(2) system call
-        return external_call["read", Int, Int, Bytes, Int](self.fd, buffer, count)
-
-    fn write(self, buffer: Bytes, count: Int) -> Int:
-        # Invoke the write(2) system call
-        return external_call["write", Int, Int, Bytes, Int](self.fd, buffer, count)
+    # fn write(self, buffer: Bytes, count: Int) -> Int:
+    #     # Invoke the write(2) system call
+    #     return external_call["write", Int, Int, Bytes, Int](self.fd, buffer, count)
 
 
 # # This is a simple wrapper around POSIX-style fcntl.h functions.
