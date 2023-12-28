@@ -16,7 +16,7 @@ fn main():
     except IOError:
         print("Error writing to file: (e)")
 
-    # fd.__del__() is automatically called when fd3 goes out of scope
+    # fd.__del__() is automatically called when fd goes out of scope
     let fd_read = FileDescriptor(file_path)
 
     # Reading from the file descriptor
