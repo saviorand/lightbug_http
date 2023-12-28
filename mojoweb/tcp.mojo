@@ -1,4 +1,4 @@
-from mojoweb.io.utils import Bytes
+from mojoweb.io.bytes import Bytes
 
 
 struct TCPStream:

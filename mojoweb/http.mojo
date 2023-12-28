@@ -5,6 +5,7 @@ from mojoweb.stream import StreamReader
 from mojoweb.body import Body, RequestBodyWriter, ResponseBodyWriter
 from mojoweb.net import TCPAddr
 from mojoweb.io.bytes import Bytes
+from mojoweb.io.sync import Duration
 
 
 @value
