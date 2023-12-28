@@ -25,16 +25,14 @@ struct FileDescriptor:
         )
 
     fn __del__(owned self):
-        # Call the close(2) syscall
         external_call["close", Int, Int](self.fd)
 
     fn dup(self) -> Self:
-        # Invoke the dup(2) system call
         let new_fd = external_call["dup", Int, Int](self.fd)
         return Self(new_fd)
 
     fn read(self) raises -> String:
-        alias buffer_size: Int = 2**13  # Example buffer size
+        alias buffer_size: Int = 2**13
         let buffer: c.Str
         with c.Str(size=buffer_size) as buffer:
             let read_count: c.ssize_t = external_call[
@@ -42,12 +40,19 @@ struct FileDescriptor:
             ](self.fd, buffer.vector.data, buffer_size)
 
             if read_count == -1:
-                raise Error("Failed to read file descriptor \\(self.fd)")
+                raise Error("Failed to read file descriptor " + self.fd.__str__())
+
+            if read_count == buffer_size:
+                raise Error(
+                    "You can only read up to "
+                    + String(buffer_size)
+                    + " bytes at a time. Adjust the buffer size or handle larger data"
+                    " in segments."
+                )
 
             return buffer.to_string(read_count)
 
     fn write(self, data: String) raises -> Int:
-        # Convert the string to a byte array or a format suitable for writing
         let buffer: c.Str
         with c.Str(data) as buffer:
             let write_count: c.ssize_t = external_call[
@@ -55,6 +60,6 @@ struct FileDescriptor:
             ](self.fd, buffer.vector.data, data.__len__())
 
             if write_count == -1:
-                raise Error("Failed to write to file descriptor \\(self.fd)")
+                raise Error("Failed to write to file descriptor " + self.fd.__str__())
 
             return write_count
