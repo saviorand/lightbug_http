@@ -1,12 +1,16 @@
 from mojoweb.io.bytes import Bytes
+from memory.buffer import DynamicRankBuffer
+import mojoweb.io.syscalls as c
 
 alias O_RDWR = 0o2
 
 
-@value
+# This is a simple wrapper around POSIX-style fcntl.h functions.
+# thanks to https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/ for the original read implementation!
 struct FileDescriptor:
     var fd: Int
 
+    # This takes ownership of a POSIX file descriptor.
     fn __moveinit__(inout self, owned existing: Self):
         self.fd = existing.fd
 
@@ -15,47 +19,42 @@ struct FileDescriptor:
 
     fn __init__(inout self, path: StringLiteral):
         let mode: Int = 0o644  # file permission
-        self.fd = external_call["open", Int, StringLiteral, Int](path, mode)
+        # TODO: handle errors
+        self = FileDescriptor(
+            external_call["open", Int, StringLiteral, Int, Int](path, O_RDWR, mode)
+        )
 
-    # fn __del__(owned self):
-    #     # Call the close(2) syscall
-    #     external_call["close", Int, Int](self.fd)
+    fn __del__(owned self):
+        # Call the close(2) syscall
+        external_call["close", Int, Int](self.fd)
 
-    # fn dup(self) -> Self:
-    #     # Invoke the dup(2) system call
-    #     let new_fd = external_call["dup", Int, Int](self.fd)
-    #     return FileDescriptor(new_fd)
+    fn dup(self) -> Self:
+        # Invoke the dup(2) system call
+        let new_fd = external_call["dup", Int, Int](self.fd)
+        return Self(new_fd)
 
-    # fn read(self, buffer: Bytes, count: Int) -> Int:
-    #     # Invoke the read(2) system call
-    #     return external_call["read", Int, Int, Bytes, Int](self.fd, buffer, count)
+    fn read(self) raises -> String:
+        alias buffer_size: Int = 2**13  # Example buffer size
+        let buffer: c.Str
+        with c.Str(size=buffer_size) as buffer:
+            let read_count: c.ssize_t = external_call[
+                "read", c.ssize_t, c.int, c.char_pointer, c.size_t
+            ](self.fd, buffer.vector.data, buffer_size)
 
-    # fn write(self, buffer: Bytes, count: Int) -> Int:
-    #     # Invoke the write(2) system call
-    #     return external_call["write", Int, Int, Bytes, Int](self.fd, buffer, count)
+            if read_count == -1:
+                raise Error("Failed to read file descriptor \\(self.fd)")
 
+            return buffer.to_string(read_count)
 
-# # This is a simple wrapper around POSIX-style fcntl.h functions.
-# struct FileDescriptor:
-#     var fd: Int
+    fn write(self, data: String) raises -> Int:
+        # Convert the string to a byte array or a format suitable for writing
+        let buffer: c.Str
+        with c.Str(data) as buffer:
+            let write_count: c.ssize_t = external_call[
+                "write", c.ssize_t, c.int, c.char_pointer, c.size_t
+            ](self.fd, buffer.vector.data, data.__len__())
 
-#     # This is how we move our unique type.
-#     fn __moveinit__(inout self, owned existing: Self):
-#         self.fd = existing.fd
+            if write_count == -1:
+                raise Error("Failed to write to file descriptor \\(self.fd)")
 
-#     # This takes ownership of a POSIX file descriptor.
-#     fn __init__(inout self, fd: Int):
-#         self.fd = fd
-
-#     fn __init__(inout self, path: String):
-#         # Error handling omitted, call the open(2) syscall.
-#         self = FileDescriptor(open(path, ...))
-
-#     fn __del__(owned self):
-#         close(self.fd)   # pseudo code, call close(2)
-
-#     fn dup(self) -> Self:
-#         # Invoke the dup(2) system call.
-#         return Self(dup(self.fd))
-#     fn read(...): ...
-#     fn write(...): ...
+            return write_count
