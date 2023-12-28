@@ -1,5 +1,7 @@
 from collections.vector import DynamicVector
 
+# courtesy https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/
+
 # Types aliases
 alias void = UInt8
 alias char = UInt8

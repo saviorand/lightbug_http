@@ -1,5 +1,3 @@
-from mojoweb.io.bytes import Bytes
-from memory.buffer import DynamicRankBuffer
 import mojoweb.io.syscalls as c
 
 alias O_RDWR = 0o2
