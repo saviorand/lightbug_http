@@ -9,6 +9,18 @@ alias strMethodGet = String("GET")._buffer
 
 
 @value
+struct NetworkType:
+    var value: String
+
+    alias empty = NetworkType("")
+    alias tcp = NetworkType("tcp")
+    alias tcp4 = NetworkType("tcp4")
+    alias tcp6 = NetworkType("tcp6")
+    alias udp = NetworkType("udp")
+    alias unix = NetworkType("unix")
+
+
+@value
 struct ConnType:
     var value: String
 

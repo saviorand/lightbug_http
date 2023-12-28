@@ -1,17 +1,8 @@
-import time
-from python import Python, PythonObject
-from mojoweb.python.modules import Modules
-from mojoweb.service import Service
+from mojoweb.strings import NetworkType
 
 
 trait Net:
-    fn listen_and_serve(self, addr: Addr) raises -> None:
-        ...
-
-    fn serve(self, listener: Listener) raises -> None:
-        ...
-
-    fn listen(self, addr: String) -> Listener:
+    fn listen(self, network: NetworkType, addr: String) -> Listener:
         ...
 
 

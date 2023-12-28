@@ -1,6 +1,6 @@
+from mojoweb.python import Modules
 from mojoweb.net import Net, Addr, Listener
 from mojoweb.http import Request, Response, Service
-from mojoweb.python.modules import Modules
 
 struct PythonNet(Net):
     var __py: Modules
