@@ -5,7 +5,7 @@ from mojoweb.net import Net, Addr, Listener, ListenConfig, resolve_internet_addr
 from mojoweb.http import Request, Response
 from mojoweb.service import Service
 from mojoweb.net import Connection
-from mojoweb.strings import NetworkType
+from mojoweb.strings import NetworkType, CharSet
 
 
 @value
@@ -50,6 +50,7 @@ struct PythonListenConfig(ListenConfig):
 
 
 struct PythonConnection(Connection):
+    var pymodules: Modules
     var conn: PythonObject
     var addr: PythonObject
 
@@ -57,23 +58,24 @@ struct PythonConnection(Connection):
         let py_conn_addr = PythonObject(conn_addr)
         self.conn = py_conn_addr[0]
         self.addr = py_conn_addr[1]
+        self.pymodules = Modules()
 
     fn read(self, buf: Bytes) raises -> Int:
         ...
         #     fn recieve_data(
         #     self, size: Int = 1024, encoding: StringLiteral = "utf-8"
         # ) raises -> String:
+
         #     let data = self.conn.recv(size).decode(encoding)
         #     return str(data)
 
     fn write(self, buf: Bytes) raises -> Int:
         ...
         # let response_bytes = response.to_bytes(py_builtins=self.__py)
-        # _ = self.conn.sendall(response_bytes)
+        _ = self.conn.sendall(self.pymodules.builtins.bytes(buf, CharSet.utf8))
 
     fn close(self) raises:
-        ...
-        # _ = self.conn.close()
+        _ = self.conn.close()
 
     fn local_addr(self) -> Addr:
         ...

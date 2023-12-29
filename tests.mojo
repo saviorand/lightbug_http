@@ -1,4 +1,4 @@
-import test_requests
+import test_http, test_io, test_fd, test_connection, test_cookies, test_server, test_tls
 from mojoweb.client import Client
 from mojoweb.header import ResponseHeader
 from mojoweb.http import Request, Response
@@ -13,9 +13,6 @@ struct TestClient(Client):
         return Response(ResponseHeader(), String("Nice")._buffer)
 
 
-fn main():
+fn main() raises:
     var client = TestClient()
-    try:
-        test_requests.test_request_simple_url(client)
-    except:
-        print("test_request_simple_url failed")
+    test_http.test_request_simple_url(client)
