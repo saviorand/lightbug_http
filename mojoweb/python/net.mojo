@@ -21,9 +21,6 @@ struct PythonConnection(Connection):
     # var __py: PythonObject
     fn __init__(inout self, laddr: Addr, raddr: Addr):
         ...
-        # fn __init__(inout self, conn_addr: PythonObject, py: PythonObject) raises -> None:
-        #         self.conn = conn_addr[0]
-        #         self.addr = conn_addr[1]
         #         self.__py = py
 
     fn read(self, buf: Bytes) raises -> Int:

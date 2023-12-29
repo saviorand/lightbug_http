@@ -150,7 +150,11 @@ struct PythonServer(Server):
         # @always_inline
         # fn __accept_connection(self) raises -> Connection:
         #     let conn_addr = self.socket.accept()
-        #     return Connection(conn_addr=conn_addr, py=self.__py.builtins)
+        #     check if the first is laddr and second is raddr
+        #     self.conn = conn_addr[0]
+        #     self.addr = conn_addr[1]
+        #     py=self.__py.builtins
+        #     return Connection(laddr=conn_addr[0], raddr=conn_addr[1])
 
         # @always_inline
         # fn full_addr(self) raises -> String:
