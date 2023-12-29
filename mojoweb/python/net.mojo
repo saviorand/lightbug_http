@@ -15,11 +15,21 @@ struct PythonTCPListener(Listener):
     fn __init__(inout self):
         ...
 
+    @always_inline
     fn accept(self) raises -> Connection:
-        ...
+        let conn_addr = self.socket.accept()
+        # check if the first is laddr and second is raddr
+        # py=self.__py.builtins
+        return PythonConnection(laddr=conn_addr[0], raddr=conn_addr[1])
 
     fn addr(self) -> Addr:
         ...
+
+    # fn __close_socket(self) raises -> None:
+    #     _ = self.socket.close()
+    # @always_inline
+    # fn __accept_connection(self) raises -> Connection:
+    #
 
 
 struct PythonListenConfig(ListenConfig):
@@ -40,12 +50,13 @@ struct PythonListenConfig(ListenConfig):
 
 
 struct PythonConnection(Connection):
-    # var conn: PythonObject
-    # var addr: PythonObject
-    # var __py: PythonObject
-    fn __init__(inout self, laddr: Addr, raddr: Addr):
-        ...
-        #         self.__py = py
+    var conn: PythonObject
+    var addr: PythonObject
+
+    fn __init__(inout self, conn_addr: Tuple) raises:
+        let py_conn_addr = PythonObject(conn_addr)
+        self.conn = py_conn_addr[0]
+        self.addr = py_conn_addr[1]
 
     fn read(self, buf: Bytes) raises -> Int:
         ...

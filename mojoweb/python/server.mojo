@@ -135,23 +135,6 @@ struct PythonServer(Server):
         ...
         # max_number_of_workers := self.max_concurrent_connections
 
-        # fn __close_socket(self) raises -> None:
-        #     _ = self.socket.close()
-
-        # @always_inline
-        # fn __accept_connection(self) raises -> Connection:
-        #     let conn_addr = self.socket.accept()
-        #     check if the first is laddr and second is raddr
-        #     self.conn = conn_addr[0]
-        #     self.addr = conn_addr[1]
-        #     py=self.__py.builtins
-        #     return Connection(laddr=conn_addr[0], raddr=conn_addr[1])
-
-        # @always_inline
-        # fn full_addr(self) raises -> String:
-        #     return str(self.host_addr)
-        #             + "/" + self.port
-
         # fn __handle_request(self, raw_request: String, connection: Connection) raises -> Response:
         #     """Private function that makes generates a Response object given a Request object."""
         #     if not raw_request:

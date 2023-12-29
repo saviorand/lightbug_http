@@ -29,7 +29,7 @@ trait Listener(CollectionElement):
 
 
 trait Connection:
-    fn __init__(inout self, laddr: Addr, raddr: Addr):
+    fn __init__(inout self, conn_addr: Tuple) raises:
         ...
 
     fn read(self, buf: Bytes) raises -> Int:
