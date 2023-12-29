@@ -9,11 +9,15 @@ from mojoweb.strings import NetworkType
 
 
 @value
-struct PythonListener(Listener):
-    var value: String
-
+struct PythonTCPListener(Listener):
     fn __init__(inout self, value: String):
-        self.value = value
+        ...
+
+    fn accept(self) raises -> Connection:
+        ...
+
+    fn addr(self) -> Addr:
+        ...
 
 
 struct PythonListenConfig(ListenConfig):
