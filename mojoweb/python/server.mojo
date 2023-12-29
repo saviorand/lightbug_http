@@ -111,7 +111,7 @@ struct PythonServer(Server):
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve(self, address: String) raises -> None:
+    fn listen_and_serve(self, address: String, handler: RequestHandler) raises -> None:
         ...
         # TODO: implement
         # _ = self.socket.listen()
@@ -131,7 +131,7 @@ struct PythonServer(Server):
         # # go back to listening for requests
         # self.serve()
 
-    fn serve(self, ln: Listener) raises -> None:
+    fn serve(self, ln: Listener, handler: RequestHandler) raises -> None:
         ...
         # max_number_of_workers := self.max_concurrent_connections
 
