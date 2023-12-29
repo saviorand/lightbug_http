@@ -4,7 +4,7 @@ from mojoweb.io.sync import Duration
 
 
 trait Net:
-    fn listen(self, network: NetworkType, addr: String) -> Listener:
+    fn listen(self, network: NetworkType, addr: String) raises -> Listener:
         ...
 
 

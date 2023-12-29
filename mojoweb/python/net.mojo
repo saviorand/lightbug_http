@@ -64,5 +64,9 @@ struct PythonConnection(Connection):
 
 
 struct PythonNet(Net):
-    fn listen(self, network: NetworkType, addr: String) -> Listener:
-        ...
+    var lc: PythonListenConfig
+    fn __init__(inout self, keep_alive: Duration):
+        self.lc = PythonListenConfig(keep_alive)
+
+    fn listen(self, network: NetworkType, addr: String) raises -> Listener:
+        return self.lc.listen(network, addr)
