@@ -21,13 +21,20 @@ struct PythonTCPListener(Listener):
 
 
 struct PythonListenConfig(ListenConfig):
+    var __py: PythonObject
+    var socket: PythonObject
+
     fn __init__(inout self, keep_alive: Duration):
         ...
 
-    fn listen(self, network: NetworkType, address: String) raises -> Listener:
-        # TODO: this should support resolving multiple addresses and strategy
-        let addrs = resolve_internet_addr(network, address)
-        # _ = self.socket.listen()
+    fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
+        let addr = resolve_internet_addr(network, address)
+        self.socket = self.__py.socket.socket(
+            self.__py.socket.AF_INET,
+            self.__py.socket.SOCK_STREAM,
+        )
+        _ = self.socket.bind((addr.ip, addr.port))
+        _ = self.socket.listen()
 
     # fn control(self, network: NetworkType, address: String) raises -> None:
     #     ...

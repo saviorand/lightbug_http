@@ -13,7 +13,7 @@ trait ListenConfig:
         # TODO: support mptcp?
         ...
 
-    fn listen(self, network: NetworkType, address: String) raises -> Listener:
+    fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
         ...
 
     # fn control(self, network: NetworkType, address: String) raises -> None:
@@ -93,7 +93,7 @@ struct TCPAddr(Addr):
         return join_host_port(self.ip, self.port)
 
 
-# This should return a TCPAddrList, but we don't support that yet
+# TODO: This should return a TCPAddrList and support resolving strategy
 fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAddr:
     let network_str = network.value
     var host: String

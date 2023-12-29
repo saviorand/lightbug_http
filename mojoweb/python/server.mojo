@@ -135,18 +135,9 @@ struct PythonServer(Server):
         ...
         # max_number_of_workers := self.max_concurrent_connections
 
-        # fn __bind_pySocket(self) raises -> None:
-        #     """Private funciton that binds the initialized python socket to the given host and port. this runs in __init__()"""
-        #     _ = self.socket.bind((self.host_addr, self.port))
-
         # fn __close_socket(self) raises -> None:
         #     _ = self.socket.close()
 
-        # fn __spinup_socket(inout self) raises -> None:
-        #     self.socket = self.__py.socket.socket(
-        #         self.__py.socket.AF_INET,
-        #         self.__py.socket.SOCK_STREAM,
-        #     )
         # @always_inline
         # fn __accept_connection(self) raises -> Connection:
         #     let conn_addr = self.socket.accept()
