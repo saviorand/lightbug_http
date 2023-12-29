@@ -51,9 +51,17 @@ trait Connection:
         ...
 
 
-trait Addr:
+alias AddrList = DynamicVector[Addr]
+
+
+@value
+struct Addr(CollectionElement):
     fn network(self) -> String:
         ...
 
     fn string(self) -> String:
         ...
+
+
+fn resolve_addr_list(network: NetworkType, address: String) raises -> AddrList:
+    ...

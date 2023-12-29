@@ -10,27 +10,6 @@ from mojoweb.http import Request, Response
 
 
 @value
-struct TCPAddr(Addr):
-    var ip: String
-    var port: Int
-
-    fn __init__(inout self):
-        # TODO: do these defaults make sense?
-        self.ip = "127.0.0.1"
-        self.port = 80
-
-    fn __init__(inout self, ip: String, port: Int):
-        self.ip = ip
-        self.port = port
-
-    fn network(self) -> String:
-        return "tcp"
-
-    fn string(self) -> String:
-        return self.ip + ":" + self.port
-
-
-@value
 struct PythonRequest(Request):
     var header: RequestHeader
     var uri: URI
@@ -143,8 +122,8 @@ struct PythonResponse(Response):
 
     # TODO: var keep_body_buffer: Bool
 
-    var raddr: TCPAddr
-    var laddr: TCPAddr
+    var raddr: Addr
+    var laddr: Addr
 
     fn __init__(inout self, header: ResponseHeader, body: Bytes):
         self.header = header
@@ -155,8 +134,8 @@ struct PythonResponse(Response):
         self.body = Body()
         self.body_raw = body
         self.skip_reading_writing_body = False
-        self.raddr = TCPAddr()
-        self.laddr = TCPAddr()
+        self.raddr = Addr()
+        self.laddr = Addr()
 
     fn set_status_code(inout self, status_code: Int) -> Self:
         self.header.set_status_code(status_code)
