@@ -74,32 +74,32 @@ struct PythonRequest(Request):
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
     fn set_host(inout self, host: String) -> Self:
-        self.uri.set_host(host)
+        _ = self.uri.set_host(host)
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
-        self.uri.set_host_bytes(host)
+        _ = self.uri.set_host_bytes(host)
         return self
 
     fn host(self) -> String:
         return self.uri.host()
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.header.set_request_uri(request_uri._buffer)
+        _ = self.header.set_request_uri(request_uri._buffer)
         self.parsed_uri = False
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
-        self.header.set_request_uri_bytes(request_uri)
+        _ = self.header.set_request_uri_bytes(request_uri)
         return self
 
     fn request_uri(inout self) -> String:
         if self.parsed_uri:
-            self.set_request_uri_bytes(self.uri.request_uri())
+            _ = self.set_request_uri_bytes(self.uri.request_uri())
         return self.header.request_uri()
 
     fn set_connection_close(inout self, connection_close: Bool) -> Self:
-        self.header.set_connection_close()
+        _ = self.header.set_connection_close()
         return self
 
     fn connection_close(self) -> Bool:

@@ -70,9 +70,9 @@ struct PythonConnection(Connection):
         #     return str(data)
 
     fn write(self, buf: Bytes) raises -> Int:
-        ...
-        # let response_bytes = response.to_bytes(py_builtins=self.__py)
-        _ = self.conn.sendall(self.pymodules.builtins.bytes(buf, CharSet.utf8))
+        _ = self.conn.sendall(
+            self.pymodules.builtins.bytes(String(buf), CharSet.utf8.value)
+        )
 
     fn close(self) raises:
         _ = self.conn.close()
