@@ -21,7 +21,7 @@ trait ListenConfig:
 
 
 trait Listener(CollectionElement):
-    fn __init__(inout self, value: String):
+    fn __init__(inout self):
         ...
 
     fn accept(self) raises -> Connection:

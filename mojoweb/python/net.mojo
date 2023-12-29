@@ -10,7 +10,9 @@ from mojoweb.strings import NetworkType
 
 @value
 struct PythonTCPListener(Listener):
-    fn __init__(inout self, value: String):
+    var socket: PythonObject
+
+    fn __init__(inout self):
         ...
 
     fn accept(self) raises -> Connection:
@@ -22,13 +24,13 @@ struct PythonTCPListener(Listener):
 
 struct PythonListenConfig(ListenConfig):
     var __py: PythonObject
-    var socket: PythonObject
 
     fn __init__(inout self, keep_alive: Duration):
         ...
 
     fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
         let addr = resolve_internet_addr(network, address)
+        var listener = PythonTCPListener(addr)
         self.socket = self.__py.socket.socket(
             self.__py.socket.AF_INET,
             self.__py.socket.SOCK_STREAM,
