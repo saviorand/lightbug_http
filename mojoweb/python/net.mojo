@@ -1,7 +1,14 @@
 from mojoweb.python import Modules
 from mojoweb.io.bytes import Bytes
 from mojoweb.io.sync import Duration
-from mojoweb.net import Net, Addr, Listener, ListenConfig, resolve_internet_addr
+from mojoweb.net import (
+    Net,
+    Addr,
+    Listener,
+    ListenConfig,
+    resolve_internet_addr,
+    default_buffer_size,
+)
 from mojoweb.http import Request, Response
 from mojoweb.service import Service
 from mojoweb.net import Connection
@@ -20,7 +27,7 @@ struct PythonTCPListener(Listener):
         let conn_addr = self.socket.accept()
         # check if the first is laddr and second is raddr
         # py=self.__py.builtins
-        return PythonConnection(laddr=conn_addr[0], raddr=conn_addr[1])
+        return PythonConnection(Tuple(conn_addr))
 
     fn addr(self) -> Addr:
         ...
@@ -61,13 +68,8 @@ struct PythonConnection(Connection):
         self.pymodules = Modules()
 
     fn read(self, buf: Bytes) raises -> Int:
-        ...
-        #     fn recieve_data(
-        #     self, size: Int = 1024, encoding: StringLiteral = "utf-8"
-        # ) raises -> String:
-
-        #     let data = self.conn.recv(size).decode(encoding)
-        #     return str(data)
+        let data = self.conn.recv(default_buffer_size)
+        return data
 
     fn write(self, buf: Bytes) raises -> Int:
         _ = self.conn.sendall(

@@ -23,7 +23,7 @@ struct FileDescriptor:
         )
 
     fn __del__(owned self):
-        external_call["close", Int, Int](self.fd)
+        _ = external_call["close", Int, Int](self.fd)
 
     fn dup(self) -> Self:
         let new_fd = external_call["dup", Int, Int](self.fd)

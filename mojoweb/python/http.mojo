@@ -138,14 +138,14 @@ struct PythonResponse(Response):
         self.laddr = Addr()
 
     fn set_status_code(inout self, status_code: Int) -> Self:
-        self.header.set_status_code(status_code)
+        _ = self.header.set_status_code(status_code)
         return self
 
     fn status_code(self) -> Int:
         return self.header.status_code()
 
     fn set_connection_close(inout self, connection_close: Bool) -> Self:
-        self.header.set_connection_close()
+        _ = self.header.set_connection_close()
         return self
 
     fn connection_close(self) -> Bool:

@@ -1,6 +1,6 @@
 from mojoweb.server import Server, DefaultConcurrency
 from mojoweb.net import Listener
-from mojoweb.python.net import PythonListener
+from mojoweb.python.net import PythonTCPListener
 from mojoweb.handler import RequestHandler
 from mojoweb.io.sync import Duration
 from mojoweb.error import ErrorHandler
@@ -52,7 +52,7 @@ struct PythonServer(Server):
     var stream_request_body: Bool
 
     # TODO: support multiple listeners
-    var ln: DynamicVector[PythonListener]
+    var ln: DynamicVector[PythonTCPListener]
 
     fn __init__(
         inout self, addr: String, handler: RequestHandler, error_handler: ErrorHandler
@@ -103,7 +103,7 @@ struct PythonServer(Server):
         self.close_on_shutdown = False
         self.stream_request_body = False
 
-        self.ln = DynamicVector[PythonListener]()
+        self.ln = DynamicVector[PythonTCPListener]()
 
     fn get_concurrency(self) -> Int:
         var concurrency = self.max_concurrent_connections

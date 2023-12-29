@@ -2,6 +2,8 @@ from mojoweb.strings import NetworkType
 from mojoweb.io.bytes import Bytes
 from mojoweb.io.sync import Duration
 
+alias default_buffer_size = 4096
+
 
 trait Net:
     fn listen(self, network: NetworkType, addr: String) raises -> Listener:
