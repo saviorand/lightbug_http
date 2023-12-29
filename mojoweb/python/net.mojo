@@ -30,16 +30,13 @@ struct PythonListenConfig(ListenConfig):
 
     fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
         let addr = resolve_internet_addr(network, address)
-        var listener = PythonTCPListener(addr)
-        self.socket = self.__py.socket.socket(
+        var listener = PythonTCPListener()
+        listener.socket = self.__py.socket.socket(
             self.__py.socket.AF_INET,
             self.__py.socket.SOCK_STREAM,
         )
-        _ = self.socket.bind((addr.ip, addr.port))
-        _ = self.socket.listen()
-
-    # fn control(self, network: NetworkType, address: String) raises -> None:
-    #     ...
+        _ = listener.socket.bind((addr.ip, addr.port))
+        _ = listener.socket.listen()
 
 
 struct PythonConnection(Connection):

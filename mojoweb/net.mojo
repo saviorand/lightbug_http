@@ -16,9 +16,6 @@ trait ListenConfig:
     fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
         ...
 
-    # fn control(self, network: NetworkType, address: String) raises -> None:
-    #     ...
-
 
 trait Listener(CollectionElement):
     fn __init__(inout self):
