@@ -17,6 +17,9 @@ trait Connection:
     fn write(self, buf: Bytes) raises -> Int:
         ...
 
+    fn close(self) raises:
+        ...
+
     fn local_addr(self) -> Addr:
         ...
 
