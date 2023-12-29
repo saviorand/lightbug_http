@@ -1,9 +1,33 @@
 from mojoweb.strings import NetworkType
 from mojoweb.io.bytes import Bytes
+from mojoweb.io.sync import Duration
+
+
+trait Net:
+    fn listen(self, network: NetworkType, addr: String) -> Listener:
+        ...
+
+
+trait ListenConfig:
+    fn __init__(inout self, keep_alive: Duration):
+        # TODO: support mptcp?
+        ...
+
+    fn listen(self, network: NetworkType, address: String) raises -> Listener:
+        ...
+
+    # fn control(self, network: NetworkType, address: String) raises -> None:
+    #     ...
 
 
 trait Listener(CollectionElement):
     fn __init__(inout self, value: String):
+        ...
+
+    fn accept(self) raises -> Connection:
+        ...
+
+    fn addr(self) -> Addr:
         ...
 
 
@@ -33,29 +57,3 @@ trait Addr:
 
     fn string(self) -> String:
         ...
-
-
-trait Net:
-    fn listen(self, network: NetworkType, addr: String) -> Listener:
-        ...
-
-
-@value
-struct TCPAddr(Addr):
-    var ip: String
-    var port: Int
-
-    fn __init__(inout self):
-        # TODO: do these defaults make sense?
-        self.ip = "127.0.0.1"
-        self.port = 80
-
-    fn __init__(inout self, ip: String, port: Int):
-        self.ip = ip
-        self.port = port
-
-    fn network(self) -> String:
-        return "tcp"
-
-    fn string(self) -> String:
-        return self.ip + ":" + self.port

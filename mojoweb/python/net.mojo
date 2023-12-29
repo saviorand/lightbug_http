@@ -1,6 +1,7 @@
 from mojoweb.python import Modules
 from mojoweb.io.bytes import Bytes
-from mojoweb.net import Net, Addr, Listener
+from mojoweb.io.sync import Duration
+from mojoweb.net import Net, Addr, Listener, ListenConfig
 from mojoweb.http import Request, Response
 from mojoweb.service import Service
 from mojoweb.net import Connection
@@ -13,6 +14,17 @@ struct PythonListener(Listener):
 
     fn __init__(inout self, value: String):
         self.value = value
+
+
+struct PythonListenConfig(ListenConfig):
+    fn __init__(inout self, keep_alive: Duration):
+        ...
+
+    fn listen(self, network: NetworkType, address: String) raises -> Listener:
+        # _ = self.socket.listen()
+
+    # fn control(self, network: NetworkType, address: String) raises -> None:
+    #     ...
 
 
 struct PythonConnection(Connection):
