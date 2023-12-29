@@ -3,6 +3,6 @@ from mojoweb.header import ResponseHeader
 
 
 @value
-struct Error:
+struct ErrorHandler:
     fn Error(self) -> Response:
         return Response(ResponseHeader(), String("TODO")._buffer)

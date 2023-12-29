@@ -3,11 +3,12 @@ from mojoweb.net import Listener
 from mojoweb.python.net import PythonListener
 from mojoweb.handler import RequestHandler
 from mojoweb.io.sync import Duration
+from mojoweb.error import ErrorHandler
 
 
 struct PythonServer(Server):
     var handler: RequestHandler
-    var error_handler: Error
+    var error_handler: ErrorHandler
     # var __py: Modules
     # var socket: PythonObject
     # var host_name: PythonObject
@@ -54,7 +55,7 @@ struct PythonServer(Server):
     var ln: DynamicVector[PythonListener]
 
     fn __init__(
-        inout self, addr: String, handler: RequestHandler, error_handler: Error
+        inout self, addr: String, handler: RequestHandler, error_handler: ErrorHandler
     ):
         self.handler = handler
         self.error_handler = error_handler
