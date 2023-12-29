@@ -93,7 +93,8 @@ struct TCPAddr(Addr):
         return join_host_port(self.ip, self.port)
 
 
-fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAddrList:
+# This should return a TCPAddrList, but we don't support that yet
+fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAddr:
     let network_str = network.value
     var host: String
     var port: String
@@ -122,9 +123,9 @@ fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAdd
         raise Error("Unix addresses not supported yet")
     else:
         raise Error("unsupported network type: " + network_str)
-    var list = TCPAddrList()
-    list.append(TCPAddr(host, portnum))
-    return list
+    # var list = TCPAddrList()
+    # list.append(TCPAddr(host, portnum))
+    return TCPAddr(host, portnum)
 
 
 fn join_host_port(host: String, port: String) -> String:

@@ -1,7 +1,7 @@
 from mojoweb.python import Modules
 from mojoweb.io.bytes import Bytes
 from mojoweb.io.sync import Duration
-from mojoweb.net import Net, Addr, Listener, ListenConfig
+from mojoweb.net import Net, Addr, Listener, ListenConfig, resolve_internet_addr
 from mojoweb.http import Request, Response
 from mojoweb.service import Service
 from mojoweb.net import Connection
@@ -25,6 +25,8 @@ struct PythonListenConfig(ListenConfig):
         ...
 
     fn listen(self, network: NetworkType, address: String) raises -> Listener:
+        # TODO: this should support resolving multiple addresses and strategy
+        let addrs = resolve_internet_addr(network, address)
         # _ = self.socket.listen()
 
     # fn control(self, network: NetworkType, address: String) raises -> None:
@@ -65,9 +67,9 @@ struct PythonConnection(Connection):
 
 struct PythonNet(Net):
     var lc: PythonListenConfig
+
     fn __init__(inout self, keep_alive: Duration):
         self.lc = PythonListenConfig(keep_alive)
 
     fn listen(self, network: NetworkType, addr: String) raises -> Listener:
         return self.lc.listen(network, addr)
-
