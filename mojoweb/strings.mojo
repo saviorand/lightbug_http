@@ -17,6 +17,11 @@ struct NetworkType:
     alias tcp4 = NetworkType("tcp4")
     alias tcp6 = NetworkType("tcp6")
     alias udp = NetworkType("udp")
+    alias udp4 = NetworkType("udp4")
+    alias udp6 = NetworkType("udp6")
+    alias ip = NetworkType("ip")
+    alias ip4 = NetworkType("ip4")
+    alias ip6 = NetworkType("ip6")
     alias unix = NetworkType("unix")
 
 
