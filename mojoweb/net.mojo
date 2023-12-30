@@ -77,7 +77,7 @@ struct TCPAddr(Addr):
     fn __init__(inout self):
         # TODO: do these defaults make sense?
         self.ip = String("127.0.0.1")._buffer
-        self.port = 80
+        self.port = 8000
         self.zone = ""
 
     fn __init__(inout self, ip: String, port: Int):

@@ -1,13 +1,13 @@
 from mojoweb.server import Server, DefaultConcurrency
 from mojoweb.net import Listener
-from mojoweb.python.net import PythonTCPListener, PythonListenConfig
+from mojoweb.python.net import PythonTCPListener, PythonListenConfig, PythonNet
 from mojoweb.handler import RequestHandler
 from mojoweb.io.sync import Duration
 from mojoweb.error import ErrorHandler
 from mojoweb.strings import NetworkType
 
 
-struct PythonServer(Server):
+struct PythonServer:
     var handler: RequestHandler
     var error_handler: ErrorHandler
     # var __py: Modules
@@ -112,11 +112,15 @@ struct PythonServer(Server):
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve(self, address: String, handler: RequestHandler) raises -> None:
-        let lc = PythonListenConfig()
-        let ln = lc.listen(network=NetworkType.tcp4.value, address=address)
-        # let connection: Connection = self.__accept_connection()
-        # connection.print_log_connect_message()
+    fn listen_and_serve(
+        inout self, address: String, handler: RequestHandler
+    ) raises -> None:
+        let net = PythonNet()
+        let ln = net.listen(NetworkType.tcp4.value, address)
+        self.serve(ln, handler)
+
+    fn serve(self, ln: PythonTCPListener, handler: RequestHandler) raises -> None:
+        let conn = ln.accept()
 
         # let st: Float64 = time.now()
         # let raw_request = connection.recieve_data()
@@ -129,10 +133,6 @@ struct PythonServer(Server):
         # connection.close()
 
         # # go back to listening for requests
-        # self.serve()
-
-    fn serve(self, ln: Listener, handler: RequestHandler) raises -> None:
-        ...
         # max_number_of_workers := self.max_concurrent_connections
 
         # fn __handle_request(self, raw_request: String, connection: Connection) raises -> Response:
