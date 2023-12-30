@@ -1,7 +1,7 @@
 import testing
 from mojoweb.client import Client
 from mojoweb.uri import URI
-from mojoweb.http import Request, Response
+from mojoweb.http import HTTPRequest, HTTPResponse
 
 
 fn test_request_simple_url[T: Client](inout client: T) raises -> None:
@@ -10,63 +10,151 @@ fn test_request_simple_url[T: Client](inout client: T) raises -> None:
     Validate that we get a 200 OK response.
     """
     let uri = URI("http", "localhost", "/123")
-    let response = client.get(Request(uri))
+    let response = client.get(HTTPRequest(uri))
     testing.assert_equal(response.header.status_code(), 200)
 
 
-"""
-GET request with query parameters.
-Validate that we get a 200 OK response and that server can parse the query parameters.
-"""
+fn test_request_simple_url_with_parameters[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a simple GET request with query parameters.
+    Validate that we get a 200 OK response and that server can parse the query parameters.
+    """
+    # This test is a WIP
+    let uri = URI("http", "localhost", "/123")
+    # uri.add_query_parameter("foo", "bar")
+    # uri.add_query_parameter("baz", "qux")
+    let response = client.get(HTTPRequest(uri))
+    testing.assert_equal(response.header.status_code(), 200)
 
-"""
-GET request with multiple headers.
-Validate that we get a 200 OK response and that server can parse the headers.
-"""
 
-"""
-POST request with PLAIN TEXT body.
-Validate that request is properly received and the server can parse the body.
-"""
+fn test_request_simple_url_with_headers[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a simple GET request with headers.
+    Validate that we get a 200 OK response and that server can parse the headers.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.header.add("foo", "bar")
+    let response = client.get(request)
+    testing.assert_equal(response.header.status_code(), 200)
 
-"""
-POST request with JSON body.
-Validate that the request is properly received and the server can parse the JSON.
-"""
 
-"""
-POST request with a FORM body.
-Validate that the request is properly received and the server can parse the form. 
-Include URL encoded strings in test cases.
-"""
+fn test_request_post_plain_text[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a POST request with PLAIN TEXT body.
+    Validate that request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "Hello World"
+    # let response = client.post(request)
+    # testing.assert_equal(response.header.status_code(), 200)
 
-"""
-POST request with a FILE body and get a response.
-Validate that the request is properly received and the server can parse the body.
-"""
 
-"""
-POST request with a stream body.
-Validate that the request is properly received and the server can parse the body. 
-Try stream only, stream then body, and body then stream.
-"""
+fn test_request_post_json[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a POST request with JSON body.
+    Validate that the request is properly received and the server can parse the JSON.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "{\"foo\": \"bar\"}"
+    # let response = client.post(request)
+    # testing.assert_equal(response.header.status_code(), 200)
 
-"""
-PUT, PATCH requests.
-Validate that the PUT and PATCH requests is properly received and the server can parse the body.
-"""
 
-"""
-OPTIONS request.
-Validate that the OPTIONS request returns appropriate headers such as Allow.
-"""
+fn test_request_post_form[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a POST request with a FORM body.
+    Validate that the request is properly received and the server can parse the form.
+    Include URL encoded strings in test cases.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.post(request)
+    # testing.assert_equal(response.header.status_code(), 200)
 
-"""
-DELETE request.
-Validate that DELETE requests are processed correctly and appropriate responses are returned.
-"""
 
-"""
-HEAD request to a URL and get a response
-Validate that HEAD requests return correct headers without a body.
-"""
+fn test_request_post_file[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a POST request with a FILE body.
+    Validate that the request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.post(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_post_stream[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a POST request with a stream body.
+    Validate that the request is properly received and the server can parse the body.
+    Try stream only, stream then body, and body then stream.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.post(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_put[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a PUT request.
+    Validate that the PUT request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.put(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_patch[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a PATCH request.
+    Validate that the PATCH request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.patch(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_options[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making an OPTIONS request.
+    Validate that the OPTIONS request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.options(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_delete[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a DELETE request.
+    Validate that the DELETE request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # request.body = "foo=bar&baz=qux"
+    # let response = client.delete(request)
+    # testing.assert_equal(response.header.status_code(), 200)
+
+
+fn test_request_head[T: Client](inout client: T) raises -> None:
+    """
+    WIP: Test making a HEAD request.
+    Validate that the HEAD request is properly received and the server can parse the body.
+    """
+    let uri = URI("http", "localhost", "/123")
+    let request = HTTPRequest(uri)
+    # let response = client.head(request)
+    # testing.assert_equal(response.header.status_code(), 200)

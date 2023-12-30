@@ -1,9 +1,9 @@
-from mojoweb.http import Request, Response
+from mojoweb.http import HTTPRequest, HTTPResponse
 
 
 trait Client:
     fn __init__(inout self):
         ...
 
-    fn get(inout self, request: Request) -> Response:
+    fn get(inout self, request: HTTPRequest) -> HTTPResponse:
         ...

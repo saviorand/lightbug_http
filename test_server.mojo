@@ -1,14 +1,29 @@
 import testing
+from mojoweb.python.server import PythonServer
 
 """
 Run a server listening on a port.
 Validate that the server is listening on the provided port.
 """
 
-"""
-Error thrown if we try to run a server on a port that is already in use.
-"""
 
-"""
-Error thrown if we try to use an invalid host.
-"""
+fn test_server() raises -> None:
+    """
+    Test making a simple GET request without parameters.
+    Validate that we get a 200 OK response.
+    """
+    ...
+
+
+fn test_server_busy_port() raises -> None:
+    """
+    Test that we get an error if we try to run a server on a port that is already in use.
+    """
+    ...
+
+
+fn test_server_invalid_host() raises -> None:
+    """
+    Test that we get an error if we try to run a server on an invalid host.
+    """
+    ...
