@@ -76,6 +76,7 @@ struct PythonConnection(Connection):
         _ = self.conn.sendall(
             self.pymodules.builtins.bytes(String(buf), CharSet.utf8.value)
         )
+        return len(buf)
 
     fn close(self) raises:
         _ = self.conn.close()

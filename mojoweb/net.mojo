@@ -34,7 +34,7 @@ trait Connection:
     fn __init__(inout self, conn_addr: Tuple) raises:
         ...
 
-    fn read(self, buf: Bytes) raises -> Int:
+    fn read(self, inout buf: Bytes) raises -> Int:
         ...
 
     fn write(self, buf: Bytes) raises -> Int:
