@@ -1,8 +1,8 @@
-from mojoweb.http import Response
+from mojoweb.http import HTTPResponse
 from mojoweb.header import ResponseHeader
 
 
 @value
 struct ErrorHandler:
-    fn Error(self) -> Response:
-        return Response(ResponseHeader(), String("TODO")._buffer)
+    fn Error(self) -> HTTPResponse:
+        return HTTPResponse(ResponseHeader(), String("TODO")._buffer)

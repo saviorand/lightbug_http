@@ -18,7 +18,7 @@ fn test_request_with_cookies[T: Client](inout client: T) raises -> None:
 fn test_request_with_invalid_cookies[T: Client](inout client: T) raises -> None:
     """
     WIP:  We should be able to parse invalid or non-spec conformant cookies, such as the ones set by Okta (see below).
-    From Starlette (https://github.com/encode/starlette/blob/master/tests/test_requests.py)
+    From Starlette (https://github.com/encode/starlette/blob/master/tests/test_requests.py).
     """
     let uri = URI("http", "localhost", "/123")
     # let cookies = [

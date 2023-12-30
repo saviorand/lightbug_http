@@ -110,8 +110,8 @@ fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAdd
     ):
         if address != "":
             let host_port = split_host_port(address)
-            host = host_port.get[0, StringLiteral]()
-            port = host_port.get[1, StringLiteral]()
+            host = host_port.host
+            port = host_port.port
             portnum = atol(port.__str__())
     elif (
         network_str == NetworkType.ip.value
@@ -137,7 +137,16 @@ alias missingPortError = Error("missing port in address")
 alias tooManyColonsError = Error("too many colons in address")
 
 
-fn split_host_port(hostport: String) raises -> (String, String):
+struct HostPort:
+    var host: String
+    var port: String
+
+    fn __init__(inout self, host: String, port: String):
+        self.host = host
+        self.port = port
+
+
+fn split_host_port(hostport: String) raises -> HostPort:
     var host: String = ""
     var port: String = ""
     let colon_index = hostport.rfind(":")
@@ -175,4 +184,4 @@ fn split_host_port(hostport: String) raises -> (String, String):
         raise missingPortError
     if host == "":
         raise Error("missing host")
-    return host, port
+    return HostPort(host, port)

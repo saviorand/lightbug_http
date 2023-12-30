@@ -32,7 +32,7 @@ struct PythonTCPListener(CollectionElement):
         if self.socket == None:
             raise Error("socket is None, cannot accept")
         let conn_addr = self.socket.accept()
-        return PythonConnection(self.__pymodules, Tuple(conn_addr))
+        return PythonConnection(self.__pymodules, conn_addr)
 
     fn close(self) raises:
         if self.socket == None:
@@ -76,8 +76,8 @@ struct PythonConnection:
     var raddr: PythonObject
     var laddr: PythonObject
 
-    fn __init__(inout self, pymodules: PythonObject, conn_addr: Tuple) raises:
-        let py_conn_addr = PythonObject(conn_addr)
+    fn __init__(inout self, pymodules: PythonObject, conn_addr: PythonObject) raises:
+        let py_conn_addr = conn_addr
         self.conn = py_conn_addr[0]
         self.raddr = py_conn_addr[1]
         self.laddr = ""
