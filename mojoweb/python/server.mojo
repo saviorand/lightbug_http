@@ -153,10 +153,12 @@ struct PythonServer:
         self.ln.append(ln)
 
         while True:
+            print("accepting")
             let conn = self.ln[0].accept()
             self.open.__iadd__(1)
             var buf = Bytes()
             _ = conn.read(buf)
+            print(String(buf))
             let res = handler.func(buf)
             _ = conn.write(res)
             conn.close()
