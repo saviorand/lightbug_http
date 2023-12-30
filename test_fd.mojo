@@ -2,7 +2,12 @@ from mojoweb.io.fd import FileDescriptor
 from memory.buffer import DynamicRankBuffer
 
 
-fn main():
+fn test_fd_basic_io():
+    """
+    Test basic file descriptor I/O
+    Validates that the file descriptor can be opened, written to, and read from
+    """
+
     let file_path: StringLiteral = "./test.txt"
 
     # Open a file for writing
