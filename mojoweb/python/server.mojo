@@ -1,14 +1,15 @@
-from mojoweb.server import Server, DefaultConcurrency
+from mojoweb.server import DefaultConcurrency
 from mojoweb.net import Listener
+from mojoweb.http import HTTPRequest, HTTPResponse
 from mojoweb.python.net import PythonTCPListener, PythonListenConfig, PythonNet
-from mojoweb.handler import RequestHandler
+from mojoweb.service import RawBytesService
 from mojoweb.io.sync import Duration
+from mojoweb.io.bytes import Bytes
 from mojoweb.error import ErrorHandler
 from mojoweb.strings import NetworkType
 
 
 struct PythonServer:
-    var handler: RequestHandler
     var error_handler: ErrorHandler
 
     # TODO: header_received
@@ -52,10 +53,7 @@ struct PythonServer:
     var open: Atomic[DType.int32]
     var stop: Atomic[DType.int32]
 
-    fn __init__(
-        inout self, addr: String, handler: RequestHandler, error_handler: ErrorHandler
-    ):
-        self.handler = handler
+    fn __init__(inout self, addr: String, error_handler: ErrorHandler):
         self.error_handler = error_handler
 
         self.name = "mojoweb"
@@ -101,13 +99,15 @@ struct PythonServer:
         return concurrency
 
     fn listen_and_serve(
-        inout self, address: String, handler: RequestHandler
+        inout self, address: String, handler: RawBytesService
     ) raises -> None:
         var __net = PythonNet()
         let listener = __net.listen(NetworkType.tcp4.value, address)
         self.serve(listener, handler)
 
-    fn serve(inout self, ln: PythonTCPListener, handler: RequestHandler) raises -> None:
+    fn serve(
+        inout self, ln: PythonTCPListener, handler: RawBytesService
+    ) raises -> None:
         let max_worker_count = self.get_concurrency()
 
         # logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
@@ -115,5 +115,13 @@ struct PythonServer:
         self.ln.append(ln)
 
         while True:
-            let conn = self.ln[0].accept()
-            self.open.__iadd__(1)
+            try:
+                let conn = self.ln[0].accept()
+                self.open.__iadd__(1)
+                var buf = Bytes()
+                _ = conn.read(buf)
+                let res = handler.func(buf)
+                _ = conn.write(res)
+                conn.close()
+            except:
+                break

@@ -10,7 +10,7 @@ from mojoweb.net import (
     default_buffer_size,
 )
 from mojoweb.http import Request, Response
-from mojoweb.service import Service
+from mojoweb.service import HTTPService
 from mojoweb.net import Connection, default_tcp_keep_alive
 from mojoweb.strings import NetworkType, CharSet
 
