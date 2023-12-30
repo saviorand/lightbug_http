@@ -138,8 +138,8 @@ alias tooManyColonsError = Error("too many colons in address")
 
 
 fn split_host_port(hostport: String) raises -> (String, String):
-    var host: String
-    var port: String
+    var host: String = ""
+    var port: String = ""
     let colon_index = hostport.rfind(":")
     var j: Int = 0
     var k: Int = 0
@@ -171,4 +171,8 @@ fn split_host_port(hostport: String) raises -> (String, String):
         raise Error("unexpected ']' in address")
     port = hostport[colon_index + 1 :]
 
+    if port == "":
+        raise missingPortError
+    if host == "":
+        raise Error("missing host")
     return host, port
