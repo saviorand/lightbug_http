@@ -29,8 +29,8 @@ struct PythonTCPListener(CollectionElement):
 
     @always_inline
     fn accept(self) raises -> PythonConnection:
-        if self.socket == None:
-            raise Error("socket is None, cannot accept")
+        # if self.socket == None:
+        # raise Error("socket is None, cannot accept")
         let conn_addr = self.socket.accept()
         return PythonConnection(self.__pymodules, conn_addr)
 
@@ -43,30 +43,28 @@ struct PythonTCPListener(CollectionElement):
         return self.__addr
 
 
-@value
 struct PythonListenConfig:
-    var __pymodules: PythonObject
+    var __pymodules: Modules
     var __keep_alive: Duration
 
     fn __init__(inout self) raises:
         self.__keep_alive = Duration(default_tcp_keep_alive)
-        self.__pymodules = Modules().builtins
+        self.__pymodules = Modules()
 
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__keep_alive = Duration(keep_alive)
-        self.__pymodules = Modules().builtins
+        self.__pymodules = Modules()
 
-    fn listen(
-        inout self, network: NetworkType, address: String
-    ) raises -> PythonTCPListener:
+    fn listen(inout self, network: String, address: String) raises -> PythonTCPListener:
         let addr = resolve_internet_addr(network, address)
-        var listener = PythonTCPListener(self.__pymodules, addr)
+        var listener = PythonTCPListener(self.__pymodules.builtins, addr)
         listener.socket = self.__pymodules.socket.socket(
             self.__pymodules.socket.AF_INET,
             self.__pymodules.socket.SOCK_STREAM,
         )
-        _ = listener.socket.bind((addr.ip, addr.port))
+        _ = listener.socket.bind(("0.0.0.0", addr.port))
         _ = listener.socket.listen()
+        print("Listening on " + "0.0.0.0")
         return listener
 
 
@@ -89,9 +87,7 @@ struct PythonConnection:
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
-        _ = self.conn.sendall(
-            self.pymodules.builtins.bytes(String(buf), CharSet.utf8.value)
-        )
+        _ = self.conn.sendall(self.pymodules.bytes(String(buf), CharSet.utf8.value))
         return len(buf)
 
     fn close(self) raises:
@@ -106,7 +102,6 @@ struct PythonConnection:
         return TCPAddr(self.raddr[0].__str__(), self.raddr[1].__int__())
 
 
-@value
 struct PythonNet:
     var __lc: PythonListenConfig
 
@@ -116,7 +111,5 @@ struct PythonNet:
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__lc = PythonListenConfig(keep_alive)
 
-    fn listen(
-        inout self, network: NetworkType, addr: String
-    ) raises -> PythonTCPListener:
+    fn listen(inout self, network: String, addr: String) raises -> PythonTCPListener:
         return self.__lc.listen(network, addr)

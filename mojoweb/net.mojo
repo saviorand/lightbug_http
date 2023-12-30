@@ -95,18 +95,17 @@ struct TCPAddr(Addr):
 
 
 # TODO: This should return a TCPAddrList and support resolving strategy
-fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAddr:
-    let network_str = network.value
+fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
     var host: String = ""
     var port: String = ""
     var portnum: Int = 0
     if (
-        network_str == NetworkType.tcp.value
-        or network_str == NetworkType.tcp4.value
-        or network_str == NetworkType.tcp6.value
-        or network_str == NetworkType.udp.value
-        or network_str == NetworkType.udp4.value
-        or network_str == NetworkType.udp6.value
+        network == NetworkType.tcp.value
+        or network == NetworkType.tcp4.value
+        or network == NetworkType.tcp6.value
+        or network == NetworkType.udp.value
+        or network == NetworkType.udp4.value
+        or network == NetworkType.udp6.value
     ):
         if address != "":
             let host_port = split_host_port(address)
@@ -114,16 +113,16 @@ fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAdd
             port = host_port.port
             portnum = atol(port.__str__())
     elif (
-        network_str == NetworkType.ip.value
-        or network_str == NetworkType.ip4.value
-        or network_str == NetworkType.ip6.value
+        network == NetworkType.ip.value
+        or network == NetworkType.ip4.value
+        or network == NetworkType.ip6.value
     ):
         if address != "":
             host = address
-    elif network_str == NetworkType.unix.value:
+    elif network == NetworkType.unix.value:
         raise Error("Unix addresses not supported yet")
     else:
-        raise Error("unsupported network type: " + network_str)
+        raise Error("unsupported network type: " + network)
     return TCPAddr(host, portnum)
 
 

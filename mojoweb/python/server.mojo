@@ -147,20 +147,16 @@ struct PythonServer:
     fn serve[
         T: RawBytesService
     ](inout self, ln: PythonTCPListener, handler: T) raises -> None:
-        let max_worker_count = self.get_concurrency()
-
-        # logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
+        # let max_worker_count = self.get_concurrency()
+        # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
 
         self.ln.append(ln)
 
         while True:
-            try:
-                let conn = self.ln[0].accept()
-                self.open.__iadd__(1)
-                var buf = Bytes()
-                _ = conn.read(buf)
-                let res = handler.func(buf)
-                _ = conn.write(res)
-                conn.close()
-            except:
-                break
+            let conn = self.ln[0].accept()
+            self.open.__iadd__(1)
+            var buf = Bytes()
+            _ = conn.read(buf)
+            let res = handler.func(buf)
+            _ = conn.write(res)
+            conn.close()
