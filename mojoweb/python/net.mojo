@@ -106,6 +106,7 @@ struct PythonConnection:
         return TCPAddr(self.raddr[0].__str__(), self.raddr[1].__int__())
 
 
+@value
 struct PythonNet:
     var __lc: PythonListenConfig
 

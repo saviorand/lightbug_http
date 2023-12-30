@@ -10,12 +10,6 @@ from mojoweb.strings import NetworkType
 struct PythonServer:
     var handler: RequestHandler
     var error_handler: ErrorHandler
-    # var __py: Modules
-    # var socket: PythonObject
-    # var host_name: PythonObject
-    # var host_addr: StringLiteral
-    # var service: Service
-    # var port: Int
 
     # TODO: header_received
     # TODO: continue_handler
@@ -55,6 +49,9 @@ struct PythonServer:
     # TODO: support multiple listeners
     var ln: DynamicVector[PythonTCPListener]
 
+    var open: Int32
+    var stop: Int32
+
     fn __init__(
         inout self, addr: String, handler: RequestHandler, error_handler: ErrorHandler
     ):
@@ -65,17 +62,6 @@ struct PythonServer:
         self.max_concurrent_connections = 1000
         self.read_buffer_size = 4096
         self.write_buffer_size = 4096
-
-        # self.port = port
-        # self.host_addr = host_addr StringLiteral
-        # self.service = service
-        # self.__py = Modules()
-        # self.host_name = self.__py.socket.gethostbyname(
-        #     self.__py.socket.gethostname(),
-        # )
-        # self.socket = None
-        # self.__spinup_socket()
-        # self.__bind_pySocket()
 
         self.read_timeout = Duration(5)
         self.write_timeout = Duration(5)
@@ -105,6 +91,8 @@ struct PythonServer:
         self.stream_request_body = False
 
         self.ln = DynamicVector[PythonTCPListener]()
+        self.open = 0
+        self.stop = 0
 
     fn get_concurrency(self) -> Int:
         var concurrency = self.max_concurrent_connections
@@ -115,12 +103,19 @@ struct PythonServer:
     fn listen_and_serve(
         inout self, address: String, handler: RequestHandler
     ) raises -> None:
-        let net = PythonNet()
-        let ln = net.listen(NetworkType.tcp4.value, address)
-        self.serve(ln, handler)
+        var __net = PythonNet()
+        let listener = __net.listen(NetworkType.tcp4.value, address)
+        self.serve(listener, handler)
 
-    fn serve(self, ln: PythonTCPListener, handler: RequestHandler) raises -> None:
-        let conn = ln.accept()
+    fn serve(inout self, ln: PythonTCPListener, handler: RequestHandler) raises -> None:
+        let max_worker_count = self.get_concurrency()
+
+        # logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
+
+        self.ln.append(ln)
+
+        while True:
+            let conn = self.ln[0].accept()
 
         # let st: Float64 = time.now()
         # let raw_request = connection.recieve_data()
