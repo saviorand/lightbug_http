@@ -49,8 +49,8 @@ struct PythonServer:
     # TODO: support multiple listeners
     var ln: DynamicVector[PythonTCPListener]
 
-    var open: Int32
-    var stop: Int32
+    var open: Atomic[DType.int32]
+    var stop: Atomic[DType.int32]
 
     fn __init__(
         inout self, addr: String, handler: RequestHandler, error_handler: ErrorHandler
@@ -116,6 +116,7 @@ struct PythonServer:
 
         while True:
             let conn = self.ln[0].accept()
+            self.open.__iadd__(1)
 
         # let st: Float64 = time.now()
         # let raw_request = connection.recieve_data()
