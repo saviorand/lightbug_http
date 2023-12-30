@@ -3,10 +3,11 @@ from mojoweb.io.bytes import Bytes
 from mojoweb.io.sync import Duration
 
 alias default_buffer_size = 4096
+alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
 trait Net:
-    fn listen(self, network: NetworkType, addr: String) raises -> Listener:
+    fn listen(inout self, network: NetworkType, addr: String) raises -> Listener:
         ...
 
 
@@ -69,7 +70,6 @@ alias TCPAddrList = DynamicVector[TCPAddr]
 
 @value
 struct TCPAddr(Addr):
-    var __string: String
     var ip: Bytes
     var port: Int
     var zone: String  # IPv6 addressing zone
@@ -78,10 +78,12 @@ struct TCPAddr(Addr):
         # TODO: do these defaults make sense?
         self.ip = String("127.0.0.1")._buffer
         self.port = 80
+        self.zone = ""
 
     fn __init__(inout self, ip: String, port: Int):
         self.ip = ip._buffer
         self.port = port
+        self.zone = ""
 
     fn network(self) -> String:
         return NetworkType.tcp.value
@@ -95,9 +97,9 @@ struct TCPAddr(Addr):
 # TODO: This should return a TCPAddrList and support resolving strategy
 fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAddr:
     let network_str = network.value
-    var host: String
-    var port: String
-    var portnum: Int
+    var host: String = ""
+    var port: String = ""
+    var portnum: Int = 0
     if (
         network_str == NetworkType.tcp.value
         or network_str == NetworkType.tcp4.value
@@ -122,8 +124,6 @@ fn resolve_internet_addr(network: NetworkType, address: String) raises -> TCPAdd
         raise Error("Unix addresses not supported yet")
     else:
         raise Error("unsupported network type: " + network_str)
-    # var list = TCPAddrList()
-    # list.append(TCPAddr(host, portnum))
     return TCPAddr(host, portnum)
 
 

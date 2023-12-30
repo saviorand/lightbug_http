@@ -11,61 +11,67 @@ from mojoweb.net import (
 )
 from mojoweb.http import Request, Response
 from mojoweb.service import Service
-from mojoweb.net import Connection
+from mojoweb.net import Connection, default_tcp_keep_alive
 from mojoweb.strings import NetworkType, CharSet
 
 
+# TODO: This should implement Listener once Mojo supports returning generics
 @value
-struct PythonTCPListener(Listener):
+struct PythonTCPListener(CollectionElement):
+    var pymodules: PythonObject
     var socket: PythonObject
 
-    fn __init__(inout self):
-        ...
+    fn __init__(inout self, pymodules: PythonObject) raises:
+        self.pymodules = pymodules
 
     @always_inline
-    fn accept(self) raises -> Connection:
+    fn accept(self) raises -> PythonConnection:
         let conn_addr = self.socket.accept()
-        # check if the first is laddr and second is raddr
-        # py=self.__py.builtins
-        return PythonConnection(Tuple(conn_addr))
+        return PythonConnection(self.pymodules, Tuple(conn_addr))
+
+    fn close(self) raises:
+        _ = self.socket.close()
 
     fn addr(self) -> Addr:
         ...
 
-    # fn __close_socket(self) raises -> None:
-    #     _ = self.socket.close()
-    # @always_inline
-    # fn __accept_connection(self) raises -> Connection:
-    #
 
+struct PythonListenConfig:
+    var keep_alive: Duration
+    var pymodules: PythonObject
 
-struct PythonListenConfig(ListenConfig):
-    var __py: PythonObject
+    fn __init__(inout self) raises:
+        self.keep_alive = Duration(default_tcp_keep_alive)
+        self.pymodules = Modules().builtins
 
-    fn __init__(inout self, keep_alive: Duration):
-        ...
+    fn __init__(inout self, keep_alive: Duration) raises:
+        self.keep_alive = keep_alive
+        self.pymodules = Modules().builtins
 
-    fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
+    fn listen(
+        inout self, network: NetworkType, address: String
+    ) raises -> PythonTCPListener:
         let addr = resolve_internet_addr(network, address)
-        var listener = PythonTCPListener()
-        listener.socket = self.__py.socket.socket(
-            self.__py.socket.AF_INET,
-            self.__py.socket.SOCK_STREAM,
+        var listener = PythonTCPListener(self.pymodules)
+        listener.socket = self.pymodules.socket.socket(
+            self.pymodules.socket.AF_INET,
+            self.pymodules.socket.SOCK_STREAM,
         )
         _ = listener.socket.bind((addr.ip, addr.port))
         _ = listener.socket.listen()
+        return listener
 
 
-struct PythonConnection(Connection):
-    var pymodules: Modules
+struct PythonConnection:
+    var pymodules: PythonObject
     var conn: PythonObject
     var addr: PythonObject
 
-    fn __init__(inout self, conn_addr: Tuple) raises:
+    fn __init__(inout self, pymodules: PythonObject, conn_addr: Tuple) raises:
         let py_conn_addr = PythonObject(conn_addr)
         self.conn = py_conn_addr[0]
         self.addr = py_conn_addr[1]
-        self.pymodules = Modules()
+        self.pymodules = pymodules
 
     fn read(self, inout buf: Bytes) raises -> Int:
         let data = self.conn.recv(default_buffer_size)
@@ -88,11 +94,13 @@ struct PythonConnection(Connection):
         ...
 
 
-struct PythonNet(Net):
+struct PythonNet:
     var lc: PythonListenConfig
 
-    fn __init__(inout self, keep_alive: Duration):
+    fn __init__(inout self, keep_alive: Duration) raises:
         self.lc = PythonListenConfig(keep_alive)
 
-    fn listen(self, network: NetworkType, addr: String) raises -> Listener:
+    fn listen(
+        inout self, network: NetworkType, addr: String
+    ) raises -> PythonTCPListener:
         return self.lc.listen(network, addr)

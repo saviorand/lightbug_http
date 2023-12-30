@@ -1,9 +1,10 @@
 from mojoweb.server import Server, DefaultConcurrency
 from mojoweb.net import Listener
-from mojoweb.python.net import PythonTCPListener
+from mojoweb.python.net import PythonTCPListener, PythonListenConfig
 from mojoweb.handler import RequestHandler
 from mojoweb.io.sync import Duration
 from mojoweb.error import ErrorHandler
+from mojoweb.strings import NetworkType
 
 
 struct PythonServer(Server):
@@ -112,9 +113,8 @@ struct PythonServer(Server):
         return concurrency
 
     fn listen_and_serve(self, address: String, handler: RequestHandler) raises -> None:
-        ...
-        # TODO: implement
-        # _ = self.socket.listen()
+        let lc = PythonListenConfig()
+        let ln = lc.listen(network=NetworkType.tcp4.value, address=address)
         # let connection: Connection = self.__accept_connection()
         # connection.print_log_connect_message()
 
