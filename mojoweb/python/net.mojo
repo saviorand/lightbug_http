@@ -1,5 +1,5 @@
 from mojoweb.python import Modules
-from mojoweb.io.bytes import Bytes
+from mojoweb.io.bytes import Bytes, python_bytes_to_bytes
 from mojoweb.io.sync import Duration
 from mojoweb.net import (
     Net,
@@ -67,9 +67,10 @@ struct PythonConnection(Connection):
         self.addr = py_conn_addr[1]
         self.pymodules = Modules()
 
-    fn read(self, buf: Bytes) raises -> Int:
+    fn read(self, inout buf: Bytes) raises -> Int:
         let data = self.conn.recv(default_buffer_size)
-        return data
+        python_bytes_to_bytes(buf, data)
+        return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
         _ = self.conn.sendall(
