@@ -8,7 +8,7 @@ fn test_fd_basic_io():
     Validates that the file descriptor can be opened, written to, and read from
     """
 
-    let file_path: StringLiteral = "./test.txt"
+    let file_path: StringLiteral = "./static/test.txt"
 
     # Open a file for writing
     let fd = FileDescriptor(file_path)

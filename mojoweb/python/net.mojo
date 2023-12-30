@@ -64,7 +64,7 @@ struct PythonListenConfig:
         )
         _ = listener.socket.bind(("0.0.0.0", addr.port))
         _ = listener.socket.listen()
-        print("Listening on " + "0.0.0.0")
+        print("Listening on " + String(addr.ip) + ":" + String(addr.port))
         return listener
 
 
