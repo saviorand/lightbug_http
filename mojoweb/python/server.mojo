@@ -117,28 +117,3 @@ struct PythonServer:
         while True:
             let conn = self.ln[0].accept()
             self.open.__iadd__(1)
-
-        # let st: Float64 = time.now()
-        # let raw_request = connection.recieve_data()
-        # let response: Response = self.__handle_request(
-        #     connection=connection,
-        #     raw_request=raw_request,
-        # )
-
-        # connection.send_response(response)
-        # connection.close()
-
-        # # go back to listening for requests
-        # max_number_of_workers := self.max_concurrent_connections
-
-        # fn __handle_request(self, raw_request: String, connection: Connection) raises -> Response:
-        #     """Private function that makes generates a Response object given a Request object."""
-        #     if not raw_request:
-        #         return Response.empty_error(error_str=EMPTY_REQUEST_MESSAGE)
-
-        #     try:
-        #         let request = Request(body=raw_request)
-        #         let response: Response = self.service.func(req=request)
-        #         return response
-        #     except Error:
-        #         return Response.error(error_str=str(Error))
