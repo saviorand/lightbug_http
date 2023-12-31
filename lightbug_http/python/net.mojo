@@ -89,13 +89,8 @@ struct PythonConnection:
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
-        let request_line = "HTTP/1.1 200 OK\r\n"
         let data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
-        let headers = "Content-Type: text/plain\r\nContent-Length: " + data.__len__().__str__() + "\r\n\r\n"
-        let request = self.pymodules.bytes(
-            String(request_line), CharSet.utf8.value
-        ) + self.pymodules.bytes(String(headers), CharSet.utf8.value) + data
-        _ = self.conn.sendall(request)
+        _ = self.conn.sendall(data)
         return len(buf)
 
     fn close(self) raises:

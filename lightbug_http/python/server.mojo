@@ -1,12 +1,14 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
 from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.uri import URI
+from lightbug_http.header import ResponseHeader
 from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, PythonNet
-from lightbug_http.service import RawBytesService
+from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import NetworkType
+from lightbug_http.strings import NetworkType, strHttp
 
 
 struct PythonServer:
@@ -138,14 +140,14 @@ struct PythonServer:
         return concurrency
 
     fn listen_and_serve[
-        T: RawBytesService
+        T: HTTPService
     ](inout self, address: String, handler: T) raises -> None:
         var __net = PythonNet()
         let listener = __net.listen(NetworkType.tcp4.value, address)
         self.serve(listener, handler)
 
     fn serve[
-        T: RawBytesService
+        T: HTTPService
     ](inout self, ln: PythonTCPListener, handler: T) raises -> None:
         # let max_worker_count = self.get_concurrency()
         # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
@@ -156,7 +158,31 @@ struct PythonServer:
             let conn = self.ln[0].accept()
             self.open.__iadd__(1)
             var buf = Bytes()
-            _ = conn.read(buf)
-            let res = handler.func(buf)
-            _ = conn.write(res)
-            conn.close()
+            let read_len = conn.read(buf)
+            if read_len == 0:
+                conn.close()
+                self.open.__isub__(1)
+                continue
+            else:
+                let res = handler.func(
+                    HTTPRequest(
+                        URI(strHttp, conn.local_addr().ip, "/"),
+                        buf,
+                        ResponseHeader(200, "OK", "Content-Type: text/plain\r\n"),
+                    )
+                )
+                let status = "HTTP/1.1 200 OK\r\n"
+                let data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
+                let response = self.pymodules.bytes(
+                    status, CharSet.utf8.value
+                ) + self.pymodules.bytes(
+                    String(
+                        headers
+                        + "Content-Length: "
+                        + data.__len__().__str__()
+                        + "\r\n\r\n"
+                    ),
+                    CharSet.utf8.value,
+                ) + data
+                _ = conn.write(res, status, headers)
+                conn.close()

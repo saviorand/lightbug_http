@@ -108,6 +108,19 @@ struct HTTPRequest(Request):
         self.timeout = Duration()
         self.disable_redirect_path_normalization = False
 
+    fn __init__(inout self, uri: URI, buf: Bytes, headers: RequestHeader):
+        self.header = headers
+        self.uri = uri
+        self.post_args = Args()
+        self.body_stream = StreamReader()
+        self.w = RequestBodyWriter()
+        self.body = Body()
+        self.body_raw = buf
+        self.parsed_uri = False
+        self.server_is_tls = False
+        self.timeout = Duration()
+        self.disable_redirect_path_normalization = False
+
     fn __init__(
         inout self,
         header: RequestHeader,

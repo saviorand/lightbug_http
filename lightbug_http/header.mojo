@@ -205,6 +205,27 @@ struct ResponseHeader:
 
     fn __init__(
         inout self,
+        status_code: Int,
+        status_message: Bytes,
+        content_type: Bytes,
+        content_length: Int,
+    ) -> None:
+        self.disable_normalization = False
+        self.no_http_1_1 = False
+        self.__connection_close = False
+        self.no_default_content_type = False
+        self.no_default_date = False
+        self.__status_code = status_code
+        self.__status_message = status_message
+        self.__protocol = Bytes()
+        self.content_length = content_length
+        self.content_length_bytes = Bytes()
+        self.content_type = content_type
+        self.content_encoding = Bytes()
+        self.server = Bytes()
+
+    fn __init__(
+        inout self,
         disable_normalization: Bool,
         no_http_1_1: Bool,
         connection_close: Bool,
