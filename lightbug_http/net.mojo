@@ -1,5 +1,5 @@
 from lightbug_http.strings import NetworkType
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, UnsafeString
 from lightbug_http.io.sync import Duration
 
 alias default_buffer_size = 4096
@@ -70,18 +70,18 @@ alias TCPAddrList = DynamicVector[TCPAddr]
 
 @value
 struct TCPAddr(Addr):
-    var ip: Bytes
+    var ip: String
     var port: Int
     var zone: String  # IPv6 addressing zone
 
     fn __init__(inout self):
         # TODO: do these defaults make sense?
-        self.ip = String("127.0.0.1")._buffer
+        self.ip = String("127.0.0.1")
         self.port = 8000
         self.zone = ""
 
     fn __init__(inout self, ip: String, port: Int):
-        self.ip = ip._buffer
+        self.ip = ip
         self.port = port
         self.zone = ""
 
