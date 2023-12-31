@@ -1,17 +1,19 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.uri import URI
-from lightbug_http.header import ResponseHeader
+from lightbug_http.header import ResponseHeader, RequestHeader
 from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, PythonNet
+from lightbug_http.python import Modules
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import NetworkType, strHttp
+from lightbug_http.strings import NetworkType, strHttp, CharSet
 
 
 struct PythonServer:
+    var pymodules: Modules
     var error_handler: ErrorHandler
 
     # TODO: header_received
@@ -55,7 +57,8 @@ struct PythonServer:
     var open: Atomic[DType.int32]
     var stop: Atomic[DType.int32]
 
-    fn __init__(inout self):
+    fn __init__(inout self) raises:
+        self.pymodules = Modules()
         self.error_handler = ErrorHandler()
 
         self.name = "lightbug_http"
@@ -94,7 +97,8 @@ struct PythonServer:
         self.open = 0
         self.stop = 0
 
-    fn __init__(inout self, error_handler: ErrorHandler):
+    fn __init__(inout self, error_handler: ErrorHandler) raises:
+        self.pymodules = Modules()
         self.error_handler = error_handler
 
         self.name = "lightbug_http"
@@ -155,34 +159,18 @@ struct PythonServer:
         self.ln.append(ln)
 
         while True:
-            let conn = self.ln[0].accept()
+            var conn = self.ln[0].accept()
             self.open.__iadd__(1)
             var buf = Bytes()
             let read_len = conn.read(buf)
-            if read_len == 0:
-                conn.close()
-                self.open.__isub__(1)
-                continue
-            else:
-                let res = handler.func(
-                    HTTPRequest(
-                        URI(strHttp, conn.local_addr().ip, "/"),
-                        buf,
-                        ResponseHeader(200, "OK", "Content-Type: text/plain\r\n"),
-                    )
+            # TODO: extract headers from the request into a RequestHeader object
+            let res = handler.func(
+                HTTPRequest(
+                    URI(strHttp, conn.local_addr().ip, "/"),
+                    buf,
+                    RequestHeader(),
                 )
-                let status = "HTTP/1.1 200 OK\r\n"
-                let data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
-                let response = self.pymodules.bytes(
-                    status, CharSet.utf8.value
-                ) + self.pymodules.bytes(
-                    String(
-                        headers
-                        + "Content-Length: "
-                        + data.__len__().__str__()
-                        + "\r\n\r\n"
-                    ),
-                    CharSet.utf8.value,
-                ) + data
-                _ = conn.write(res, status, headers)
-                conn.close()
+            )
+            let res_encoded = encode(res)
+            _ = conn.write(res_encoded)
+            conn.close()

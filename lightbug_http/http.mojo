@@ -5,7 +5,8 @@ from lightbug_http.stream import StreamReader
 from lightbug_http.body import Body, RequestBodyWriter, ResponseBodyWriter
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
-from lightbug_http.net import Addr
+from lightbug_http.net import Addr, TCPAddr
+from lightbug_http.strings import strHttp11
 
 
 trait Request:
@@ -193,20 +194,37 @@ struct HTTPResponse(Response):
 
     # TODO: var keep_body_buffer: Bool
 
-    var raddr: Addr
-    var laddr: Addr
+    var raddr: TCPAddr
+    var laddr: TCPAddr
 
-    fn __init__(inout self, header: ResponseHeader, body: Bytes):
+    fn __init__(inout self, body_bytes: Bytes):
+        # TODO: infer content type from the body
+        self.header = ResponseHeader(
+            200,
+            String("OK")._buffer,
+            String("Content-Type: application/octet-stream\r\n")._buffer,
+        )
+        self.stream_immediate_header_flush = False
+        self.stream_body = False
+        self.body_stream = StreamReader()
+        self.w = ResponseBodyWriter()
+        self.body = Body()
+        self.body_raw = body_bytes
+        self.skip_reading_writing_body = False
+        self.raddr = TCPAddr()
+        self.laddr = TCPAddr()
+
+    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes):
         self.header = header
         self.stream_immediate_header_flush = False
         self.stream_body = False
         self.body_stream = StreamReader()
         self.w = ResponseBodyWriter()
         self.body = Body()
-        self.body_raw = body
+        self.body_raw = body_bytes
         self.skip_reading_writing_body = False
-        self.raddr = Addr()
-        self.laddr = Addr()
+        self.raddr = TCPAddr()
+        self.laddr = TCPAddr()
 
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
@@ -221,3 +239,52 @@ struct HTTPResponse(Response):
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
+
+
+fn encode(res: HTTPResponse) -> Bytes:
+    var res_str = String()
+    let protocol = strHttp11
+    res_str += protocol
+    res_str += String(" ")
+    res_str += String(res.header.status_code())
+    res_str += String(" ")
+    res_str += String(res.header.status_message())
+    res_str += String("\r\n")
+    res_str += String("Server: M\r\n")
+    res_str += String("Date: ")
+    res_str += String("Content-Length: ")
+    res_str += String(res.body_raw.__len__().__str__())
+    res_str += String("\r\n")
+    res_str += String("\r\n")
+    res_str += res.body_raw
+    return res_str._buffer
+
+
+# Rust example
+
+# pub fn encode(mut rsp: Response, buf: &mut BytesMut) {
+#     if rsp.status_message.code == 200 {
+#         buf.extend_from_slice(b"HTTP/1.1 200 Ok\r\nServer: M\r\nDate: ");
+#     } else {
+#         buf.extend_from_slice(b"HTTP/1.1 ");
+#         let mut code = itoa::Buffer::new();
+#         buf.extend_from_slice(code.format(rsp.status_message.code).as_bytes());
+#         buf.extend_from_slice(b" ");
+#         buf.extend_from_slice(rsp.status_message.msg.as_bytes());
+#         buf.extend_from_slice(b"\r\nServer: M\r\nDate: ");
+#     }
+#     crate::date::append_date(buf);
+#     buf.extend_from_slice(b"\r\nContent-Length: ");
+#     let mut length = itoa::Buffer::new();
+#     buf.extend_from_slice(length.format(rsp.body_len()).as_bytes());
+
+#     // SAFETY: we already have bound check when insert headers
+#     let headers = unsafe { rsp.headers.get_unchecked(..rsp.headers_len) };
+#     for h in headers {
+#         buf.extend_from_slice(b"\r\n");
+#         buf.extend_from_slice(h.as_bytes());
+#     }
+
+#     buf.extend_from_slice(b"\r\n\r\n");
+#     buf.extend_from_slice(rsp.get_body());
+# }

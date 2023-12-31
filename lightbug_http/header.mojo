@@ -208,7 +208,6 @@ struct ResponseHeader:
         status_code: Int,
         status_message: Bytes,
         content_type: Bytes,
-        content_length: Int,
     ) -> None:
         self.disable_normalization = False
         self.no_http_1_1 = False
@@ -218,7 +217,7 @@ struct ResponseHeader:
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = Bytes()
-        self.content_length = content_length
+        self.content_length = 0
         self.content_length_bytes = Bytes()
         self.content_type = content_type
         self.content_encoding = Bytes()
