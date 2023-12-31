@@ -62,7 +62,7 @@ struct PythonListenConfig:
             self.__pymodules.socket.AF_INET,
             self.__pymodules.socket.SOCK_STREAM,
         )
-        _ = listener.socket.bind((self.__pymodules.builtins.bytes(addr.ip), addr.port))
+        _ = listener.socket.bind((addr.ip, addr.port))
         _ = listener.socket.listen()
         print("Listening on " + String(addr.ip) + ":" + String(addr.port))
         return listener
