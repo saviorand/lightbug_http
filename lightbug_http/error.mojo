@@ -1,5 +1,5 @@
-from mojoweb.http import HTTPResponse
-from mojoweb.header import ResponseHeader
+from lightbug_http.http import HTTPResponse
+from lightbug_http.header import ResponseHeader
 
 
 @value

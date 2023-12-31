@@ -1,5 +1,5 @@
 import testing
-from mojoweb.io.bytes import Bytes, bytes_equal
+from lightbug_http.io.bytes import Bytes, bytes_equal
 
 
 fn test_bytes_equal() raises:

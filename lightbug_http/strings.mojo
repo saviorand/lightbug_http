@@ -1,4 +1,4 @@
-from mojoweb.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes
 
 alias strSlash = String("/")._buffer
 alias strHttp = String("http")._buffer

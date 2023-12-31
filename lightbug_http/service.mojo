@@ -1,5 +1,5 @@
-from mojoweb.http import Request, Response
-from mojoweb.io.bytes import Bytes
+from lightbug_http.http import Request, Response
+from lightbug_http.io.bytes import Bytes
 
 
 trait HTTPService:

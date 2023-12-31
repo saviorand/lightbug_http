@@ -1,6 +1,6 @@
-from mojoweb.strings import NetworkType
-from mojoweb.io.bytes import Bytes
-from mojoweb.io.sync import Duration
+from lightbug_http.strings import NetworkType
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.sync import Duration
 
 alias default_buffer_size = 4096
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds

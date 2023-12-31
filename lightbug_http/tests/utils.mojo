@@ -1,4 +1,15 @@
-from mojoweb.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.client import Client
+
+
+@value
+struct TestClient(Client):
+    fn __init__(inout self):
+        ...
+
+    fn get(inout self, request: HTTPRequest) -> HTTPResponse:
+        return HTTPResponse(ResponseHeader(), String("Nice")._buffer)
 
 
 @value

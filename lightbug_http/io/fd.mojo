@@ -1,4 +1,4 @@
-import mojoweb.io.syscalls as c
+import lightbug_http.io.syscalls as c
 
 alias O_RDWR = 0o2
 

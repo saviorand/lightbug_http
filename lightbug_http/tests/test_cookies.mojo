@@ -1,7 +1,7 @@
 import testing
-from mojoweb.client import Client
-from mojoweb.uri import URI
-from mojoweb.http import HTTPRequest, HTTPResponse
+from lightbug_http.client import Client
+from lightbug_http.uri import URI
+from lightbug_http.http import HTTPRequest, HTTPResponse
 
 
 fn test_request_with_cookies[T: Client](inout client: T) raises -> None:

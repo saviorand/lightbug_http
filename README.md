@@ -38,9 +38,17 @@
 Lightbug is a simple and sweet HTTP framework for Mojo that builds on best practice from systems programming, such as the Golang [FastHTTP](https://github.com/valyala/fasthttp/) and Rust [may_minihttp](https://github.com/Xudong-Huang/may_minihttp/). 
 
 It currently has the following features:
- - ..
+ - [x] Server listen/serve on a given host/port
+ - [x] Assign your own custom handler to a route
+
+
+We're working on support for:
+ - [ ] Better error handling (contributors welcome!)
+ - [ ] Support for multiple connections and parallelization
+
 
 We're aiming to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -61,17 +69,7 @@ _Below is an example of how you can instruct your audience on installing and set
    ```sh
    git clone https://github.com/saviorand/mojo-web
    ```
-2. Enjoy!
-   
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+2. Add your handler in `main.mojo` (or use the default one that prints all requests to console). To add a handler:
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

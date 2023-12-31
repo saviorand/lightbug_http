@@ -1,5 +1,5 @@
 import testing
-from mojoweb.python.server import PythonServer
+from lightbug_http.python.server import PythonServer
 
 """
 Run a server listening on a port.

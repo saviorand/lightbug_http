@@ -1,4 +1,4 @@
-from mojoweb.http import HTTPRequest, HTTPResponse
+from lightbug_http.http import HTTPRequest, HTTPResponse
 
 
 trait Client:

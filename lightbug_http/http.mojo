@@ -1,11 +1,11 @@
-from mojoweb.header import RequestHeader, ResponseHeader
-from mojoweb.uri import URI
-from mojoweb.args import Args
-from mojoweb.stream import StreamReader
-from mojoweb.body import Body, RequestBodyWriter, ResponseBodyWriter
-from mojoweb.io.bytes import Bytes
-from mojoweb.io.sync import Duration
-from mojoweb.net import Addr
+from lightbug_http.header import RequestHeader, ResponseHeader
+from lightbug_http.uri import URI
+from lightbug_http.args import Args
+from lightbug_http.stream import StreamReader
+from lightbug_http.body import Body, RequestBodyWriter, ResponseBodyWriter
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.sync import Duration
+from lightbug_http.net import Addr
 
 
 trait Request:

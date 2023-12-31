@@ -1,5 +1,5 @@
-from mojoweb.strings import strHttp11, strSlash, strMethodGet
-from mojoweb.io.bytes import Bytes, bytes_equal
+from lightbug_http.strings import strHttp11, strSlash, strMethodGet
+from lightbug_http.io.bytes import Bytes, bytes_equal
 
 alias statusOK = 200
 

@@ -1,6 +1,6 @@
-from mojoweb.io.bytes import Bytes, bytes_equal
-from mojoweb.args import Args
-from mojoweb.strings import strSlash, strHttp, strHttps
+from lightbug_http.io.bytes import Bytes, bytes_equal
+from lightbug_http.args import Args
+from lightbug_http.strings import strSlash, strHttp, strHttps
 
 
 fn normalise_path(path: Bytes, path_original: Bytes) -> Bytes:

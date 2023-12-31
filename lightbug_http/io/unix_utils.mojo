@@ -1,4 +1,4 @@
-from mojoweb.io.fd import FileDescriptor
+from lightbug_http.io.fd import FileDescriptor
 
 
 struct EventData:

@@ -1,19 +1,9 @@
-import test_http, test_io, test_fd, test_connection, test_cookies, test_server, test_tls
-from mojoweb.io.bytes import Bytes
-from mojoweb.python.server import PythonServer
-from mojoweb.client import Client
-from mojoweb.header import ResponseHeader
-from mojoweb.http import HTTPRequest, HTTPResponse
-from mojoweb.service import RawBytesService
-
-
-@value
-struct TestClient(Client):
-    fn __init__(inout self):
-        ...
-
-    fn get(inout self, request: HTTPRequest) -> HTTPResponse:
-        return HTTPResponse(ResponseHeader(), String("Nice")._buffer)
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.python.server import PythonServer
+from lightbug_http.client import Client
+from lightbug_http.header import ResponseHeader
+from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.service import RawBytesService
 
 
 @value
@@ -24,8 +14,6 @@ struct Printer(RawBytesService):
 
 
 fn main() raises:
-    # var client = TestClient()
-    # test_http.test_request_simple_url(client)
     var server = PythonServer()
     let handler = Printer()
     server.listen_and_serve("0.0.0.0:8080", handler)

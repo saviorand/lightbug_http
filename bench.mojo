@@ -1,6 +1,6 @@
 import benchmark
 from benchmark import Unit
-from mojoweb.tests.utils import TestStruct
+from lightbug_http.tests.utils import TestStruct
 
 
 fn lightbug_benchmark_server() -> None:

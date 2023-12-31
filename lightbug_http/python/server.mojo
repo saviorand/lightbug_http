@@ -1,12 +1,12 @@
-from mojoweb.server import DefaultConcurrency
-from mojoweb.net import Listener
-from mojoweb.http import HTTPRequest, HTTPResponse
-from mojoweb.python.net import PythonTCPListener, PythonListenConfig, PythonNet
-from mojoweb.service import RawBytesService
-from mojoweb.io.sync import Duration
-from mojoweb.io.bytes import Bytes
-from mojoweb.error import ErrorHandler
-from mojoweb.strings import NetworkType
+from lightbug_http.server import DefaultConcurrency
+from lightbug_http.net import Listener
+from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, PythonNet
+from lightbug_http.service import RawBytesService
+from lightbug_http.io.sync import Duration
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.error import ErrorHandler
+from lightbug_http.strings import NetworkType
 
 
 struct PythonServer:
@@ -56,7 +56,7 @@ struct PythonServer:
     fn __init__(inout self):
         self.error_handler = ErrorHandler()
 
-        self.name = "mojoweb"
+        self.name = "lightbug_http"
         self.max_concurrent_connections = 1000
         self.read_buffer_size = 4096
         self.write_buffer_size = 4096
@@ -95,7 +95,7 @@ struct PythonServer:
     fn __init__(inout self, error_handler: ErrorHandler):
         self.error_handler = error_handler
 
-        self.name = "mojoweb"
+        self.name = "lightbug_http"
         self.max_concurrent_connections = 1000
         self.read_buffer_size = 4096
         self.write_buffer_size = 4096
@@ -153,12 +153,10 @@ struct PythonServer:
         self.ln.append(ln)
 
         while True:
-            print("accepting")
             let conn = self.ln[0].accept()
             self.open.__iadd__(1)
             var buf = Bytes()
             _ = conn.read(buf)
-            print(String(buf))
             let res = handler.func(buf)
             _ = conn.write(res)
             conn.close()

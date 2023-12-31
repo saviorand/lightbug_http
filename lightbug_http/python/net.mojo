@@ -1,7 +1,7 @@
-from mojoweb.python import Modules
-from mojoweb.io.bytes import Bytes, python_bytes_to_bytes
-from mojoweb.io.sync import Duration
-from mojoweb.net import (
+from lightbug_http.python import Modules
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.sync import Duration
+from lightbug_http.net import (
     Net,
     TCPAddr,
     Listener,
@@ -9,13 +9,13 @@ from mojoweb.net import (
     resolve_internet_addr,
     default_buffer_size,
 )
-from mojoweb.http import Request, Response
-from mojoweb.service import HTTPService
-from mojoweb.net import Connection, default_tcp_keep_alive
-from mojoweb.strings import NetworkType, CharSet
+from lightbug_http.http import Request, Response
+from lightbug_http.service import HTTPService
+from lightbug_http.net import Connection, default_tcp_keep_alive
+from lightbug_http.strings import NetworkType, CharSet
 
 
-# TODO: This should implement Listener once Mojo supports returning generics
+# TODO: This should implement Listener once Mojo supports automatically returning a trait from implementation
 @value
 struct PythonTCPListener(CollectionElement):
     var __pymodules: PythonObject
@@ -62,7 +62,7 @@ struct PythonListenConfig:
             self.__pymodules.socket.AF_INET,
             self.__pymodules.socket.SOCK_STREAM,
         )
-        _ = listener.socket.bind(("0.0.0.0", addr.port))
+        _ = listener.socket.bind((self.__pymodules.builtins.bytes(addr.ip), addr.port))
         _ = listener.socket.listen()
         print("Listening on " + String(addr.ip) + ":" + String(addr.port))
         return listener
@@ -83,7 +83,7 @@ struct PythonConnection:
 
     fn read(self, inout buf: Bytes) raises -> Int:
         let data = self.conn.recv(default_buffer_size)
-        python_bytes_to_bytes(buf, data)
+        buf = String(self.pymodules.bytes(data).__str__())._buffer
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
