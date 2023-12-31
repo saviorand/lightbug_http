@@ -83,11 +83,19 @@ struct PythonConnection:
 
     fn read(self, inout buf: Bytes) raises -> Int:
         let data = self.conn.recv(default_buffer_size)
-        buf = String(self.pymodules.bytes(data).__str__())._buffer
+        buf = String(
+            self.pymodules.bytes.decode(data, CharSet.utf8.value).__str__()
+        )._buffer
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
-        _ = self.conn.sendall(self.pymodules.bytes(String(buf), CharSet.utf8.value))
+        let request_line = "HTTP/1.1 200 OK\r\n"
+        let data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
+        let headers = "Content-Type: text/plain\r\nContent-Length: " + data.__len__().__str__() + "\r\n\r\n"
+        let request = self.pymodules.bytes(
+            String(request_line), CharSet.utf8.value
+        ) + self.pymodules.bytes(String(headers), CharSet.utf8.value) + data
+        _ = self.conn.sendall(request)
         return len(buf)
 
     fn close(self) raises:
