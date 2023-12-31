@@ -33,10 +33,10 @@ It currently has the following features:
 
 We're working on support for:
  - [ ] Better error handling (contributors welcome!)
- - [ ] Support for multiple connections and parallelization
+ - [ ] Multiple simultaneous connections and parallelization
 
 
-We're aiming to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
+The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -46,19 +46,32 @@ We're aiming to get to a feature set similar to Python frameworks like [Starlett
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-
-### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
+The only hard dependency is Mojo!
 
 1. Clone the repo
    ```sh
    git clone https://github.com/saviorand/mojo-web
    ```
-2. Add your handler in `main.mojo` (or use the default one that prints all requests to console). To add a handler:
+2. Add your handler in `main.mojo` by passing a struct satisfying the following trait:
+   ```mojo
+   trait HTTPService:
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        ...
+   ```
+   e.g. to make a service that simply prints the request to console:
+   ```mojo
+   @value
+   struct Printer(HTTPService):
+      fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+         let req_body = req.body_raw
+         print(String(req_body))
+         return HTTPResponse(
+               ResponseHeader(
+                  200, String("OK")._buffer, String("Content-Type: text/plain")._buffer
+               ),
+               req_body,
+         )
+   ``` 
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
