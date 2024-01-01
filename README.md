@@ -62,7 +62,7 @@ Once you have Mojo up and running on your local machine,
    git clone https://github.com/saviorand/mojo-web
    ```
    Alternatively, start the project in Github Codespaces for quick setup:
-   
+
    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
 2. Add your handler in `main.mojo` by passing a struct that satisfies the following trait:
    ```mojo
@@ -129,7 +129,7 @@ See the [open issues](https://github.com/othneildrew/Best-README-Template/issues
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. See [CONTRIBUTING.md](./CONTRIBUTING.md) for more details on how to contribute.
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
+Don't forget to give the project a star!
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -164,7 +164,7 @@ Project Link: [https://github.com/saviorand/mojo-web](https://github.com/saviora
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
+We were drawing a lot on the following projects:
 
 * [FastHTTP](https://github.com/valyala/fasthttp/) (Golang)
 * [may_minihttp](https://github.com/Xudong-Huang/may_minihttp/) (Rust)
