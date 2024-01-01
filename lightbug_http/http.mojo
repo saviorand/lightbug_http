@@ -241,6 +241,15 @@ struct HTTPResponse(Response):
         return self.header.connection_close()
 
 
+fn OK(body: Bytes) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(
+            200, String("OK")._buffer, String("Content-Type: text/plain")._buffer
+        ),
+        body,
+    )
+
+
 fn encode(res: HTTPResponse) -> Bytes:
     var res_str = String()
     let protocol = strHttp11
@@ -258,33 +267,3 @@ fn encode(res: HTTPResponse) -> Bytes:
     res_str += String("\r\n")
     res_str += res.body_raw
     return res_str._buffer
-
-
-# Rust example
-
-# pub fn encode(mut rsp: Response, buf: &mut BytesMut) {
-#     if rsp.status_message.code == 200 {
-#         buf.extend_from_slice(b"HTTP/1.1 200 Ok\r\nServer: M\r\nDate: ");
-#     } else {
-#         buf.extend_from_slice(b"HTTP/1.1 ");
-#         let mut code = itoa::Buffer::new();
-#         buf.extend_from_slice(code.format(rsp.status_message.code).as_bytes());
-#         buf.extend_from_slice(b" ");
-#         buf.extend_from_slice(rsp.status_message.msg.as_bytes());
-#         buf.extend_from_slice(b"\r\nServer: M\r\nDate: ");
-#     }
-#     crate::date::append_date(buf);
-#     buf.extend_from_slice(b"\r\nContent-Length: ");
-#     let mut length = itoa::Buffer::new();
-#     buf.extend_from_slice(length.format(rsp.body_len()).as_bytes());
-
-#     // SAFETY: we already have bound check when insert headers
-#     let headers = unsafe { rsp.headers.get_unchecked(..rsp.headers_len) };
-#     for h in headers {
-#         buf.extend_from_slice(b"\r\n");
-#         buf.extend_from_slice(h.as_bytes());
-#     }
-
-#     buf.extend_from_slice(b"\r\n\r\n");
-#     buf.extend_from_slice(rsp.get_body());
-# }

@@ -4,9 +4,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
     <img src="static/logo.png" alt="Logo" width="250" height="250">
-  </a>
 
   <h3 align="center">Lightbug</h3>
 
@@ -31,9 +29,12 @@ It currently has the following features:
  - [x] Assign your own custom handler to a route
 
 
-We're working on support for:
- - [ ] Better error handling (contributors welcome!)
+We're working on support for the following (contributors welcome!):
+ - [ ] Pure Mojo networking (while most of the code is in Mojo, we call Python's `socket` library in several parts of the code)
+ - [ ] More request body types (currently only `text/plain`)
+ - [ ] Better error handling 
  - [ ] Multiple simultaneous connections and parallelization
+ - [ ] WebSockets, HTTP 2.0
 
 
 The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
@@ -46,33 +47,46 @@ The plan is to get to a feature set similar to Python frameworks like [Starlette
 <!-- GETTING STARTED -->
 ## Getting Started
 
-The only hard dependency is Mojo!
+The only hard dependency for `lightbug_http` is Mojo. 
+Learn how to set it up on the [Modular website](https://www.modular.com/max/mojo).
+
+Once you have Mojo up and running on your local machine,
 
 1. Clone the repo
    ```sh
    git clone https://github.com/saviorand/mojo-web
    ```
-2. Add your handler in `main.mojo` by passing a struct satisfying the following trait:
+2. Add your handler in `main.mojo` by passing a struct that satisfies the following trait:
    ```mojo
    trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         ...
    ```
-   e.g. to make a service that simply prints the request to console:
+   For example, to make a `Printer` service that simply prints the request to console:
    ```mojo
    @value
    struct Printer(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-         let req_body = req.body_raw
-         print(String(req_body))
-         return HTTPResponse(
-               ResponseHeader(
-                  200, String("OK")._buffer, String("Content-Type: text/plain")._buffer
-               ),
-               req_body,
-         )
-   ``` 
+         let body = req.body_raw
 
+         print(String(body))
+
+         return OK(body)
+   ```
+3. Run `mojo main.mojo`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
+   ```mojo
+   from lightbug_http.io.bytes import Bytes
+   from lightbug_http.python.server import PythonServer
+   from lightbug_http.service import Printer
+
+
+   fn main() raises:
+      var server = PythonServer()
+      let handler = Printer()
+      server.listen_and_serve("0.0.0.0:8080", handler)
+   ```
+
+   Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -81,12 +95,19 @@ The only hard dependency is Mojo!
 <!-- ROADMAP -->
 ## Roadmap
 
- - Mojo-http (this repo)
-    - [ ] TODOs
- - Mojo-api
-    - Experience of Django, Speed of Rust
- - Mojo-web
-    - Ditch NextJS, Mojo full-stack framework
+<div align="center">
+    <img src="static/roadmap.png" alt="Logo" width="695" height="226">
+</div>
+
+Our vision is to develop three libraries, with `lightbug_http` (this repo) as a starting point: 
+ - `lightbug_http` - HTTP infrastructure and basic API development
+ - `lightbug_api` - Tools to make great APIs fast, with support for OpenAPI spec and domain driven design
+ - `lightbug_web` - Full-stack web framework for Mojo, similar to NextJS or SvelteKit
+
+The idea is to get to a point where the entire codebase of a simple modern web application can be written in Mojo. 
+
+We don't make any promises, though -- this is just a vision, and whether we get there or not depends on many factors, including the support of the community.
+
 
 See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
 
@@ -97,7 +118,7 @@ See the [open issues](https://github.com/othneildrew/Best-README-Template/issues
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. See [CONTRIBUTING.md](./CONTRIBUTING.md) for more details on how to contribute.
 
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!
@@ -148,7 +169,7 @@ Use this space to list resources you find helpful and would like to give credit 
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[language-shield]: https://img.shields.io/badge/language-mojo-red
+[language-shield]: https://img.shields.io/badge/language-mojo-orange
 [license-shield]: https://img.shields.io/github/license/saviorand/lightbug_http?logo=github
 [license-url]: https://github.com/saviorand/lightbug_http/blob/main/LICENSE
 [contributors-shield]: https://img.shields.io/badge/contributors-welcome!-blue
