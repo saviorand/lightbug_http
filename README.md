@@ -62,7 +62,8 @@ Once you have Mojo up and running on your local machine,
    git clone https://github.com/saviorand/mojo-web
    ```
    Alternatively, start the project in Github Codespaces for quick setup:
-   https://codespaces.new/saviorand/lightbug_htt
+   
+   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
 2. Add your handler in `main.mojo` by passing a struct that satisfies the following trait:
    ```mojo
    trait HTTPService:
