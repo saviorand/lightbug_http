@@ -24,18 +24,23 @@
 
 Lightbug is a simple and sweet HTTP framework for Mojo that builds on best practice from systems programming, such as the Golang [FastHTTP](https://github.com/valyala/fasthttp/) and Rust [may_minihttp](https://github.com/Xudong-Huang/may_minihttp/). 
 
-It currently has the following features:
- - [x] Server listen/serve on a given host/port
+This is not production ready yet. We're aiming to keep up with new developments in Mojo, but it might take some time to get to a point when this is safe to use in real-world applications.
+
+Lightbug currently has the following features:
+ - [x] Set up a server to listen on a given host/port
  - [x] Assign your own custom handler to a route
+ - [x] Craft HTTP requests and responses with built-in primitives
+ - [x] Everything is fully typed, with no `def` functions used
 
 
 We're working on support for the following (contributors welcome!):
  - [ ] Pure Mojo networking (while most of the code is in Mojo, we call Python's `socket` library in several parts of the code)
  - [ ] More request body types (currently only `text/plain`)
  - [ ] Better error handling 
- - [ ] Multiple simultaneous connections and parallelization
+ - [ ] Multiple simultaneous connections, parallelization and performance optimizations/benchmarks
  - [ ] WebSockets, HTTP 2.0
 
+The test coverage is also something we're working on.
 
 The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
 
