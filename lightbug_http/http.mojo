@@ -71,7 +71,7 @@ trait Response:
 @value
 struct HTTPRequest(Request):
     var header: RequestHeader
-    var uri: URI
+    var __uri: URI
 
     var post_args: Args
 
@@ -85,7 +85,6 @@ struct HTTPRequest(Request):
 
     var parsed_uri: Bool
     # TODO: var parsed_post_args: Bool
-
     # TODO: var keep_body_buffer: Bool
 
     var server_is_tls: Bool
@@ -98,7 +97,7 @@ struct HTTPRequest(Request):
 
     fn __init__(inout self, uri: URI):
         self.header = RequestHeader()
-        self.uri = uri
+        self.__uri = uri
         self.post_args = Args()
         self.body_stream = StreamReader()
         self.w = RequestBodyWriter()
@@ -111,7 +110,7 @@ struct HTTPRequest(Request):
 
     fn __init__(inout self, uri: URI, buf: Bytes, headers: RequestHeader):
         self.header = headers
-        self.uri = uri
+        self.__uri = uri
         self.post_args = Args()
         self.body_stream = StreamReader()
         self.w = RequestBodyWriter()
@@ -134,7 +133,7 @@ struct HTTPRequest(Request):
         disable_redirect_path_normalization: Bool,
     ):
         self.header = header
-        self.uri = uri
+        self.__uri = uri
         self.post_args = post_args
         self.body_stream = StreamReader()
         self.w = RequestBodyWriter()
@@ -146,15 +145,15 @@ struct HTTPRequest(Request):
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
     fn set_host(inout self, host: String) -> Self:
-        _ = self.uri.set_host(host)
+        _ = self.__uri.set_host(host)
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
-        _ = self.uri.set_host_bytes(host)
+        _ = self.__uri.set_host_bytes(host)
         return self
 
     fn host(self) -> String:
-        return self.uri.host()
+        return self.__uri.host()
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         _ = self.header.set_request_uri(request_uri._buffer)
@@ -167,8 +166,11 @@ struct HTTPRequest(Request):
 
     fn request_uri(inout self) -> String:
         if self.parsed_uri:
-            _ = self.set_request_uri_bytes(self.uri.request_uri())
+            _ = self.set_request_uri_bytes(self.__uri.request_uri())
         return self.header.request_uri()
+
+    fn uri(self) -> URI:
+        return self.__uri
 
     fn set_connection_close(inout self, connection_close: Bool) -> Self:
         _ = self.header.set_connection_close()

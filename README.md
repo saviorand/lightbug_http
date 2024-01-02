@@ -34,9 +34,8 @@ Lightbug currently has the following features:
 
 We're working on support for the following (contributors welcome!):
  - [ ] Pure Mojo networking (while most of the code is in Mojo, we call Python's `socket` library in several parts of the code)
- - [ ] More request body types (currently only `text/plain`)
- - [ ] Better error handling 
- - [ ] Multiple simultaneous connections, parallelization and performance optimizations/benchmarks
+ - [ ] Better error handling, improved form/multipart and JSON support
+ - [ ] Multiple simultaneous connections, parallelization and performance optimizations
  - [ ] WebSockets, HTTP 2.0
 
 The test coverage is also something we're working on.
