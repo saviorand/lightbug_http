@@ -163,12 +163,18 @@ struct PythonServer:
             self.open.__iadd__(1)
             var buf = Bytes()
             let read_len = conn.read(buf)
-            # TODO: extract headers from the request into a RequestHeader object
+            var header = RequestHeader(buf)
+            try:
+                header.parse()
+            except:
+                conn.close()
+                raise Error("Failed to parse request header")
+
             let res = handler.func(
                 HTTPRequest(
                     URI(strHttp, conn.local_addr().ip, "/"),
                     buf,
-                    RequestHeader(),
+                    header,
                 )
             )
             let res_encoded = encode(res)

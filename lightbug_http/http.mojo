@@ -6,7 +6,7 @@ from lightbug_http.body import Body, RequestBodyWriter, ResponseBodyWriter
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import strHttp11
+from lightbug_http.strings import TwoLines, next_line, strHttp11, strHttp10, strHttp
 
 
 trait Request:

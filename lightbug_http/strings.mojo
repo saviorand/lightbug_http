@@ -4,8 +4,31 @@ alias strSlash = String("/")._buffer
 alias strHttp = String("http")._buffer
 alias strHttps = String("https")._buffer
 alias strHttp11 = String("HTTP/1.1")._buffer
+alias strHttp10 = String("HTTP/1.0")._buffer
 
 alias strMethodGet = String("GET")._buffer
+
+alias rChar = String("\r")._buffer
+alias nChar = String("\n")._buffer
+
+
+# TODO: had to add this since tuples don't work with strings, to be replaced with a tuple
+@value
+struct TwoLines:
+    var first_line: String
+    var rest: String
+
+    fn __init__(inout self, first_line: String, rest: String) -> None:
+        self.first_line = first_line
+        self.rest = rest
+
+
+# Helper function to get the next line
+fn next_line(s: String) raises -> TwoLines:
+    let split = s.split("\n")
+    return TwoLines(split[0].strip(), split[1]) if len(split) == 2 else TwoLines(
+        split[0].strip(), String()
+    )
 
 
 @value

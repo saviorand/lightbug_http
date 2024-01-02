@@ -15,3 +15,20 @@ struct Printer(HTTPService):
         print(String(body))
 
         return OK(body)
+
+
+@value
+struct ExampleRouter(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        let body = req.body_raw
+
+        if req.uri.path() == "/":
+            print("I'm on the index path!")
+        if req.uri.path() == "/first":
+            print("I'm on /first!")
+        elif req.uri.path() == "/second":
+            print("I'm on /second!")
+        elif req.uri.path() == "/echo":
+            print(String(body))
+
+        return OK(body)

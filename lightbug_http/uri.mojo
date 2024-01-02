@@ -88,15 +88,15 @@ struct URI:
         self.__path = normalise_path(path._buffer, self.__path_original)
         return self
 
-    fn set_path_bytes(inout self, path: Bytes) -> Self:
+    fn set_path_sbytes(inout self, path: Bytes) -> Self:
         self.__path = normalise_path(path, self.__path_original)
         return self
 
-    fn path(self) -> Bytes:
+    fn path(self) -> String:
         var processed_path = self.__path
         if len(processed_path) == 0:
             processed_path = strSlash
-        return processed_path
+        return String(processed_path)
 
     fn set_scheme(inout self, scheme: String) -> Self:
         self.__scheme = scheme._buffer
