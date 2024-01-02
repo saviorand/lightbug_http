@@ -27,8 +27,15 @@ struct PythonClient:
     fn __init__(inout self) raises:
         self.pymodules = Modules()
         self.socket = self.pymodules.socket.socket()
-        self.host = "localhost"
-        self.port = 80
+        self.host = "127.0.0.1"
+        self.port = 8888
+        self.name = "lightbug_http_client"
+
+    fn __init__(inout self, host: StringLiteral, port: Int) raises:
+        self.pymodules = Modules()
+        self.socket = self.pymodules.socket.socket()
+        self.host = host
+        self.port = port
         self.name = "lightbug_http_client"
 
     fn do(self, req: HTTPRequest) raises -> HTTPResponse:

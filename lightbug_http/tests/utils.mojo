@@ -1,6 +1,44 @@
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.service import HTTPService, OK
 from lightbug_http.client import Client
+
+
+@value
+struct FakeResponder(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        # let method = String(req.header.method())
+        # if method != "GET":
+        #     raise Error("Did not expect a non-GET request! Got: " + method)
+        return OK(String("Hello, world!")._buffer)
+
+
+struct fakeListener:
+    var request_count: Int
+    var request: Bytes
+    var closed: Bool
+
+    fn __init__(inout self, request_count: Int, request: Bytes) -> None:
+        self.request_count = request_count
+        self.request = request
+        self.closed = False
+
+    fn accept(inout self) -> None:
+        self.request_count -= 1
+        if self.request_count == 0:
+            self.closed = True
+
+
+alias getRequest = String(
+    "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
+    " Firefox Chrome MSIE Opera\r\n"
+    + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
+    " aa=aakslsdweriwereowriewroire\r\n\r\n"
+)._buffer
+
+
+fn new_fake_listener(request_count: Int, request: Bytes) -> fakeListener:
+    return fakeListener(request_count, request)
 
 
 @value

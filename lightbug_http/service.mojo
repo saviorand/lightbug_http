@@ -33,12 +33,3 @@ struct ExampleRouter(HTTPService):
             print(String(body))
 
         return OK(body)
-
-
-@value
-struct FakeResponder(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        # let method = String(req.header.method())
-        # if method != "GET":
-        #     raise Error("Did not expect a non-GET request! Got: " + method)
-        return OK(String("Hello, world!")._buffer)
