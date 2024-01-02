@@ -9,7 +9,7 @@ from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import NetworkType, strHttp, CharSet
+from lightbug_http.strings import next_line, NetworkType, strHttp, CharSet
 
 
 struct PythonServer:
@@ -159,10 +159,23 @@ struct PythonServer:
         self.ln.append(ln)
 
         while True:
-            var conn = self.ln[0].accept()
+            let conn = self.ln[0].accept()
             self.open.__iadd__(1)
             var buf = Bytes()
             let read_len = conn.read(buf)
+
+            # Extract the first line (request line) and the rest of the headers
+            let first_line_and_headers = next_line(buf)
+            let request_line = first_line_and_headers.first_line
+            let rest_of_headers = first_line_and_headers.rest
+
+            var uri = URI(request_line)
+            try:
+                uri.parse()
+            except:
+                conn.close()
+                raise Error("Failed to parse request line")
+
             var header = RequestHeader(buf)
             try:
                 header.parse()
@@ -172,7 +185,7 @@ struct PythonServer:
 
             let res = handler.func(
                 HTTPRequest(
-                    URI(strHttp, conn.local_addr().ip, "/"),
+                    uri,
                     buf,
                     header,
                 )
