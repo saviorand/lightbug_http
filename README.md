@@ -85,18 +85,20 @@ Once you have Mojo up and running on your local machine,
    struct ExampleRouter(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
          let body = req.body_raw
+         let uri = req.uri()
 
-         if req.uri.path() == "/":
+         if uri.path() == "/":
                print("I'm on the index path!")
-         if req.uri.path() == "/first":
+         if uri.path() == "/first":
                print("I'm on /first!")
-         elif req.uri.path() == "/second":
+         elif uri.path() == "/second":
                print("I'm on /second!")
-         elif req.uri.path() == "/echo":
+         elif uri.path() == "/echo":
                print(String(body))
 
          return OK(body)
    ```
+   
    We plan to add routing in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
 3. Run `mojo main.mojo`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo

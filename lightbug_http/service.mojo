@@ -21,14 +21,15 @@ struct Printer(HTTPService):
 struct ExampleRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         let body = req.body_raw
+        let uri = req.uri()
 
-        if req.__uri.path() == "/":
+        if uri.path() == "/":
             print("I'm on the index path!")
-        if req.__uri.path() == "/first":
+        if uri.path() == "/first":
             print("I'm on /first!")
-        elif req.__uri.path() == "/second":
+        elif uri.path() == "/second":
             print("I'm on /second!")
-        elif req.__uri.path() == "/echo":
+        elif uri.path() == "/echo":
             print(String(body))
 
         return OK(body)
