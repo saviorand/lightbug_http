@@ -5,15 +5,20 @@ from lightbug_http.python.net import PythonNet
 from lightbug_http.python.server import PythonServer
 from lightbug_http.service import Printer
 from lightbug_http.strings import NetworkType
-from lightbug_http.tests.utils import TestStruct, FakeResponder
+from lightbug_http.tests.utils import (
+    TestStruct,
+    FakeResponder,
+    new_fake_listener,
+    FakeListener,
+    FakeServer,
+    getRequest,
+)
 
 
-fn lightbug_benchmark_server() raises -> None:
-    var server = PythonServer()
-    var __net = PythonNet()
-    let handler = FakeResponder()
-    let listener = __net.listen("tcp4", "0.0.0.0:8080")
-    server.serve(listener, handler)
+fn lightbug_benchmark_server():
+    let server_report = benchmark.run[run_fake_server](max_iters=1)
+    print("Server: ")
+    server_report.print(Unit.ms)
 
 
 fn lightbug_benchmark_misc() -> None:
@@ -25,6 +30,13 @@ fn lightbug_benchmark_misc() -> None:
     direct_set_report.print(Unit.ms)
     print("Recreating set: ")
     recreating_set_report.print(Unit.ms)
+
+
+fn run_fake_server():
+    let handler = FakeResponder()
+    let listener = new_fake_listener(2, getRequest)
+    var server = FakeServer(listener, handler)
+    server.serve()
 
 
 fn init_test_and_set_a_copy() -> None:
