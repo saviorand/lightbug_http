@@ -8,12 +8,12 @@ from lightbug_http.tests.utils import FakeResponder
 
 
 fn test_client() raises:
-    var server = PythonServer()
-    var __net = PythonNet()
-    let handler = FakeResponder()
+    # var server = PythonServer()
+    # var __net = PythonNet()
+    # let handler = FakeResponder()
     let client = PythonClient()
-    let listener = __net.listen("tcp4", "0.0.0.0:8080")
-    server.serve(listener, handler)
+    # let listener = __net.listen("tcp4", "0.0.0.0:8080")
+    # server.serve(listener, handler)
     let res = client.do(HTTPRequest(URI("0.0.0.0:8080")))
     print(res.body_raw)
 
@@ -21,5 +21,5 @@ fn test_client() raises:
 fn main():
     try:
         test_client()
-    except:
-        print("test failed")
+    except e:
+        print("test failed " + e.__str__())

@@ -5,7 +5,7 @@ from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, Pyth
 from lightbug_http.python import Modules
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, UnsafeString
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import next_line, NetworkType, strHttp, CharSet
 
@@ -40,17 +40,26 @@ struct PythonClient:
 
     fn do(self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri()
-        var host = uri.host()
-        if String(host) == "":
+        try:
+            _ = uri.parse()
+        except e:
+            print("error parsing uri: " + e.__str__())
+
+        let host = String(uri.host())
+
+        if host == "":
             raise Error("URI is nil")
         var is_tls = False
         if uri.is_https():
             is_tls = True
-        elif not uri.is_http():
-            raise Error("not supported: URI is not HTTP or HTTPS")
 
-        _ = self.socket.connect((self.host, self.port))
-        _ = self.socket.send(PythonObject(req.body_raw))
+        let host_port = host.split(":")
+        let host_str = host_port[0]
+
+        let port = atol(host_port[1])
+
+        _ = self.socket.connect((UnsafeString(host_str), port))
+        _ = self.socket.sendall(PythonObject(req.body_raw))
 
         let res = self.socket.recv(1024).decode()
         _ = self.socket.close()
