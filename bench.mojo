@@ -3,9 +3,9 @@ from benchmark import Unit
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.python.net import PythonNet
 from lightbug_http.python.server import PythonServer
-from lightbug_http.service import Printer, FakeResponder
+from lightbug_http.service import Printer
 from lightbug_http.strings import NetworkType
-from lightbug_http.tests.utils import TestStruct
+from lightbug_http.tests.utils import TestStruct, FakeResponder
 
 
 fn lightbug_benchmark_server() raises -> None:
