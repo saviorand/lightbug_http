@@ -80,6 +80,25 @@ Once you have Mojo up and running on your local machine,
 
          return OK(body)
    ```
+   Routing is not in scope for this library, but you can easily set up routes yourself:
+   ```mojo
+   @value
+   struct ExampleRouter(HTTPService):
+      fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+         let body = req.body_raw
+
+         if req.uri.path() == "/":
+               print("I'm on the index path!")
+         if req.uri.path() == "/first":
+               print("I'm on /first!")
+         elif req.uri.path() == "/second":
+               print("I'm on /second!")
+         elif req.uri.path() == "/echo":
+               print(String(body))
+
+         return OK(body)
+   ```
+   We plan to add routing in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
 3. Run `mojo main.mojo`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo
    from lightbug_http.io.bytes import Bytes
@@ -108,8 +127,8 @@ Once you have Mojo up and running on your local machine,
 
 Our vision is to develop three libraries, with `lightbug_http` (this repo) as a starting point: 
  - `lightbug_http` - HTTP infrastructure and basic API development
- - `lightbug_api` - Tools to make great APIs fast, with support for OpenAPI spec and domain driven design
- - `lightbug_web` - Full-stack web framework for Mojo, similar to NextJS or SvelteKit
+ - `lightbug_api` - (coming later in 2024!) Tools to make great APIs fast, with support for OpenAPI spec and domain driven design
+ - `lightbug_web` - (release date TBD) Full-stack web framework for Mojo, similar to NextJS or SvelteKit
 
 The idea is to get to a point where the entire codebase of a simple modern web application can be written in Mojo. 
 
