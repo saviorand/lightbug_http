@@ -59,7 +59,11 @@ struct PythonClient:
         let port = atol(host_port[1])
 
         _ = self.socket.connect((UnsafeString(host_str), port))
-        _ = self.socket.sendall(PythonObject(req.body_raw))
+
+        let data = self.pymodules.builtins.bytes(
+            String(req.body_raw), CharSet.utf8.value
+        )
+        _ = self.socket.sendall(data)
 
         let res = self.socket.recv(1024).decode()
         _ = self.socket.close()
