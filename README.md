@@ -14,6 +14,8 @@
    ![Written in Mojo][language-shield]
    [![MIT License][license-shield]][license-url]
    [![Contributors Welcome][contributors-shield]][contributors-url]
+   [![Join our Discord][discord-shield]][discord-url]
+   
    
 
   </p>
@@ -201,3 +203,5 @@ We were drawing a lot on the following projects:
 [license-url]: https://github.com/saviorand/lightbug_http/blob/main/LICENSE
 [contributors-shield]: https://img.shields.io/badge/contributors-welcome!-blue
 [contributors-url]: https://github.com/saviorand/lightbug_http#contributing
+[discord-shield]: https://img.shields.io/discord/1192127090271719495?style=flat&logo=discord&logoColor=white
+[discord-url]: https://discord.gg/VFWETkTgrr
