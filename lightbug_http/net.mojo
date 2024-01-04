@@ -7,22 +7,26 @@ alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
 trait Net(DefaultConstructible):
-    fn __init__(inout self) raises:
+    fn __init__(inout self):
         ...
 
     fn __init__(inout self, keep_alive: Duration) raises:
         ...
 
-    fn listen(inout self, network: String, addr: String) raises -> Listener:
-        ...
+    # A listen method should be implemented on structs that implement Net.
+    # Signature is not enforced for now.
+    # fn listen(inout self, network: String, addr: String) raises -> Listener:
+    #    ...
 
 
 trait ListenConfig:
     fn __init__(inout self, keep_alive: Duration) raises:
         ...
 
-    fn listen(inout self, network: String, address: String) raises -> Listener:
-        ...
+    # A listen method should be implemented on structs that implement ListenConfig.
+    # Signature is not enforced for now.
+    # fn listen(inout self, network: String, address: String) raises -> Listener:
+    #    ...
 
 
 trait Listener(Movable):
@@ -90,7 +94,6 @@ struct TCPAddr(Addr):
     var zone: String  # IPv6 addressing zone
 
     fn __init__(inout self):
-        # TODO: do these defaults make sense?
         self.ip = String("127.0.0.1")
         self.port = 8000
         self.zone = ""
@@ -109,7 +112,6 @@ struct TCPAddr(Addr):
         return join_host_port(self.ip, self.port)
 
 
-# TODO: This should return a TCPAddrList and support resolving strategy
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
     var host: String = ""
     var port: String = ""

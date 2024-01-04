@@ -1,8 +1,10 @@
 from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
+from lightbug_http.error import ErrorHandler
 from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
-from lightbug_http.net import Listener, Addr
+from lightbug_http.net import Listener, Addr, Connection, TCPAddr
 from lightbug_http.service import HTTPService, OK
+from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
 
 
@@ -15,7 +17,7 @@ fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
     return FakeListener(request_count, request)
 
 
-struct FakeServer:
+struct FakeServer(ServerTrait):
     var __listener: FakeListener
     var __handler: FakeResponder
 
@@ -23,9 +25,30 @@ struct FakeServer:
         self.__listener = listener
         self.__handler = handler
 
+    fn __init__(
+        inout self, addr: String, service: HTTPService, error_handler: ErrorHandler
+    ):
+        try:
+            self.__listener = FakeListener()
+        except e:
+            print(e)
+        self.__handler = FakeResponder()
+
+    fn get_concurrency(self) -> Int:
+        return 1
+
+    fn listen_and_serve(self, address: String, handler: HTTPService) raises -> None:
+        ...
+
     fn serve(inout self) -> None:
         while not self.__listener.closed:
-            self.__listener.accept()
+            try:
+                _ = self.__listener.accept[FakeConnection]()
+            except e:
+                print(e)
+
+    fn serve(self, ln: Listener, handler: HTTPService) raises -> None:
+        ...
 
 
 @value
@@ -38,20 +61,59 @@ struct FakeResponder(HTTPService):
 
 
 @value
-struct FakeListener:
+struct FakeConnection(Connection):
+    fn __init__(inout self, laddr: String, raddr: String) raises:
+        ...
+
+    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
+        ...
+
+    fn read(self, inout buf: Bytes) raises -> Int:
+        return 0
+
+    fn write(self, buf: Bytes) raises -> Int:
+        return 0
+
+    fn close(self) raises:
+        ...
+
+    fn local_addr(inout self) raises -> TCPAddr:
+        return TCPAddr()
+
+    fn remote_addr(self) raises -> TCPAddr:
+        return TCPAddr()
+
+
+@value
+struct FakeListener(Listener):
     var request_count: Int
     var request: Bytes
     var closed: Bool
+
+    fn __init__(inout self) raises:
+        self.request_count = 0
+        self.request = Bytes()
+        self.closed = False
+
+    fn __init__(inout self, addr: TCPAddr) raises:
+        self.request_count = 0
+        self.request = Bytes()
+        self.closed = False
 
     fn __init__(inout self, request_count: Int, request: Bytes) -> None:
         self.request_count = request_count
         self.request = request
         self.closed = False
 
-    fn accept(inout self) -> None:
-        self.request_count -= 1
-        if self.request_count == 0:
-            self.closed = True
+    @always_inline
+    fn accept[T: Connection](self) raises -> T:
+        return FakeConnection()
+
+    fn close(self) raises:
+        pass
+
+    fn addr(self) -> TCPAddr:
+        return TCPAddr()
 
 
 @value

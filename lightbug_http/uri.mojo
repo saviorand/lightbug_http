@@ -9,15 +9,6 @@ from lightbug_http.strings import (
 )
 
 
-fn normalise_path(path: Bytes, path_original: Bytes) -> Bytes:
-    # TODO: implement
-    return path
-
-
-# TODO: fn unescape()
-# TODO fn should_escape()
-
-
 @value
 struct URI:
     var __path_original: Bytes
@@ -236,10 +227,7 @@ struct URI:
         _ = self.set_scheme(proto_str)
         _ = self.set_request_uri(request_uri)
 
-    # TODO: fn parse_host()
-
     fn request_uri(self) -> Bytes:
-        # TODO: implement processing logic
         return self.__request_uri
 
     fn set_username(inout self, username: String) -> Self:
@@ -257,3 +245,8 @@ struct URI:
     fn set_password_bytes(inout self, password: Bytes) -> Self:
         self.__password = password
         return self
+
+
+fn normalise_path(path: Bytes, path_original: Bytes) -> Bytes:
+    # TODO: implement
+    return path

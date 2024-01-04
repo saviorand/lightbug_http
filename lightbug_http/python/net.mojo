@@ -50,7 +50,7 @@ struct PythonTCPListener(Listener):
         return self.__addr
 
 
-struct PythonListenConfig:
+struct PythonListenConfig(ListenConfig):
     var __pymodules: Modules
     var __keep_alive: Duration
 
@@ -124,11 +124,14 @@ struct PythonConnection(Connection):
         return TCPAddr(self.raddr[0].__str__(), self.raddr[1].__int__())
 
 
-struct PythonNet:
+struct PythonNet(Net):
     var __lc: PythonListenConfig
 
-    fn __init__(inout self) raises:
-        self.__lc = PythonListenConfig(default_tcp_keep_alive)
+    fn __init__(inout self):
+        try:
+            self.__lc = PythonListenConfig(default_tcp_keep_alive)
+        except e:
+            print("Could not initialize PythonListenConfig: " + e.__str__())
 
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__lc = PythonListenConfig(keep_alive)

@@ -32,7 +32,6 @@ struct RequestHeader:
     var __host: Bytes
     var __content_type: Bytes
     var __user_agent: Bytes
-    # TODO: var mul_header
 
     # TODO: var cookies
 
@@ -313,7 +312,6 @@ struct ResponseHeader:
     var __content_type: Bytes
     var __content_encoding: Bytes
     var __server: Bytes
-    # TODO: var mul_header
 
     # TODO: var cookies
     var __trailer: Bytes

@@ -12,7 +12,7 @@ alias rChar = String("\r")._buffer
 alias nChar = String("\n")._buffer
 
 
-# TODO: had to add this since tuples don't work with strings, to be replaced with a tuple
+# TODO: tuples don't work with strings in Mojo currently, to be replaced with a tuple
 @value
 struct TwoLines:
     var first_line: String

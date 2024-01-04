@@ -84,14 +84,10 @@ struct HTTPRequest(Request):
     # TODO: var multipart_form_boundary
 
     var parsed_uri: Bool
-    # TODO: var parsed_post_args: Bool
-    # TODO: var keep_body_buffer: Bool
 
     var server_is_tls: Bool
 
     var timeout: Duration
-
-    # TODO: var use_host_header: Bool
 
     var disable_redirect_path_normalization: Bool
 
@@ -193,8 +189,6 @@ struct HTTPResponse(Response):
     var body_raw: Bytes
 
     var skip_reading_writing_body: Bool
-
-    # TODO: var keep_body_buffer: Bool
 
     var raddr: TCPAddr
     var laddr: TCPAddr

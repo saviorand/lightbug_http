@@ -21,9 +21,6 @@ struct PythonServer:
     var pymodules: Modules
     var error_handler: ErrorHandler
 
-    # TODO: header_received
-    # TODO: continue_handler
-
     var name: String
     var max_concurrent_connections: Int
     var read_buffer_size: Int

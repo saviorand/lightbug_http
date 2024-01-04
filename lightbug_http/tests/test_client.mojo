@@ -6,7 +6,6 @@ from lightbug_http.header import RequestHeader
 from lightbug_http.tests.utils import getRequest
 
 
-# TODO: this test should run with a running server for now, we should parallelize them or make a fake server
 fn test_client_lightbug() raises:
     let client = PythonClient()
     let res = client.do(
