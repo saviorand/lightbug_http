@@ -1,7 +1,17 @@
+from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
 from lightbug_http.service import HTTPService, OK
 from lightbug_http.client import Client
+
+
+fn init_client_httpx() raises -> PythonObject:
+    let httpx = Python.import_module("httpx")
+    return httpx
+
+
+fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
+    return FakeListener(request_count, request)
 
 
 struct FakeServer:
@@ -98,7 +108,3 @@ alias getRequest = String(
     + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
     " aa=aakslsdweriwereowriewroire\r\n\r\n"
 )._buffer
-
-
-fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
-    return FakeListener(request_count, request)
