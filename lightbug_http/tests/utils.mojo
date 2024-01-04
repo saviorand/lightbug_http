@@ -1,6 +1,7 @@
 from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
+from lightbug_http.uri import URI
 from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
 from lightbug_http.net import Listener, Addr, Connection, TCPAddr
 from lightbug_http.service import HTTPService, OK
@@ -15,6 +16,69 @@ fn new_httpx_client() raises -> PythonObject:
 
 fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
     return FakeListener(request_count, request)
+
+
+struct ReqInfo:
+    var full_uri: URI
+    var host: String
+    var is_tls: Bool
+
+    fn __init__(inout self, full_uri: URI, host: String, is_tls: Bool):
+        self.full_uri = full_uri
+        self.host = host
+        self.is_tls = is_tls
+
+
+struct FakeClient(Client):
+    """FakeClient doesn't actually send any requests, but it extracts useful information from the input.
+    """
+
+    var name: String
+    var host: StringLiteral
+    var port: Int
+    var req_full_uri: URI
+    var req_host: String
+    var req_is_tls: Bool
+
+    fn __init__(inout self) raises:
+        self.host = "127.0.0.1"
+        self.port = 8888
+        self.name = "lightbug_http_fake_client"
+        self.req_full_uri = URI("")
+        self.req_host = ""
+        self.req_is_tls = False
+
+    fn __init__(inout self, host: StringLiteral, port: Int) raises:
+        self.host = host
+        self.port = port
+        self.name = "lightbug_http_fake_client"
+        self.req_full_uri = URI("")
+        self.req_host = ""
+        self.req_is_tls = False
+
+    fn do(self, req: HTTPRequest) raises -> HTTPResponse:
+        return OK(String(defaultExpectedGetResponse)._buffer)
+
+    fn extract(inout self, req: HTTPRequest) raises -> ReqInfo:
+        var full_uri = req.uri()
+        try:
+            _ = full_uri.parse()
+        except e:
+            print("error parsing uri: " + e.__str__())
+
+        self.req_full_uri = full_uri
+
+        let host = String(full_uri.host())
+
+        if host == "":
+            raise Error("URI host is nil")
+
+        self.req_host = host
+
+        let is_tls = full_uri.is_https()
+        self.req_is_tls = is_tls
+
+        return ReqInfo(full_uri, host, is_tls)
 
 
 struct FakeServer(ServerTrait):
@@ -162,3 +226,7 @@ alias getRequest = String(
     + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
     " aa=aakslsdweriwereowriewroire\r\n\r\n"
 )._buffer
+
+alias defaultExpectedGetResponse = String(
+    "HTTP/1.1 200 OK\r\nServer: M\r\nDate: Content-Length: 13\r\n\r\nHello world!"
+)
