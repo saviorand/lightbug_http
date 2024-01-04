@@ -6,33 +6,48 @@ alias default_buffer_size = 4096
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
-trait Net:
-    fn listen(inout self, network: NetworkType, addr: String) raises -> Listener:
+trait Net(DefaultConstructible):
+    fn __init__(inout self) raises:
+        ...
+
+    fn __init__(inout self, keep_alive: Duration) raises:
+        ...
+
+    fn listen(inout self, network: String, addr: String) raises -> Listener:
         ...
 
 
 trait ListenConfig:
-    fn __init__(inout self, keep_alive: Duration):
-        # TODO: support mptcp?
+    fn __init__(inout self, keep_alive: Duration) raises:
         ...
 
-    fn listen(inout self, network: NetworkType, address: String) raises -> Listener:
-        ...
-
-
-trait Listener(CollectionElement):
-    fn __init__(inout self):
-        ...
-
-    fn accept(self) raises -> Connection:
-        ...
-
-    fn addr(self) -> Addr:
+    fn listen(inout self, network: String, address: String) raises -> Listener:
         ...
 
 
-trait Connection:
-    fn __init__(inout self, conn_addr: Tuple) raises:
+trait Listener(Movable):
+    fn __init__(inout self) raises:
+        ...
+
+    fn __init__(inout self, addr: TCPAddr) raises:
+        ...
+
+    @always_inline
+    fn accept[T: Connection](self) raises -> T:
+        ...
+
+    fn close(self) raises:
+        ...
+
+    fn addr(self) -> TCPAddr:
+        ...
+
+
+trait Connection(Movable):
+    fn __init__(inout self, laddr: String, raddr: String) raises:
+        ...
+
+    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
         ...
 
     fn read(self, inout buf: Bytes) raises -> Int:
@@ -44,10 +59,10 @@ trait Connection:
     fn close(self) raises:
         ...
 
-    fn local_addr(self) -> Addr:
+    fn local_addr(inout self) raises -> TCPAddr:
         ...
 
-    fn remote_addr(self) -> Addr:
+    fn remote_addr(self) raises -> TCPAddr:
         ...
 
 

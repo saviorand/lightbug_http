@@ -1,11 +1,12 @@
 from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.net import Listener, Addr
 from lightbug_http.service import HTTPService, OK
 from lightbug_http.client import Client
 
 
-fn init_client_httpx() raises -> PythonObject:
+fn new_httpx_client() raises -> PythonObject:
     let httpx = Python.import_module("httpx")
     return httpx
 
@@ -30,9 +31,9 @@ struct FakeServer:
 @value
 struct FakeResponder(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        # let method = String(req.header.method())
-        # if method != "GET":
-        #     raise Error("Did not expect a non-GET request! Got: " + method)
+        let method = String(req.header.method())
+        if method != "GET":
+            raise Error("Did not expect a non-GET request! Got: " + method)
         return OK(String("Hello, world!")._buffer)
 
 
@@ -51,15 +52,6 @@ struct FakeListener:
         self.request_count -= 1
         if self.request_count == 0:
             self.closed = True
-
-
-@value
-struct TestClient(Client):
-    fn __init__(inout self):
-        ...
-
-    fn get(inout self, request: HTTPRequest) -> HTTPResponse:
-        return HTTPResponse(ResponseHeader(), String("Nice")._buffer)
 
 
 @value

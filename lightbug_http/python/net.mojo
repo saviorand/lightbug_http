@@ -15,12 +15,21 @@ from lightbug_http.net import Connection, default_tcp_keep_alive
 from lightbug_http.strings import NetworkType, CharSet
 
 
-# TODO: This should implement Listener once Mojo supports automatically returning a trait from implementation
 @value
-struct PythonTCPListener(CollectionElement):
+struct PythonTCPListener(Listener):
     var __pymodules: PythonObject
     var __addr: TCPAddr
     var socket: PythonObject
+
+    fn __init__(inout self) raises:
+        self.__pymodules = None
+        self.__addr = TCPAddr("localhost", 8080)
+        self.socket = None
+
+    fn __init__(inout self, addr: TCPAddr) raises:
+        self.__pymodules = None
+        self.__addr = addr
+        self.socket = None
 
     fn __init__(inout self, pymodules: PythonObject, addr: TCPAddr) raises:
         self.__pymodules = pymodules
@@ -28,9 +37,7 @@ struct PythonTCPListener(CollectionElement):
         self.socket = None
 
     @always_inline
-    fn accept(self) raises -> PythonConnection:
-        # if self.socket == None:
-        # raise Error("socket is None, cannot accept")
+    fn accept[T: Connection](self) raises -> T:
         let conn_addr = self.socket.accept()
         return PythonConnection(self.__pymodules, conn_addr)
 
@@ -68,14 +75,26 @@ struct PythonListenConfig:
         return listener
 
 
-struct PythonConnection:
+@value
+struct PythonConnection(Connection):
     var pymodules: PythonObject
     var conn: PythonObject
     var raddr: PythonObject
     var laddr: PythonObject
 
-    fn __init__(inout self, pymodules: PythonObject, conn_addr: PythonObject) raises:
-        let py_conn_addr = conn_addr
+    fn __init__(inout self, laddr: String, raddr: String) raises:
+        self.conn = None
+        self.raddr = PythonObject(raddr)
+        self.laddr = PythonObject(laddr)
+        self.pymodules = Modules().builtins
+
+    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
+        self.conn = None
+        self.raddr = PythonObject(raddr.ip + ":" + raddr.port)
+        self.laddr = PythonObject(laddr.ip + ":" + laddr.port)
+        self.pymodules = Modules().builtins
+
+    fn __init__(inout self, pymodules: PythonObject, py_conn_addr: PythonObject) raises:
         self.conn = py_conn_addr[0]
         self.raddr = py_conn_addr[1]
         self.laddr = ""

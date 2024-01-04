@@ -3,7 +3,12 @@ from lightbug_http.net import Listener
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import ResponseHeader, RequestHeader
-from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, PythonNet
+from lightbug_http.python.net import (
+    PythonTCPListener,
+    PythonListenConfig,
+    PythonNet,
+    PythonConnection,
+)
 from lightbug_http.python import Modules
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
@@ -51,8 +56,7 @@ struct PythonServer:
     var close_on_shutdown: Bool
     var stream_request_body: Bool
 
-    # TODO: support multiple listeners
-    var ln: DynamicVector[PythonTCPListener]
+    var ln: PythonTCPListener
 
     var open: Atomic[DType.int32]
     var stop: Atomic[DType.int32]
@@ -93,7 +97,7 @@ struct PythonServer:
         self.close_on_shutdown = False
         self.stream_request_body = False
 
-        self.ln = DynamicVector[PythonTCPListener]()
+        self.ln = PythonTCPListener()
         self.open = 0
         self.stop = 0
 
@@ -133,7 +137,7 @@ struct PythonServer:
         self.close_on_shutdown = False
         self.stream_request_body = False
 
-        self.ln = DynamicVector[PythonTCPListener]()
+        self.ln = PythonTCPListener()
         self.open = 0
         self.stop = 0
 
@@ -156,10 +160,10 @@ struct PythonServer:
         # let max_worker_count = self.get_concurrency()
         # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
 
-        self.ln.append(ln)
+        self.ln = ln
 
         while True:
-            let conn = self.ln[0].accept()
+            let conn = self.ln.accept[PythonConnection]()
             self.open.__iadd__(1)
             var buf = Bytes()
             let read_len = conn.read(buf)

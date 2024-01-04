@@ -1,6 +1,7 @@
 from python import Python, PythonObject
 
 
+@value
 struct Modules:
     var builtins: PythonObject
     var socket: PythonObject

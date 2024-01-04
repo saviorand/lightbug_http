@@ -10,7 +10,7 @@ fn test_request_simple_url[T: Client](inout client: T) raises -> None:
     Validate that we get a 200 OK response.
     """
     let uri = URI("http", "localhost", "/123")
-    let response = client.get(HTTPRequest(uri))
+    let response = client.do(HTTPRequest(uri))
     testing.assert_equal(response.header.status_code(), 200)
 
 
@@ -23,7 +23,7 @@ fn test_request_simple_url_with_parameters[T: Client](inout client: T) raises ->
     let uri = URI("http", "localhost", "/123")
     # uri.add_query_parameter("foo", "bar")
     # uri.add_query_parameter("baz", "qux")
-    let response = client.get(HTTPRequest(uri))
+    let response = client.do(HTTPRequest(uri))
     testing.assert_equal(response.header.status_code(), 200)
 
 
@@ -35,7 +35,7 @@ fn test_request_simple_url_with_headers[T: Client](inout client: T) raises -> No
     let uri = URI("http", "localhost", "/123")
     let request = HTTPRequest(uri)
     # request.header.add("foo", "bar")
-    let response = client.get(request)
+    let response = client.do(request)
     testing.assert_equal(response.header.status_code(), 200)
 
 

@@ -1,3 +1,4 @@
+from lightbug_http.client import Client
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import ResponseHeader, RequestHeader
@@ -10,19 +11,13 @@ from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import next_line, NetworkType, strHttp, CharSet
 
 
-struct PythonClient:
+struct PythonClient(Client):
     var pymodules: Modules
     var socket: PythonObject
     var name: String
 
     var host: StringLiteral
     var port: Int
-
-    # var no_default_user_agent_header: Bool
-    # var max_connections_per_host: Int
-    # var max_idle_connection_duration: Duration
-    # var max_connection_duration: Duration
-    # var max_idemponent_call_attempts: Int
 
     fn __init__(inout self) raises:
         self.pymodules = Modules()
