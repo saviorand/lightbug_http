@@ -9,9 +9,30 @@ from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
 
 
-fn new_httpx_client() raises -> PythonObject:
-    let httpx = Python.import_module("httpx")
-    return httpx
+alias default_server_host = "localhost"
+alias default_server_port = 8080
+alias default_server_conn_string = "http://" + default_server_host + ":" + default_server_port.__str__()
+
+alias getRequest = String(
+    "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
+    " Firefox Chrome MSIE Opera\r\n"
+    + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
+    " aa=aakslsdweriwereowriewroire\r\n\r\n"
+)._buffer
+
+alias defaultExpectedGetResponse = String(
+    "HTTP/1.1 200 OK\r\nServer: M\r\nDate: Content-Length: 13\r\n\r\nHello world!"
+)
+
+
+@parameter
+fn new_httpx_client() -> PythonObject:
+    try:
+        let httpx = Python.import_module("httpx")
+        return httpx
+    except e:
+        print("Could not set up httpx client: " + e.__str__())
+        return None
 
 
 fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
@@ -218,15 +239,3 @@ struct TestStructNested:
 
     fn set_a_copy(self, a: String) -> Self:
         return Self(a, self.b)
-
-
-alias getRequest = String(
-    "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
-    " Firefox Chrome MSIE Opera\r\n"
-    + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
-    " aa=aakslsdweriwereowriewroire\r\n\r\n"
-)._buffer
-
-alias defaultExpectedGetResponse = String(
-    "HTTP/1.1 200 OK\r\nServer: M\r\nDate: Content-Length: 13\r\n\r\nHello world!"
-)

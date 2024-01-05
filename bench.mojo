@@ -1,5 +1,6 @@
 import benchmark
 from benchmark import Unit
+from python import Python
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.python.net import PythonNet
 from lightbug_http.python.server import PythonServer
@@ -9,10 +10,34 @@ from lightbug_http.tests.utils import (
     TestStruct,
     FakeResponder,
     new_fake_listener,
+    new_httpx_client,
     FakeListener,
     FakeServer,
     getRequest,
 )
+
+
+fn lightbug_benchmark_get_1req_per_conn():
+    let httpx = new_httpx_client()
+
+    @parameter
+    fn httpx_get() -> None:
+        # let client = new_httpx_client()
+        try:
+            let response = httpx.get("http://0.0.0.0:8080")
+        except e:
+            print("Error making request: " + e.__str__())
+
+    try:
+        let req_report = benchmark.run[httpx_get]()
+        print("Request: ")
+        req_report.print(Unit.ms)
+    except e:
+        print("Error importing httpx: " + e.__str__())
+
+
+fn main():
+    lightbug_benchmark_get_1req_per_conn()
 
 
 fn lightbug_benchmark_server():
