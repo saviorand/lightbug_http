@@ -159,32 +159,6 @@ struct Inet4SockAddr(SockAddr):
         # return SockAddrOutput(ptr, len)
 
 
-# func (sa *SockaddrInet4) sockaddr() (unsafe.Pointer, _Socklen, error) {
-# 	if sa.Port < 0 || sa.Port > 0xFFFF {
-# 		return nil, 0, EINVAL
-# 	}
-# 	sa.raw.Family = AF_INET
-# 	p := (*[2]byte)(unsafe.Pointer(&sa.raw.Port))
-# 	p[0] = byte(sa.Port >> 8)
-# 	p[1] = byte(sa.Port)
-# 	sa.raw.Addr = sa.Addr
-# 	return unsafe.Pointer(&sa.raw), SizeofSockaddrInet4, nil
-# }
-
-# func (sa *SockaddrInet6) sockaddr() (unsafe.Pointer, _Socklen, error) {
-# 	if sa.Port < 0 || sa.Port > 0xFFFF {
-# 		return nil, 0, EINVAL
-# 	}
-# 	sa.raw.Family = AF_INET6
-# 	p := (*[2]byte)(unsafe.Pointer(&sa.raw.Port))
-# 	p[0] = byte(sa.Port >> 8)
-# 	p[1] = byte(sa.Port)
-# 	sa.raw.Scope_id = sa.ZoneId
-# 	sa.raw.Addr = sa.Addr
-# 	return unsafe.Pointer(&sa.raw), SizeofSockaddrInet6, nil
-# }
-
-
 @value
 struct PollFileDescriptor:
     var fd: FileDescriptor
