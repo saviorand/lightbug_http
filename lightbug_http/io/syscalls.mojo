@@ -1,6 +1,16 @@
 from collections.vector import DynamicVector
 
-# courtesy https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/
+alias EPROTONOSUPPORT = 93
+
+
+fn sys_close(fd: Int) raises:
+    # let s = external_call["socket", Int, Int, Int, Int](family, type, proto)
+    let result = external_call["close", Int, Int](fd)
+    if result == -1:
+        raise Error("close failed")
+
+
+# below code courtesy https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/
 
 # Types aliases
 alias void = UInt8

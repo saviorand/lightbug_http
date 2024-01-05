@@ -5,6 +5,7 @@ alias O_RDWR = 0o2
 
 # This is a simple wrapper around POSIX-style fcntl.h functions.
 # thanks to https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/ for the original read implementation!
+@value
 struct FileDescriptor:
     var fd: Int
 
