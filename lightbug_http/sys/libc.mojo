@@ -1,3 +1,5 @@
+from benchmark import time_function
+
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
@@ -1683,11 +1685,10 @@ fn __test_socket_server__() raises:
     if send(new_sockfd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
         print("Failed to send response")
     print("Message sent succesfully")
-    let close_status = close(new_sockfd)
-    if close_status == -1:
-        print("Failed to close new_sockfd")
-    # _ = shutdown(sockfd, SHUT_RDWR)
-    # close(new_fd)
+    # let close_status = close(new_sockfd)
+    # if close_status == -1:
+    # print("Failed to close new_sockfd")
+    _ = shutdown(sockfd, SHUT_RDWR)
 
 
 # fn __test_file__():
