@@ -10,7 +10,7 @@ from lightbug_http.sys.libc import __test_socket_client__
 
 
 fn lightbug_benchmark_get_1req_per_conn():
-    let req_report = benchmark.run[__test_socket_client__](1, 1)
+    let req_report = benchmark.run[__test_socket_client__](1, 10000, 0, 3, 100)
     print("Request: ")
     req_report.print(benchmark.Unit.ns)
 
