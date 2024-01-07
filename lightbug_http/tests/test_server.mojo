@@ -34,6 +34,7 @@ from lightbug_http.sys.libc import (
     bind,
     listen,
     accept,
+    close,
     shutdown,
     sizeof,
     to_char_ptr,
@@ -121,8 +122,11 @@ fn __test_socket_server__() raises:
             print("Failed to send response")
         print("Message sent succesfully")
 
-        # After handling the connection, you can close the new socket
+        # Close the connection-specific socket after handling the connection
         _ = shutdown(new_sockfd, SHUT_RDWR)
+        let close_status = close(new_sockfd)
+        if close_status == -1:
+            print("Failed to close new_sockfd")
 
     # Optionally, close the main server socket if you ever exit the loop
     # close(sockfd)

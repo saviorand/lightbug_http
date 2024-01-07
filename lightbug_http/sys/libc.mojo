@@ -1,5 +1,3 @@
-from benchmark import time_function
-
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
@@ -1594,21 +1592,34 @@ fn __test_socket_client__():
 
     if connect(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sockfd, SHUT_RDWR)
+        print("Connection error")
+        return  # Ensure to exit if connection fails
 
     let msg = to_char_ptr("Hello, world Server")
     let bytes_sent = send(sockfd, msg, strlen(msg), 0)
+    # if bytes_sent == -1:
+    #     _ = shutdown(sockfd, SHUT_RDWR)
+    #     print("failed to send message\n")
     if bytes_sent == -1:
-        _ = shutdown(sockfd, SHUT_RDWR)
-        print("failed to send message\n")
-
+        print("Failed to send message")
+    else:
+        print("Message sent")
     let buf_size = 1024
     var buf = Pointer[UInt8]().alloc(buf_size)
     let bytes_recv = recv(sockfd, buf, buf_size, 0)
     if bytes_recv == -1:
-        _ = shutdown(sockfd, SHUT_RDWR)
-        print("failed to receive message\n")
-    print("Recived Message: ")
-    print(String(buf.bitcast[Int8](), bytes_recv))
+        print("Failed to receive message")
+    else:
+        print("Received Message: ")
+        print(String(buf.bitcast[Int8](), bytes_recv))
+
+    # Properly close the socket
+    _ = shutdown(sockfd, SHUT_RDWR)
+    let close_status = close(sockfd)
+    if close_status == -1:
+        print("Failed to close socket")
+
+    # Optionally deallocate or handle `buf` and other resources if needed
 
 
 fn __test_socket_server__() raises:
@@ -1685,10 +1696,11 @@ fn __test_socket_server__() raises:
     if send(new_sockfd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
         print("Failed to send response")
     print("Message sent succesfully")
-    # let close_status = close(new_sockfd)
-    # if close_status == -1:
-    # print("Failed to close new_sockfd")
     _ = shutdown(sockfd, SHUT_RDWR)
+
+    let close_status = close(new_sockfd)
+    if close_status == -1:
+        print("Failed to close new_sockfd")
 
 
 # fn __test_file__():
