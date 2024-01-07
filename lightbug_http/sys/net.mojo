@@ -11,20 +11,24 @@ from lightbug_http.strings import NetworkType
 from lightbug_http.io.fd import FileDescriptor
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.syscalls import EPROTONOSUPPORT, EINVAL, sys_close
+from lightbug_http.sys.libc import (
+    EPROTONOSUPPORT,
+    EINVAL,
+    AF_INET,
+    AF_INET6,
+    AF_UNIX,
+    IPPROTO_IPV6,
+    IPV6_V6ONLY,
+    SOCK_CLOEXEC,
+    SOCK_STREAM,
+    SOL_SOCKET,
+    SO_BROADCAST,
+    SOCK_NONBLOCK,
+    SOCK_DGRAM,
+    SOCK_RAW,
+    close,
+)
 
-alias AF_INET = 2
-alias AF_INET6 = 10
-alias AF_UNIX = 1
-alias SOCK_NONBLOCK = 2048
-alias SOCK_CLOEXEC = 524288
-alias SOCK_STREAM = 1
-alias SOCK_DGRAM = 2
-alias SOCK_RAW = 3
-alias IPPROTO_IPV6 = 41
-alias IPV6_V6ONLY = 26
-alias SOL_SOCKET = 1
-alias SO_BROADCAST = 6
 
 alias __sock_len = UInt32
 
@@ -48,7 +52,9 @@ fn internet_socket(
         return new_net_fd(s, family, sotype, network)
 
     except e:
-        sys_close(s)
+        let close_status = close(s)
+        if close_status != 0:
+            print("Could not close socket")
         raise Error("Could not create socket, got this error: " + e.__str__())
 
 

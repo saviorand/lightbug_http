@@ -16,6 +16,8 @@ from lightbug_http.tests.utils import (
     getRequest,
 )
 
+from lightbug_http.sys.libc import __test_socket_server__, __test_socket_client__
+
 
 fn lightbug_benchmark_get_1req_per_conn():
     let httpx = new_httpx_client()
@@ -37,7 +39,12 @@ fn lightbug_benchmark_get_1req_per_conn():
 
 
 fn main():
-    lightbug_benchmark_get_1req_per_conn()
+    # lightbug_benchmark_get_1req_per_conn()
+    try:
+        # __test_socket_server__()
+        __test_socket_client__()
+    except e:
+        print("Error running test server: " + e.__str__())
 
 
 fn lightbug_benchmark_server():

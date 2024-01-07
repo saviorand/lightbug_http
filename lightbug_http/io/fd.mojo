@@ -1,4 +1,4 @@
-import lightbug_http.io.syscalls as c
+from lightbug_http.sys.libc import Str, c_ssize_t, c_size_t, c_int, char_pointer
 
 alias O_RDWR = 0o2
 
@@ -32,10 +32,10 @@ struct FileDescriptor:
 
     fn read(self) raises -> String:
         alias buffer_size: Int = 2**13
-        let buffer: c.Str
-        with c.Str(size=buffer_size) as buffer:
-            let read_count: c.ssize_t = external_call[
-                "read", c.ssize_t, c.int, c.char_pointer, c.size_t
+        let buffer: Str
+        with Str(size=buffer_size) as buffer:
+            let read_count: c_ssize_t = external_call[
+                "read", c_ssize_t, c_int, char_pointer, c_size_t
             ](self.fd, buffer.vector.data, buffer_size)
 
             if read_count == -1:
@@ -52,10 +52,10 @@ struct FileDescriptor:
             return buffer.to_string(read_count)
 
     fn write(self, data: String) raises -> Int:
-        let buffer: c.Str
-        with c.Str(data) as buffer:
-            let write_count: c.ssize_t = external_call[
-                "write", c.ssize_t, c.int, c.char_pointer, c.size_t
+        let buffer: Str
+        with Str(data) as buffer:
+            let write_count: c_ssize_t = external_call[
+                "write", c_ssize_t, c_int, char_pointer, c_size_t
             ](self.fd, buffer.vector.data, data.__len__())
 
             if write_count == -1:
