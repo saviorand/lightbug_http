@@ -1,6 +1,5 @@
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.service import Printer
 from lightbug_http.sys.server import SysServer
+from lightbug_http.service import Printer
 
 
 fn main() raises:

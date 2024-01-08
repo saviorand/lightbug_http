@@ -28,6 +28,7 @@ Lightbug is a simple and sweet HTTP framework for Mojo that builds on best pract
 This is not production ready yet. We're aiming to keep up with new developments in Mojo, but it might take some time to get to a point when this is safe to use in real-world applications.
 
 Lightbug currently has the following features:
+ - [x] Pure Mojo networking! No dependencies on Python by default
  - [x] Set up a server to listen on a given host/port
  - [x] Assign your own custom handler to a route
  - [x] Craft HTTP requests and responses with built-in primitives
@@ -35,7 +36,6 @@ Lightbug currently has the following features:
 
 
 We're working on support for the following (contributors welcome!):
- - [ ] Pure Mojo networking (while most of the code is in Mojo, we call Python's `socket` library in several parts of the code)
  - [ ] Better error handling, improved form/multipart and JSON support
  - [ ] Multiple simultaneous connections, parallelization and performance optimizations
  - [ ] WebSockets, HTTP 2.0
@@ -104,22 +104,25 @@ Once you have Mojo up and running on your local machine,
    We plan to add routing in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
 3. Run `mojo main.mojo`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo
-   from lightbug_http.io.bytes import Bytes
-   from lightbug_http.python.server import PythonServer
+   from lightbug_http.sys.server import SysServer
    from lightbug_http.service import Printer
 
 
    fn main() raises:
-      var server = PythonServer()
+      var server = SysServer()
       let handler = Printer()
       server.listen_and_serve("0.0.0.0:8080", handler)
    ```
-
    Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
+## Switching between pure Mojo and Python implementations
+By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `SysServer` with the following line:
+```mojo
+from lightbug_http.python.server import PythonServer
+```
+You can then use all the regular server commands in the same way as with the default server.
 
 <!-- ROADMAP -->
 ## Roadmap
