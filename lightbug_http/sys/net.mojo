@@ -412,14 +412,12 @@ struct SysConnection(Connection):
         return bytes_recv
 
     fn write(self, buf: Bytes) raises -> Int:
-        print("writing")
         let msg = String(buf)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             print("Failed to send response")
         return len(buf)
 
     fn close(self) raises:
-        print("closing connection")
         _ = shutdown(self.fd, SHUT_RDWR)
         let close_status = close(self.fd)
         if close_status == -1:
