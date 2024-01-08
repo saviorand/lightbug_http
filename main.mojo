@@ -1,5 +1,4 @@
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.python.server import PythonServer
 from lightbug_http.service import Printer
 from lightbug_http.sys.server import SysServer
 
