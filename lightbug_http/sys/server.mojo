@@ -154,7 +154,6 @@ struct SysServer:
             self.open.__iadd__(1)
             var buf = Bytes()
             let read_len = conn.read(buf)
-
             # Extract the first line (request line) and the rest of the headers
             let first_line_and_headers = next_line(buf)
             let request_line = first_line_and_headers.first_line

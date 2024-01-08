@@ -6,6 +6,7 @@ from lightbug_http.net import (
     TCPAddr,
     Net,
     resolve_internet_addr,
+    default_buffer_size,
     default_tcp_keep_alive,
 )
 from lightbug_http.strings import NetworkType
@@ -296,6 +297,8 @@ struct SysListener(Listener):
         let new_sockfd = accept(
             self.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
         )
+        if new_sockfd == -1:
+            print("Failed to accept connection")
         # TODO: pass raddr to connection
         return SysConnection(self.__addr, TCPAddr("", 0), new_sockfd)
 
@@ -400,19 +403,23 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        # TODO: make this compliant with read signature
-        let buf_size = 1024
-        var buf_ptr = Pointer[UInt8]().alloc(buf_size)
-        let bytes_recv = recv(self.fd, buf_ptr, buf_size, 0)
+        var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
+        let bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
+        if bytes_recv == -1:
+            print("Failed to receive message")
+        let bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
+        buf = bytes_str._buffer
         return bytes_recv
 
     fn write(self, buf: Bytes) raises -> Int:
+        print("writing")
         let msg = String(buf)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             print("Failed to send response")
         return len(buf)
 
     fn close(self) raises:
+        print("closing connection")
         _ = shutdown(self.fd, SHUT_RDWR)
         let close_status = close(self.fd)
         if close_status == -1:
