@@ -18,6 +18,16 @@ struct Printer(HTTPService):
 
 
 @value
+struct Welcome(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        let html: String
+        with open("static/lightbug_welcome.html", "r") as f:
+            html = f.read()
+
+        return OK(html._buffer, "text/html")
+
+
+@value
 struct ExampleRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         let body = req.body_raw

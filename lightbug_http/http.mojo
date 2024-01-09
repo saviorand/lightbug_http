@@ -246,6 +246,12 @@ fn OK(body: Bytes) -> HTTPResponse:
     )
 
 
+fn OK(body: Bytes, content_type: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, String("OK")._buffer, content_type._buffer), body
+    )
+
+
 fn encode(res: HTTPResponse) -> Bytes:
     var res_str = String()
     let protocol = strHttp11

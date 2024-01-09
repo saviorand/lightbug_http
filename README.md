@@ -52,10 +52,10 @@ The plan is to get to a feature set similar to Python frameworks like [Starlette
 <!-- GETTING STARTED -->
 ## Getting Started
 
-The only hard dependency for `lightbug_http` is Mojo. 
-Learn how to set it up on the [Modular website](https://www.modular.com/max/mojo).
+The only hard dependencies for `lightbug_http` are Mojo and [Git](https://docs.github.com/en/get-started/getting-started-with-git). 
+Learn how to get up and running with Mojo on the [Modular website](https://www.modular.com/max/mojo).
 
-Once you have Mojo up and running on your local machine,
+Once you have Mojo set up locally,
 
 1. Clone the repo
    ```sh
@@ -64,6 +64,18 @@ Once you have Mojo up and running on your local machine,
    Alternatively, start the project in Github Codespaces for quick setup:
 
    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
+2. Switch to the project directory:
+   ```bash
+   cd lightbug_http
+   ```
+   then run:
+   ```bash
+   mojo lightbug.🔥
+   ```
+   
+   Open `localhost:8080` in your browser. You should see a welcome screen. 
+   
+   Congrats 🥳 You're using Lightbug!
 2. Add your handler in `lightbug.🔥` by passing a struct that satisfies the following trait:
    ```mojo
    trait HTTPService:
