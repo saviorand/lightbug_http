@@ -8,7 +8,7 @@
   <h3 align="center">Lightbug</h3>
 
   <p align="center">
-    Simple and fast HTTP framework for Mojo! 🔥
+    🐝 A Mojo HTTP framework with wings 🔥
     <br/>
 
    ![Written in Mojo][language-shield]
