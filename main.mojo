@@ -1,5 +1,4 @@
-from lightbug_http.sys.server import SysServer
-from lightbug_http.service import Printer
+from lightbug_http import *
 
 
 fn main() raises:

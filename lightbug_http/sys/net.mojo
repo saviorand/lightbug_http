@@ -332,10 +332,7 @@ struct SysListenConfig(ListenConfig):
         let conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
         let raw_ip = ip_buf.bitcast[c_uint]().load()
 
-        print("inet_pton: " + raw_ip.__str__() + " :: status: " + conv_status.__str__())
-
         let bin_port = htons(UInt16(addr.port))
-        print("htons: " + "\n" + bin_port.__str__())
 
         var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
         let ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
@@ -343,20 +340,15 @@ struct SysListenConfig(ListenConfig):
         let sockfd = socket(address_family, SOCK_STREAM, 0)
         if sockfd == -1:
             print("Socket creation error")
-        print("sockfd: " + "\n" + sockfd.__str__())
 
         var yes: Int = 1
-        if (
-            setsockopt(
-                sockfd,
-                SOL_SOCKET,
-                SO_REUSEADDR,
-                Pointer[Int].address_of(yes).bitcast[c_void](),
-                sizeof[Int](),
-            )
-            == -1
-        ):
-            print("set socket options failed")
+        _ = setsockopt(
+            sockfd,
+            SOL_SOCKET,
+            SO_REUSEADDR,
+            Pointer[Int].address_of(yes).bitcast[c_void](),
+            sizeof[Int](),
+        )
 
         if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
             # close(sockfd)
@@ -368,15 +360,8 @@ struct SysListenConfig(ListenConfig):
 
         let listener = SysListener(addr, sockfd)
 
-        print(
-            "Listening on "
-            + addr.ip
-            + ":"
-            + addr.port.__str__()
-            + " on sockfd "
-            + sockfd.__str__()
-            + "Waiting for connections..."
-        )
+        print("🔥🐝 Lightbug is listening on " + addr.ip + ":" + addr.port.__str__())
+        print("Ready to accept connections...")
 
         return listener
 
@@ -403,7 +388,7 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
+        let new_buf = Pointer[UInt8]().alloc(default_buffer_size)
         let bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
             print("Failed to receive message")
