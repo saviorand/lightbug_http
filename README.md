@@ -59,7 +59,7 @@ Once you have Mojo up and running on your local machine,
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/saviorand/mojo-web
+   git clone https://github.com/saviorand/lightbug_http.git
    ```
    Alternatively, start the project in Github Codespaces for quick setup:
 
