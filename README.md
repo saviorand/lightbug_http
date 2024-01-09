@@ -64,7 +64,7 @@ Once you have Mojo up and running on your local machine,
    Alternatively, start the project in Github Codespaces for quick setup:
 
    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
-2. Add your handler in `main.mojo` by passing a struct that satisfies the following trait:
+2. Add your handler in `lightbug.🔥` by passing a struct that satisfies the following trait:
    ```mojo
    trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -102,7 +102,7 @@ Once you have Mojo up and running on your local machine,
    ```
    
    We plan to add routing in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
-3. Run `mojo main.mojo`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
+3. Run `mojo lightbug.🔥`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo
    from lightbug_http.sys.server import SysServer
    from lightbug_http.service import Printer
