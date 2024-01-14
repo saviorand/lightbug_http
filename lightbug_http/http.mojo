@@ -1,3 +1,5 @@
+from time import now
+from external.morrow import Morrow
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.uri import URI
 from lightbug_http.args import Args
@@ -255,9 +257,15 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
 fn encode(res: HTTPResponse) -> Bytes:
     var res_str = String()
     let protocol = strHttp11
+    var current_time = String()
+    try:
+        current_time = Morrow.utcnow().__str__()
+    except e:
+        print("Error getting current time: " + e.__str__())
+        current_time = now().__str__()
     res_str += protocol
     res_str += String(" ")
-    res_str += String(res.header.status_code())
+    res_str += res.header.status_code().__str__()
     res_str += String(" ")
     res_str += String(res.header.status_message())
     res_str += String("\r\n")
@@ -270,13 +278,16 @@ fn encode(res: HTTPResponse) -> Bytes:
     res_str += String("\r\n")
     res_str += String("Content-Length: ")
     # TODO: fix this
-    res_str += String((res.body_raw.__len__() - 1).__str__())
+    res_str += (res.body_raw.__len__() - 1).__str__()
     res_str += String("\r\n")
     res_str += String("Connection: ")
     if res.connection_close():
         res_str += String("close")
     else:
         res_str += String("keep-alive")
+    res_str += String("\r\n")
+    res_str += String("Date: ")
+    res_str += current_time
     res_str += String("\r\n")
     res_str += String("\r\n")
     res_str += res.body_raw
