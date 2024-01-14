@@ -43,3 +43,19 @@ struct ExampleRouter(HTTPService):
             print(String(body))
 
         return OK(body)
+
+
+@value
+struct TechEmpowerRouter(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        let body = req.body_raw
+        let uri = req.uri()
+
+        if uri.path() == "/plaintext":
+            return OK(String("Hello world!")._buffer, "text/plain")
+        elif uri.path() == "/json":
+            return OK(
+                String('{"message": "Hello, World!"}')._buffer, "application/json"
+            )
+
+        return OK(String("Hello world!")._buffer, "text/plain")

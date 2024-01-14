@@ -1664,7 +1664,7 @@ fn __test_socket_server__() raises:
     if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
         # close(sockfd)
         _ = shutdown(sockfd, SHUT_RDWR)
-        print("Binding socket failed")
+        print("Binding socket failed. Wait a few seconds and try again.")
 
     if listen(sockfd, c_int(128)) == -1:
         print("Listen failed.\n on sockfd " + sockfd.__str__())

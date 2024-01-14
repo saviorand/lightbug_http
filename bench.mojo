@@ -1,4 +1,6 @@
 import benchmark
+from lightbug_http.sys.server import SysServer
+from lightbug_http.service import TechEmpowerRouter
 from lightbug_http.tests.utils import (
     TestStruct,
     FakeResponder,
@@ -9,14 +11,20 @@ from lightbug_http.tests.utils import (
 from lightbug_http.sys.libc import __test_socket_client__
 
 
+fn main():
+    try:
+        var server = SysServer()
+        let handler = TechEmpowerRouter()
+        server.listen_and_serve("0.0.0.0:8080", handler)
+    except e:
+        print("Error starting server: " + e.__str__())
+        return
+
+
 fn lightbug_benchmark_get_1req_per_conn():
     let req_report = benchmark.run[__test_socket_client__](1, 10000, 0, 3, 100)
     print("Request: ")
     req_report.print(benchmark.Unit.ns)
-
-
-fn main():
-    lightbug_benchmark_get_1req_per_conn()
 
 
 fn lightbug_benchmark_server():

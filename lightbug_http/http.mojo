@@ -240,7 +240,7 @@ struct HTTPResponse(Response):
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(
-            200, String("OK")._buffer, String("Content-Type: text/plain")._buffer
+            True, 200, String("OK")._buffer, String("Content-Type: text/plain")._buffer
         ),
         body,
     )
@@ -248,7 +248,7 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, String("OK")._buffer, content_type._buffer), body
+        ResponseHeader(True, 200, String("OK")._buffer, content_type._buffer), body
     )
 
 
@@ -261,10 +261,22 @@ fn encode(res: HTTPResponse) -> Bytes:
     res_str += String(" ")
     res_str += String(res.header.status_message())
     res_str += String("\r\n")
-    res_str += String("Server: M\r\n")
-    res_str += String("Date: ")
+    res_str += String("Server: lightbug_http")
+    res_str += String("\r\n")
+    res_str += String("Content-Type: ")
+    res_str += String(res.header.content_type())
+    # TODO: propagate charset
+    # res_str += String("; charset=utf-8")
+    res_str += String("\r\n")
     res_str += String("Content-Length: ")
-    res_str += String(res.body_raw.__len__().__str__())
+    # TODO: fix this
+    res_str += String((res.body_raw.__len__() - 1).__str__())
+    res_str += String("\r\n")
+    res_str += String("Connection: ")
+    if res.connection_close():
+        res_str += String("close")
+    else:
+        res_str += String("keep-alive")
     res_str += String("\r\n")
     res_str += String("\r\n")
     res_str += res.body_raw
