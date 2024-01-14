@@ -52,7 +52,7 @@ struct TechEmpowerRouter(HTTPService):
         let uri = req.uri()
 
         if uri.path() == "/plaintext":
-            return OK(String("Hello world!")._buffer, "text/plain")
+            return OK(String("Hello, World!")._buffer, "text/plain")
         elif uri.path() == "/json":
             return OK(
                 String('{"message": "Hello, World!"}')._buffer, "application/json"
