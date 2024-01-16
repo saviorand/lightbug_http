@@ -88,7 +88,6 @@ Once you have Mojo set up locally,
    struct Printer(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
          let body = req.body_raw
-
          print(String(body))
 
          return OK(body)

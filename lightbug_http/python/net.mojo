@@ -9,10 +9,8 @@ from lightbug_http.net import (
     resolve_internet_addr,
     default_buffer_size,
 )
-from lightbug_http.http import Request, Response
-from lightbug_http.service import HTTPService
 from lightbug_http.net import Connection, default_tcp_keep_alive
-from lightbug_http.strings import NetworkType, CharSet
+from lightbug_http.strings import CharSet
 
 
 @value

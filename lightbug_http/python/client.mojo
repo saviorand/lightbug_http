@@ -1,14 +1,8 @@
 from lightbug_http.client import Client
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode
-from lightbug_http.uri import URI
-from lightbug_http.header import ResponseHeader, RequestHeader
-from lightbug_http.python.net import PythonTCPListener, PythonListenConfig, PythonNet
+from lightbug_http.http import HTTPRequest, HTTPResponse
 from lightbug_http.python import Modules
-from lightbug_http.service import HTTPService
-from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, UnsafeString
-from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import next_line, NetworkType, strHttp, CharSet
+from lightbug_http.strings import CharSet
 
 
 struct PythonClient(Client):

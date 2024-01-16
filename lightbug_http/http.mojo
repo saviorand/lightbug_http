@@ -1,14 +1,11 @@
 from time import now
 from external.morrow import Morrow
-from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.uri import URI
-from lightbug_http.args import Args
-from lightbug_http.stream import StreamReader
-from lightbug_http.body import Body, RequestBodyWriter, ResponseBodyWriter
+from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import TwoLines, next_line, strHttp11, strHttp10, strHttp
+from lightbug_http.strings import strHttp11, strHttp
 
 
 trait Request:
@@ -19,7 +16,6 @@ trait Request:
         inout self,
         header: RequestHeader,
         uri: URI,
-        post_args: Args,
         body: Bytes,
         parsed_uri: Bool,
         server_is_tls: Bool,
@@ -74,32 +70,16 @@ trait Response:
 struct HTTPRequest(Request):
     var header: RequestHeader
     var __uri: URI
-
-    var post_args: Args
-
-    var body_stream: StreamReader
-    var w: RequestBodyWriter
-    var body: Body
     var body_raw: Bytes
 
-    # TODO: var multipart_form
-    # TODO: var multipart_form_boundary
-
     var parsed_uri: Bool
-
     var server_is_tls: Bool
-
     var timeout: Duration
-
     var disable_redirect_path_normalization: Bool
 
     fn __init__(inout self, uri: URI):
         self.header = RequestHeader()
         self.__uri = uri
-        self.post_args = Args()
-        self.body_stream = StreamReader()
-        self.w = RequestBodyWriter()
-        self.body = Body()
         self.body_raw = Bytes()
         self.parsed_uri = False
         self.server_is_tls = False
@@ -109,10 +89,6 @@ struct HTTPRequest(Request):
     fn __init__(inout self, uri: URI, buf: Bytes, headers: RequestHeader):
         self.header = headers
         self.__uri = uri
-        self.post_args = Args()
-        self.body_stream = StreamReader()
-        self.w = RequestBodyWriter()
-        self.body = Body()
         self.body_raw = buf
         self.parsed_uri = False
         self.server_is_tls = False
@@ -123,7 +99,6 @@ struct HTTPRequest(Request):
         inout self,
         header: RequestHeader,
         uri: URI,
-        post_args: Args,
         body: Bytes,
         parsed_uri: Bool,
         server_is_tls: Bool,
@@ -132,10 +107,6 @@ struct HTTPRequest(Request):
     ):
         self.header = header
         self.__uri = uri
-        self.post_args = post_args
-        self.body_stream = StreamReader()
-        self.w = RequestBodyWriter()
-        self.body = Body()
         self.body_raw = body
         self.parsed_uri = parsed_uri
         self.server_is_tls = server_is_tls
@@ -181,17 +152,10 @@ struct HTTPRequest(Request):
 @value
 struct HTTPResponse(Response):
     var header: ResponseHeader
-
     var stream_immediate_header_flush: Bool
     var stream_body: Bool
-
-    var body_stream: StreamReader
-    var w: ResponseBodyWriter
-    var body: Body
     var body_raw: Bytes
-
     var skip_reading_writing_body: Bool
-
     var raddr: TCPAddr
     var laddr: TCPAddr
 
@@ -204,9 +168,6 @@ struct HTTPResponse(Response):
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
-        self.body_stream = StreamReader()
-        self.w = ResponseBodyWriter()
-        self.body = Body()
         self.body_raw = body_bytes
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
@@ -216,9 +177,6 @@ struct HTTPResponse(Response):
         self.header = header
         self.stream_immediate_header_flush = False
         self.stream_body = False
-        self.body_stream = StreamReader()
-        self.w = ResponseBodyWriter()
-        self.body = Body()
         self.body_raw = body_bytes
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()

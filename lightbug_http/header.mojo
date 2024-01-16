@@ -1,5 +1,4 @@
 from lightbug_http.strings import (
-    TwoLines,
     next_line,
     strHttp11,
     strHttp10,
@@ -19,33 +18,21 @@ struct RequestHeader:
     var disable_normalization: Bool
     var no_http_1_1: Bool
     var __connection_close: Bool
-    var no_default_content_type: Bool
-
-    var cookies_collected: Bool
-
     var content_length: Int
     var content_length_bytes: Bytes
-
     var __method: Bytes
     var __request_uri: Bytes
     var proto: Bytes
     var __host: Bytes
     var __content_type: Bytes
     var __user_agent: Bytes
-
-    # TODO: var cookies
-
-    # immutable copy of original headers
     var raw_headers: Bytes
-
     var __trailer: Bytes
 
     fn __init__(inout self) -> None:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.no_default_content_type = False
-        self.cookies_collected = False
         self.content_length = 0
         self.content_length_bytes = Bytes()
         self.__method = Bytes()
@@ -61,8 +48,6 @@ struct RequestHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.no_default_content_type = False
-        self.cookies_collected = False
         self.content_length = 0
         self.content_length_bytes = Bytes()
         self.__method = Bytes()
@@ -79,8 +64,6 @@ struct RequestHeader:
         disable_normalization: Bool,
         no_http_1_1: Bool,
         connection_close: Bool,
-        no_default_content_type: Bool,
-        cookies_collected: Bool,
         content_length: Int,
         content_length_bytes: Bytes,
         method: Bytes,
@@ -95,8 +78,6 @@ struct RequestHeader:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = no_http_1_1
         self.__connection_close = connection_close
-        self.no_default_content_type = no_default_content_type
-        self.cookies_collected = cookies_collected
         self.content_length = content_length
         self.content_length_bytes = content_length_bytes
         self.__method = method
@@ -300,20 +281,14 @@ struct ResponseHeader:
     var disable_normalization: Bool
     var no_http_1_1: Bool
     var __connection_close: Bool
-    var no_default_content_type: Bool
-    var no_default_date: Bool
-
     var __status_code: Int
     var __status_message: Bytes
     var __protocol: Bytes
     var content_length: Int
     var content_length_bytes: Bytes
-
     var __content_type: Bytes
     var __content_encoding: Bytes
     var __server: Bytes
-
-    # TODO: var cookies
     var __trailer: Bytes
 
     fn __init__(
@@ -322,8 +297,6 @@ struct ResponseHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.no_default_content_type = False
-        self.no_default_date = False
         self.__status_code = 200
         self.__status_message = Bytes()
         self.__protocol = Bytes()
@@ -343,8 +316,6 @@ struct ResponseHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.no_default_content_type = False
-        self.no_default_date = False
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = Bytes()
@@ -365,8 +336,6 @@ struct ResponseHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = connection_close
-        self.no_default_content_type = False
-        self.no_default_date = False
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = Bytes()
@@ -382,8 +351,6 @@ struct ResponseHeader:
         disable_normalization: Bool,
         no_http_1_1: Bool,
         connection_close: Bool,
-        no_default_content_type: Bool,
-        no_default_date: Bool,
         status_code: Int,
         status_message: Bytes,
         protocol: Bytes,
@@ -397,8 +364,6 @@ struct ResponseHeader:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = no_http_1_1
         self.__connection_close = connection_close
-        self.no_default_content_type = no_default_content_type
-        self.no_default_date = no_default_date
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = protocol

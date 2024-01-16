@@ -1,5 +1,5 @@
 from lightbug_http.strings import NetworkType
-from lightbug_http.io.bytes import Bytes, UnsafeString
+from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 
 alias default_buffer_size = 4096

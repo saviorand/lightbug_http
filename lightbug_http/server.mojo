@@ -1,7 +1,6 @@
 from lightbug_http.error import ErrorHandler
 from lightbug_http.service import HTTPService
 from lightbug_http.net import Listener
-from lightbug_http.io.sync import Duration
 
 alias DefaultConcurrency: Int = 256 * 1024
 

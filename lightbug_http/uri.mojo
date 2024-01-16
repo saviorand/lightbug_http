@@ -1,5 +1,4 @@
 from lightbug_http.io.bytes import Bytes, bytes_equal
-from lightbug_http.args import Args
 from lightbug_http.strings import (
     strSlash,
     strHttp11,
@@ -9,6 +8,7 @@ from lightbug_http.strings import (
 )
 
 
+# TODO: convenience type, not currently used properly but will be helpful in the future
 @value
 struct URI:
     var __path_original: Bytes
@@ -17,9 +17,6 @@ struct URI:
     var __query_string: Bytes
     var __hash: Bytes
     var __host: Bytes
-
-    var __query_args: Args
-    var parsed_query_args: Bool
 
     var disable_path_normalization: Bool
 
@@ -39,8 +36,6 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = Bytes()
-        self.__query_args = Args()
-        self.parsed_query_args = False
         self.disable_path_normalization = False
         self.__full_uri = full_uri._buffer
         self.__request_uri = Bytes()
@@ -59,8 +54,6 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = host._buffer
-        self.__query_args = Args()
-        self.parsed_query_args = False
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
         self.__request_uri = Bytes()
@@ -75,7 +68,6 @@ struct URI:
         query_string: Bytes,
         hash: Bytes,
         host: Bytes,
-        parsed_query_args: Bool,
         disable_path_normalization: Bool,
         full_uri: Bytes,
         request_uri: Bytes,
@@ -88,8 +80,6 @@ struct URI:
         self.__query_string = query_string
         self.__hash = hash
         self.__host = host
-        self.__query_args = Args()
-        self.parsed_query_args = parsed_query_args
         self.disable_path_normalization = disable_path_normalization
         self.__full_uri = full_uri
         self.__request_uri = request_uri
@@ -143,12 +133,10 @@ struct URI:
 
     fn set_query_string(inout self, query_string: String) -> Self:
         self.__query_string = query_string._buffer
-        self.parsed_query_args = False
         return self
 
     fn set_query_string_bytes(inout self, query_string: Bytes) -> Self:
         self.__query_string = query_string
-        self.parsed_query_args = False
         return self
 
     fn set_hash(inout self, hash: String) -> Self:
