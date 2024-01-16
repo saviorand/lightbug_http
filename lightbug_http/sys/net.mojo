@@ -13,7 +13,7 @@ from lightbug_http.strings import NetworkType
 from lightbug_http.io.fd import FileDescriptor
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
-from lightbug_http.sys.libc import (
+from external.libc import (
     c_void,
     c_int,
     c_uint,
@@ -353,7 +353,7 @@ struct SysListenConfig(ListenConfig):
         if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
             # close(sockfd)
             _ = shutdown(sockfd, SHUT_RDWR)
-            print("Binding socket failed")
+            print("Binding socket failed. Wait a few seconds and try again?")
 
         if listen(sockfd, c_int(128)) == -1:
             print("Listen failed.\n on sockfd " + sockfd.__str__())

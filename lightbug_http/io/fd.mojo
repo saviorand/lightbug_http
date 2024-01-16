@@ -1,4 +1,4 @@
-from lightbug_http.sys.libc import Str, c_ssize_t, c_size_t, c_int, char_pointer
+from external.libc import Str, c_ssize_t, c_size_t, c_int, char_pointer
 
 alias O_RDWR = 0o2
 

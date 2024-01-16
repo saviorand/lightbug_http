@@ -8,7 +8,7 @@ from lightbug_http.tests.utils import (
     FakeServer,
     getRequest,
 )
-from lightbug_http.sys.libc import __test_socket_client__
+from external.libc import __test_socket_client__
 
 
 fn main():
