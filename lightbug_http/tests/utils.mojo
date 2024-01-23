@@ -11,7 +11,7 @@ from lightbug_http.client import Client
 
 alias default_server_host = "localhost"
 alias default_server_port = 8080
-alias default_server_conn_string = "http://" + default_server_host + ":" + default_server_port.__str__()
+alias default_server_conn_string = String("http://localhost:8080")
 
 alias getRequest = String(
     "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"

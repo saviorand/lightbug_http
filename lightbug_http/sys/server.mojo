@@ -6,9 +6,10 @@ from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, to_bytes, to_string
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import next_line, NetworkType
+from external.b64 import encode as b64_encode
 
 
 struct SysServer:
@@ -55,40 +56,112 @@ struct SysServer:
         self.serve(listener, handler)
 
     fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
-        # let max_worker_count = self.get_concurrency()
-        # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
-
         self.ln = ln
+
+        async fn handle_connection(conn: SysConnection, handler: T) -> None:
+            var buf = Bytes()
+            try:
+                let read_len = await conn.read_async(buf)
+            except e:
+                try:
+                    conn.close()
+                except e:
+                    print("Failed to close connection")
+                print("Failed to read from connection")
+            try:
+                let first_line_and_headers = next_line(buf)
+                let request_line = first_line_and_headers.first_line
+                let rest_of_headers = first_line_and_headers.rest
+
+                var uri = URI(request_line)
+                try:
+                    uri.parse()
+                except:
+                    try:
+                        conn.close()
+                    except e:
+                        print("Failed to close connection")
+                    print("Failed to parse request line")
+
+                var header = RequestHeader(buf)
+                try:
+                    header.parse()
+                except:
+                    try:
+                        conn.close()
+                    except e:
+                        print("Failed to close connection")
+                    print("Failed to parse request header")
+
+                let res = handler.func(
+                    HTTPRequest(
+                        uri,
+                        buf,
+                        header,
+                    )
+                )
+                var res_encoded: String = encode(res)
+                try:
+                    let write_len = await conn.write_async(res_encoded._buffer)
+                    print(write_len)
+                except e:
+                    print("Ooph! " + e.__str__())
+                    try:
+                        conn.close()
+                    except e:
+                        print("Failed to close connection")
+                    print("Failed to read from connection")
+                try:
+                    conn.close()
+                except e:
+                    print("Failed to close connection")
+            except e:
+                print("Failed to parse request line")
+                try:
+                    conn.close()
+                except e:
+                    print("Failed to close connection")
 
         while True:
             let conn = self.ln.accept[SysConnection]()
-            var buf = Bytes()
-            let read_len = conn.read(buf)
-            let first_line_and_headers = next_line(buf)
-            let request_line = first_line_and_headers.first_line
-            let rest_of_headers = first_line_and_headers.rest
+            let coroutine: Coroutine[NoneType] = handle_connection(conn, handler)
+            _ = coroutine()  # Execute the coroutine synchronously
 
-            var uri = URI(request_line)
-            try:
-                uri.parse()
-            except:
-                conn.close()
-                raise Error("Failed to parse request line")
+    # fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
+    #     # let max_worker_count = self.get_concurrency()
+    #     # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
 
-            var header = RequestHeader(buf)
-            try:
-                header.parse()
-            except:
-                conn.close()
-                raise Error("Failed to parse request header")
+    #     self.ln = ln
 
-            let res = handler.func(
-                HTTPRequest(
-                    uri,
-                    buf,
-                    header,
-                )
-            )
-            let res_encoded = encode(res)
-            _ = conn.write(res_encoded)
-            conn.close()
+    #     while True:
+    #         let conn = self.ln.accept[SysConnection]()
+    #         var buf = Bytes()
+    #         let read_len = conn.read(buf)
+    #         let first_line_and_headers = next_line(buf)
+    #         let request_line = first_line_and_headers.first_line
+    #         let rest_of_headers = first_line_and_headers.rest
+
+    #         var uri = URI(request_line)
+    #         try:
+    #             uri.parse()
+    #         except:
+    #             conn.close()
+    #             raise Error("Failed to parse request line")
+
+    #         var header = RequestHeader(buf)
+    #         try:
+    #             header.parse()
+    #         except:
+    #             conn.close()
+    #             raise Error("Failed to parse request header")
+
+    #         let res = handler.func(
+    #             HTTPRequest(
+    #                 uri,
+    #                 buf,
+    #                 header,
+    #             )
+    #         )
+    #         let res_encoded = encode(res)
+    #         _ = conn.write(res_encoded)
+    #         conn.close()
