@@ -21,6 +21,21 @@
   </p>
 </div>
 
+## Quickstart with Docker
+To set up Lightbug in one command:
+1. Get [Docker](https://docs.docker.com/get-docker/) or open the project in Codespaces where Docker is already installed:
+   
+   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
+2. Copy the contents of the `.mojoenv.example` file at the root of this repo into a new file called `.mojoenv`. 
+
+   Replace `<your_modular_auth_token>` with your Modular access token (you can find it [here](https://developer.modular.com/download))
+3. Run
+   ```bash
+   make lightbug
+   ```
+
+Lightbug will start and listen for requests on [`http://localhost:8080`](http://localhost:8080). Enjoy!
+
 ## Overview
 
 Lightbug is a simple and sweet HTTP framework for Mojo that builds on best practice from systems programming, such as the Golang [FastHTTP](https://github.com/valyala/fasthttp/) and Rust [may_minihttp](https://github.com/Xudong-Huang/may_minihttp/). 
@@ -47,8 +62,6 @@ The plan is to get to a feature set similar to Python frameworks like [Starlette
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
 <!-- GETTING STARTED -->
 ## Getting Started
 
@@ -61,9 +74,6 @@ Once you have Mojo set up locally,
    ```sh
    git clone https://github.com/saviorand/lightbug_http.git
    ```
-   Alternatively, start the project in Github Codespaces for quick setup:
-
-   [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/saviorand/lightbug_http)
 2. Switch to the project directory:
    ```bash
    cd lightbug_http

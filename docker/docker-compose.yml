@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  mojo-runner:
+    build:
+      context: ../  # Set the context to the parent directory of the Dockerfile
+      dockerfile: ./docker/lightbug.dockerfile
+      args:
+        userid: 1000
+        groupid: 1000
+        username: mojo
+    image: mojo-runner
+    ports:
+      - "8080:8080"
+
+
