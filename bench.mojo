@@ -15,7 +15,7 @@ fn main():
     try:
         var server = SysServer()
         let handler = TechEmpowerRouter()
-        server.listen_and_serve("0.0.0.0:8080", handler)
+        server.listen_and_serve_async("0.0.0.0:8080", handler)
     except e:
         print("Error starting server: " + e.__str__())
         return

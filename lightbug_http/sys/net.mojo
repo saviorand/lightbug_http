@@ -61,7 +61,7 @@ struct SysListener(Listener):
         self.__addr = addr
         self.fd = fd
 
-    @always_inline
+    # @always_inline
     fn accept[T: Connection](self) raises -> T:
         let their_addr_ptr = Pointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
