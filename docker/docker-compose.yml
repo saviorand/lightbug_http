@@ -10,4 +10,7 @@ services:
         groupid: 1000
         username: mojo
     image: mojo-runner
+    ports:
+      - "8080:8080"
+
 

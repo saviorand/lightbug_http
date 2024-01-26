@@ -126,7 +126,7 @@ struct SysListenConfig(ListenConfig):
 
         let listener = SysListener(addr, sockfd)
 
-        print("🔥🐝 Lightbug is listening on " + addr.ip + ":" + addr.port.__str__())
+        print("🔥🐝 Lightbug is listening on " + "http://" + addr.ip + ":" + addr.port.__str__())
         print("Ready to accept connections...")
 
         return listener
