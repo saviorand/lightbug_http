@@ -21,6 +21,17 @@
   </p>
 </div>
 
+## Quickstart with Docker
+Make sure you have [Docker](https://docs.docker.com/get-docker/). To set up Lightbug in one command:
+1. Copy the contents of the `.mojoenv.example` file at the root of this repo into a new file called `.mojoenv`. 
+
+   Replace `<your_modular_auth_token>` with your Modular access token (you can find it [here](https://developer.modular.com/download))
+2. Run
+   ```bash
+   make lightbug
+   ```
+3. Enjoy!
+
 ## Overview
 
 Lightbug is a simple and sweet HTTP framework for Mojo that builds on best practice from systems programming, such as the Golang [FastHTTP](https://github.com/valyala/fasthttp/) and Rust [may_minihttp](https://github.com/Xudong-Huang/may_minihttp/). 
@@ -46,16 +57,6 @@ The plan is to get to a feature set similar to Python frameworks like [Starlette
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## Run with Docker
-Get [Docker](https://docs.docker.com/get-docker/) and run this to set up Lightbug in one command:
-1. Copy the contents of the `.mojoenv.example` file in the root of this repo into a new file called `.mojoenv`. Replace `<your_modular_auth_token>` with your Modular access token (you can find it [here](https://developer.modular.com/download))
-2. Run
-   ```bash
-   make lightbug
-   ```
-3. Wait a minute until everything starts up and enjoy!
-
 
 <!-- GETTING STARTED -->
 ## Getting Started
