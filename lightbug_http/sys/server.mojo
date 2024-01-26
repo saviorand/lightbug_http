@@ -8,7 +8,7 @@ from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, to_bytes, to_string
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import next_line, NetworkType
+from lightbug_http.strings import next_line, NetworkType, S
 from external.b64 import encode as b64_encode
 
 
@@ -100,10 +100,9 @@ struct SysServer:
                         header,
                     )
                 )
-                var res_encoded: String = encode(res)
+                var res_encoded = encode(res)
                 try:
-                    let write_len = await conn.write_async(res_encoded._buffer)
-                    print(write_len)
+                    _ = await conn.write_async(res_encoded)
                 except e:
                     print("Ooph! " + e.__str__())
                     try:

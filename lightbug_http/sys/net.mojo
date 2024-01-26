@@ -181,23 +181,23 @@ struct SysConnection(Connection):
 
     fn write(self, buf: Bytes) raises -> Int:
         let msg = String(buf)
+        print("Sending response: " + msg)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             print("Failed to send response")
         return len(buf)
 
-    async fn write_async(self, buf: Bytes) raises -> Int:
-        print("write_async " + b64decode(buf))
-
+    # This has to be a def for now because of a weird bug in the Mojo compiler
+    async def write_async(self, buf: Bytes) -> Int:
         @parameter
-        async fn task() -> Int:
+        async def task(task_buf: Bytes) -> Int:
             try:
-                let write_len = self.write(buf)
+                let write_len = self.write(task_buf)
                 return write_len
             except e:
                 print("Failed to write to connection: " + e.__str__())
                 return -1
 
-        let routine: Coroutine[Int] = task()
+        let routine: RaisingCoroutine[Int] = task(buf)
         return await routine
 
     fn close(self) raises:
