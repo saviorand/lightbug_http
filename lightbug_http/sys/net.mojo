@@ -9,7 +9,7 @@ from lightbug_http.net import (
     default_tcp_keep_alive,
 )
 from lightbug_http.strings import NetworkType
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, to_string, to_bytes, b64decode
 from lightbug_http.io.sync import Duration
 from external.libc import (
     c_void,
@@ -24,6 +24,7 @@ from external.libc import (
     SOCK_STREAM,
     SOL_SOCKET,
     SO_REUSEADDR,
+    O_NONBLOCK,
     SHUT_RDWR,
     htons,
     inet_pton,
@@ -38,6 +39,9 @@ from external.libc import (
     shutdown,
     close,
 )
+from external.b64 import encode as b64_encode
+
+# from external.b64 import decode as b64_decode
 
 
 @value
@@ -57,7 +61,7 @@ struct SysListener(Listener):
         self.__addr = addr
         self.fd = fd
 
-    @always_inline
+    # @always_inline
     fn accept[T: Connection](self) raises -> T:
         let their_addr_ptr = Pointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
@@ -162,11 +166,39 @@ struct SysConnection(Connection):
         buf = bytes_str._buffer
         return bytes_recv
 
+    async fn read_async(self, inout buf: Bytes) raises -> Int:
+        @parameter
+        async fn task() -> Int:
+            try:
+                _ = self.read(buf)
+                return buf[0].__int__()
+            except e:
+                print("Failed to read from connection: " + e.__str__())
+                return -1
+
+        let routine: Coroutine[Int] = task()
+        return await routine
+
     fn write(self, buf: Bytes) raises -> Int:
         let msg = String(buf)
+        print("Sending response: " + msg)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             print("Failed to send response")
         return len(buf)
+
+    # This has to be a def for now because of a weird bug in the Mojo compiler
+    async def write_async(self, buf: Bytes) -> Int:
+        @parameter
+        async def task(task_buf: Bytes) -> Int:
+            try:
+                let write_len = self.write(task_buf)
+                return write_len
+            except e:
+                print("Failed to write to connection: " + e.__str__())
+                return -1
+
+        let routine: RaisingCoroutine[Int] = task(buf)
+        return await routine
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)

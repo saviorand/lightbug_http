@@ -12,6 +12,15 @@ alias rChar = String("\r")._buffer
 alias nChar = String("\n")._buffer
 
 
+struct S[lifetime: MutLifetime]:
+    var s: Reference[String, __mlir_attr.`1: i1`, lifetime]  # zero is immut
+
+    fn __init__(
+        inout self, s: Reference[String, __mlir_attr.`1: i1`, lifetime]
+    ) -> None:
+        self.s = s
+
+
 # TODO: tuples don't work with strings in Mojo currently, to be replaced with a tuple
 @value
 struct TwoLines:

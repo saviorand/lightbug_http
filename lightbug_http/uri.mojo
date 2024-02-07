@@ -8,7 +8,6 @@ from lightbug_http.strings import (
 )
 
 
-# TODO: convenience type, not currently used properly but will be helpful in the future
 @value
 struct URI:
     var __path_original: Bytes
