@@ -8,8 +8,8 @@ fn run_tests() raises:
 
 
 fn run_client_tests() raises:
-    let fake_client = FakeClient()
-    let py_client = PythonClient()
+    var fake_client = FakeClient()
+    var py_client = PythonClient()
     test_client_lightbug[FakeClient](fake_client)
     test_client_lightbug[PythonClient](py_client)
 

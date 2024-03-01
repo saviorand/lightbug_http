@@ -17,7 +17,7 @@ struct FileDescriptor:
         self.fd = fd
 
     fn __init__(inout self, path: StringLiteral):
-        let mode: Int = 0o644  # file permission
+        var mode: Int = 0o644  # file permission
         # TODO: handle errors
         self = FileDescriptor(
             external_call["open", Int, StringLiteral, Int, Int](path, O_RDWR, mode)
@@ -27,14 +27,14 @@ struct FileDescriptor:
         _ = external_call["close", Int, Int](self.fd)
 
     fn dup(self) -> Self:
-        let new_fd = external_call["dup", Int, Int](self.fd)
+        var new_fd = external_call["dup", Int, Int](self.fd)
         return Self(new_fd)
 
     fn read(self) raises -> String:
         alias buffer_size: Int = 2**13
-        let buffer: Str
+        var buffer: Str
         with Str(size=buffer_size) as buffer:
-            let read_count: c_ssize_t = external_call[
+            var read_count: c_ssize_t = external_call[
                 "read", c_ssize_t, c_int, char_pointer, c_size_t
             ](self.fd, buffer.vector.data, buffer_size)
 
@@ -52,9 +52,9 @@ struct FileDescriptor:
             return buffer.to_string(read_count)
 
     fn write(self, data: String) raises -> Int:
-        let buffer: Str
+        var buffer: Str
         with Str(data) as buffer:
-            let write_count: c_ssize_t = external_call[
+            var write_count: c_ssize_t = external_call[
                 "write", c_ssize_t, c_int, char_pointer, c_size_t
             ](self.fd, buffer.vector.data, data.__len__())
 

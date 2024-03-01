@@ -3,5 +3,5 @@ from lightbug_http import *
 
 fn main() raises:
     var server = SysServer()
-    let handler = Welcome()
+    var handler = Welcome()
     server.listen_and_serve("0.0.0.0:8080", handler)

@@ -1,6 +1,7 @@
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
+from lightbug_http.sys.net import SysConnection
 
 alias default_buffer_size = 4096
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
@@ -36,8 +37,7 @@ trait Listener(Movable):
     fn __init__(inout self, addr: TCPAddr) raises:
         ...
 
-    @always_inline
-    fn accept[T: Connection](self) raises -> T:
+    fn accept(borrowed self) raises -> SysConnection:
         ...
 
     fn close(self) raises:
@@ -125,7 +125,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         or network == NetworkType.udp6.value
     ):
         if address != "":
-            let host_port = split_host_port(address)
+            var host_port = split_host_port(address)
             host = host_port.host
             port = host_port.port
             portnum = atol(port.__str__())
@@ -165,14 +165,14 @@ struct HostPort:
 fn split_host_port(hostport: String) raises -> HostPort:
     var host: String = ""
     var port: String = ""
-    let colon_index = hostport.rfind(":")
+    var colon_index = hostport.rfind(":")
     var j: Int = 0
     var k: Int = 0
 
     if colon_index == -1:
         raise missingPortError
     if hostport[0] == "[":
-        let end_bracket_index = hostport.find("]")
+        var end_bracket_index = hostport.find("]")
         if end_bracket_index == -1:
             raise Error("missing ']' in address")
         if end_bracket_index + 1 == len(hostport):

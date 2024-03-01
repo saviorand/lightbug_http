@@ -10,22 +10,22 @@ alias MAX_TIMESTAMP_US = MAX_TIMESTAMP * 1_000_000
 @always_inline
 fn c_gettimeofday() -> CTimeval:
     var tv = CTimeval()
-    let p_tv = Pointer[CTimeval].address_of(tv)
+    var p_tv = Pointer[CTimeval].address_of(tv)
     external_call["gettimeofday", NoneType, Pointer[CTimeval], Int32](p_tv, 0)
     return tv
 
 
 @always_inline
 fn c_gmtime(owned tv_sec: Int) -> CTm:
-    let p_tv_sec = Pointer[Int].address_of(tv_sec)
-    let tm = external_call["gmtime", Pointer[CTm], Pointer[Int]](p_tv_sec).load()
+    var p_tv_sec = Pointer[Int].address_of(tv_sec)
+    var tm = external_call["gmtime", Pointer[CTm], Pointer[Int]](p_tv_sec).load()
     return tm
 
 
 @always_inline
 fn c_localtime(owned tv_sec: Int) -> CTm:
-    let p_tv_sec = Pointer[Int].address_of(tv_sec)
-    let tm = external_call["localtime", Pointer[CTm], Pointer[Int]](p_tv_sec).load()
+    var p_tv_sec = Pointer[Int].address_of(tv_sec)
+    var tm = external_call["localtime", Pointer[CTm], Pointer[Int]](p_tv_sec).load()
     return tm
 
 
@@ -50,7 +50,7 @@ struct TimeZone:
 
     @staticmethod
     fn local() -> TimeZone:
-        let local_t = c_localtime(0)
+        var local_t = c_localtime(0)
         return TimeZone(local_t.tm_gmtoff.to_int(), "local")
 
     @staticmethod
@@ -61,7 +61,7 @@ struct TimeZone:
             return TimeZone(0, "utc")
         var p = 3 if len(utc_str) > 3 and utc_str[0:3] == "UTC" else 0
 
-        let sign = -1 if utc_str[p] == "-" else 1
+        var sign = -1 if utc_str[p] == "-" else 1
         if utc_str[p] == "+" or utc_str[p] == "-":
             p += 1
 
@@ -71,10 +71,10 @@ struct TimeZone:
             or not isdigit(ord(utc_str[p + 1]))
         ):
             raise Error("utc_str format is invalid")
-        let hours: Int = atol(utc_str[p : p + 2])
+        var hours: Int = atol(utc_str[p : p + 2])
         p += 2
 
-        let minutes: Int
+        var minutes: Int
         if len(utc_str) <= p:
             minutes = 0
         elif len(utc_str) == p + 3 and utc_str[p] == ":":
@@ -84,20 +84,20 @@ struct TimeZone:
         else:
             minutes = 0
             raise Error("utc_str format is invalid")
-        let offset: Int = sign * (hours * 3600 + minutes * 60)
+        var offset: Int = sign * (hours * 3600 + minutes * 60)
         return TimeZone(offset)
 
     fn format(self) -> String:
-        let sign: String
-        let offset_abs: Int
+        var sign: String
+        var offset_abs: Int
         if self.offset < 0:
             sign = "-"
             offset_abs = -self.offset
         else:
             sign = "+"
             offset_abs = self.offset
-        let hh = offset_abs // 3600
-        let mm = offset_abs % 3600
+        var hh = offset_abs // 3600
+        var mm = offset_abs % 3600
         return sign + rjust(hh, 2, "0") + ":" + rjust(mm, 2, "0")
 
 
@@ -181,7 +181,7 @@ struct Morrow:
         terms of the time to include. Valid options are 'auto', 'hours',
         'minutes', 'seconds', 'milliseconds' and 'microseconds'.
         """
-        let date_str = (
+        var date_str = (
             rjust(self.year, 4, "0")
             + "-"
             + rjust(self.month, 2, "0")
@@ -230,18 +230,18 @@ struct Morrow:
 
     @staticmethod
     fn now() raises -> Self:
-        let t = c_gettimeofday()
+        var t = c_gettimeofday()
         return Self._fromtimestamp(t, False)
 
     @staticmethod
     fn utcnow() raises -> Self:
-        let t = c_gettimeofday()
+        var t = c_gettimeofday()
         return Self._fromtimestamp(t, True)
 
     @staticmethod
     fn _fromtimestamp(t: CTimeval, utc: Bool) raises -> Self:
-        let tm: CTm
-        let tz: TimeZone
+        var tm: CTm
+        var tz: TimeZone
         if utc:
             tm = c_gmtime(t.tv_sec)
             tz = TimeZone(0, "UTC")
@@ -249,7 +249,7 @@ struct Morrow:
             tm = c_localtime(t.tv_sec)
             tz = TimeZone(tm.tm_gmtoff.to_int(), "local")
 
-        let result = Self(
+        var result = Self(
             tm.tm_year.to_int() + 1900,
             tm.tm_mon.to_int() + 1,
             tm.tm_mday.to_int(),
@@ -263,14 +263,14 @@ struct Morrow:
 
     @staticmethod
     fn fromtimestamp(timestamp: Float64) raises -> Self:
-        let timestamp_ = normalize_timestamp(timestamp)
-        let t = CTimeval(timestamp_.to_int())
+        var timestamp_ = normalize_timestamp(timestamp)
+        var t = CTimeval(timestamp_.to_int())
         return Self._fromtimestamp(t, False)
 
     @staticmethod
     fn utcfromtimestamp(timestamp: Float64) raises -> Self:
-        let timestamp_ = normalize_timestamp(timestamp)
-        let t = CTimeval(timestamp_.to_int())
+        var timestamp_ = normalize_timestamp(timestamp)
+        var t = CTimeval(timestamp_.to_int())
         return Self._fromtimestamp(t, True)
 
 
@@ -306,7 +306,7 @@ fn _repeat_string(string: String, n: Int) -> String:
 
 
 fn rjust(string: String, width: Int, fillchar: String = " ") -> String:
-    let extra = width - len(string)
+    var extra = width - len(string)
     return _repeat_string(fillchar, extra) + string
 
 

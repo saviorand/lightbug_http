@@ -25,7 +25,7 @@ struct TwoLines:
 
 # Helper function to get the next line
 fn next_line(s: String) raises -> TwoLines:
-    let split = s.split("\n")
+    var split = s.split("\n")
     return TwoLines(split[0].strip(), split[1]) if len(split) == 2 else TwoLines(
         split[0].strip(), String()
     )

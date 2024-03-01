@@ -9,7 +9,7 @@ trait HTTPService:
 @value
 struct Printer(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        let body = req.body_raw
+        var body = req.body_raw
         print(String(body))
 
         return OK(body)
@@ -18,7 +18,7 @@ struct Printer(HTTPService):
 @value
 struct Welcome(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        let html: String
+        var html: String
         with open("static/lightbug_welcome.html", "r") as f:
             html = f.read()
 
@@ -28,8 +28,8 @@ struct Welcome(HTTPService):
 @value
 struct ExampleRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        let body = req.body_raw
-        let uri = req.uri()
+        var body = req.body_raw
+        var uri = req.uri()
 
         if uri.path() == "/":
             print("I'm on the index path!")
@@ -46,8 +46,8 @@ struct ExampleRouter(HTTPService):
 @value
 struct TechEmpowerRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        let body = req.body_raw
-        let uri = req.uri()
+        var body = req.body_raw
+        var uri = req.uri()
 
         if uri.path() == "/plaintext":
             return OK(String("Hello, World!")._buffer, "text/plain")

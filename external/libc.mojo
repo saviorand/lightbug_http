@@ -108,7 +108,7 @@ alias EWOULDBLOCK = EAGAIN
 
 fn to_char_ptr(s: String) -> Pointer[c_char]:
     """Only ASCII-based strings."""
-    let ptr = Pointer[c_char]().alloc(len(s))
+    var ptr = Pointer[c_char]().alloc(len(s))
     for i in range(len(s)):
         ptr.store(i, ord(s[i]))
     return ptr
@@ -705,8 +705,8 @@ fn inet_pton(address_family: Int, address: String) -> Int:
     if address_family == AF_INET6:
         ip_buf_size = 16
 
-    let ip_buf = Pointer[c_void].alloc(ip_buf_size)
-    let conv_status = inet_pton(
+    var ip_buf = Pointer[c_void].alloc(ip_buf_size)
+    var conv_status = inet_pton(
         rebind[c_int](address_family), to_char_ptr(address), ip_buf
     )
     return ip_buf.bitcast[c_uint]().load().to_int()
@@ -837,8 +837,8 @@ fn write(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
 
 
 fn __test_getaddrinfo__():
-    let ip_addr = "127.0.0.1"
-    let port = 8083
+    var ip_addr = "127.0.0.1"
+    var port = 8083
 
     var servinfo = Pointer[addrinfo]().alloc(1)
     servinfo.store(addrinfo())
@@ -847,40 +847,40 @@ fn __test_getaddrinfo__():
     hints.ai_family = AF_INET
     hints.ai_socktype = SOCK_STREAM
     hints.ai_flags = AI_PASSIVE
-    # let hints_ptr =
+    # var hints_ptr =
 
-    let status = getaddrinfo(
+    var status = getaddrinfo(
         to_char_ptr(ip_addr),
         Pointer[UInt8](),
         Pointer.address_of(hints),
         Pointer.address_of(servinfo),
     )
-    let msg_ptr = gai_strerror(c_int(status))
+    var msg_ptr = gai_strerror(c_int(status))
     _ = external_call["printf", c_int, Pointer[c_char], Pointer[c_char]](
         to_char_ptr("gai_strerror: %s"), msg_ptr
     )
-    let msg = c_charptr_to_string(msg_ptr)
+    var msg = c_charptr_to_string(msg_ptr)
     print("getaddrinfo satus: " + msg)
 
 
 fn __test_socket_client__():
-    let ip_addr = "127.0.0.1"  # The server's hostname or IP address
-    let port = 8080  # The port used by the server
-    let address_family = AF_INET
+    var ip_addr = "127.0.0.1"  # The server's hostname or IP address
+    var port = 8080  # The port used by the server
+    var address_family = AF_INET
 
-    let ip_buf = Pointer[c_void].alloc(4)
-    let conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
-    let raw_ip = ip_buf.bitcast[c_uint]().load()
+    var ip_buf = Pointer[c_void].alloc(4)
+    var conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
+    var raw_ip = ip_buf.bitcast[c_uint]().load()
 
     print("inet_pton: " + raw_ip.__str__() + " :: status: " + conv_status.__str__())
 
-    let bin_port = htons(UInt16(port))
+    var bin_port = htons(UInt16(port))
     print("htons: " + "\n" + bin_port.__str__())
 
     var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
-    let ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
+    var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
-    let sockfd = socket(address_family, SOCK_STREAM, 0)
+    var sockfd = socket(address_family, SOCK_STREAM, 0)
     if sockfd == -1:
         print("Socket creation error")
     print("sockfd: " + "\n" + sockfd.__str__())
@@ -890,15 +890,15 @@ fn __test_socket_client__():
         print("Connection error")
         return  # Ensure to exit if connection fails
 
-    let msg = to_char_ptr("Hello, world Server")
-    let bytes_sent = send(sockfd, msg, strlen(msg), 0)
+    var msg = to_char_ptr("Hello, world Server")
+    var bytes_sent = send(sockfd, msg, strlen(msg), 0)
     if bytes_sent == -1:
         print("Failed to send message")
     else:
         print("Message sent")
-    let buf_size = 1024
-    let buf = Pointer[UInt8]().alloc(buf_size)
-    let bytes_recv = recv(sockfd, buf, buf_size, 0)
+    var buf_size = 1024
+    var buf = Pointer[UInt8]().alloc(buf_size)
+    var bytes_recv = recv(sockfd, buf, buf_size, 0)
     if bytes_recv == -1:
         print("Failed to receive message")
     else:
@@ -906,33 +906,33 @@ fn __test_socket_client__():
         print(String(buf.bitcast[Int8](), bytes_recv))
 
     _ = shutdown(sockfd, SHUT_RDWR)
-    let close_status = close(sockfd)
+    var close_status = close(sockfd)
     if close_status == -1:
         print("Failed to close socket")
 
 
 fn __test_socket_server__() raises:
-    let ip_addr = "127.0.0.1"
-    let port = 8083
+    var ip_addr = "127.0.0.1"
+    var port = 8083
 
-    let address_family = AF_INET
+    var address_family = AF_INET
     var ip_buf_size = 4
     if address_family == AF_INET6:
         ip_buf_size = 16
 
-    let ip_buf = Pointer[c_void].alloc(ip_buf_size)
-    let conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
-    let raw_ip = ip_buf.bitcast[c_uint]().load()
+    var ip_buf = Pointer[c_void].alloc(ip_buf_size)
+    var conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
+    var raw_ip = ip_buf.bitcast[c_uint]().load()
 
     print("inet_pton: " + raw_ip.__str__() + " :: status: " + conv_status.__str__())
 
-    let bin_port = htons(UInt16(port))
+    var bin_port = htons(UInt16(port))
     print("htons: " + "\n" + bin_port.__str__())
 
     var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
-    let ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
+    var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
-    let sockfd = socket(address_family, SOCK_STREAM, 0)
+    var sockfd = socket(address_family, SOCK_STREAM, 0)
     if sockfd == -1:
         print("Socket creation error")
     print("sockfd: " + "\n" + sockfd.__str__())
@@ -968,9 +968,9 @@ fn __test_socket_server__() raises:
         + "Waiting for connections..."
     )
 
-    let their_addr_ptr = Pointer[sockaddr].alloc(1)
+    var their_addr_ptr = Pointer[sockaddr].alloc(1)
     var sin_size = socklen_t(sizeof[socklen_t]())
-    let new_sockfd = accept(
+    var new_sockfd = accept(
         sockfd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
     )
     if new_sockfd == -1:
@@ -978,12 +978,12 @@ fn __test_socket_server__() raises:
         # close(sockfd)
         _ = shutdown(sockfd, SHUT_RDWR)
 
-    let msg = "Hello, Mojo!"
+    var msg = "Hello, Mojo!"
     if send(new_sockfd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
         print("Failed to send response")
     print("Message sent succesfully")
     _ = shutdown(sockfd, SHUT_RDWR)
 
-    let close_status = close(new_sockfd)
+    var close_status = close(new_sockfd)
     if close_status == -1:
         print("Failed to close new_sockfd")

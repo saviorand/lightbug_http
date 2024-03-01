@@ -187,20 +187,20 @@ struct RequestHeader:
 
     # This is translated to Mojo from Golang FastHTTP
     fn parse(inout self) raises -> None:
-        let headers = self.raw_headers
+        var headers = self.raw_headers
 
         # Extract the first line (request line) and the rest of the headers
-        let first_line_and_headers = next_line(headers)
-        let request_line = first_line_and_headers.first_line
-        let rest_of_headers = first_line_and_headers.rest
+        var first_line_and_headers = next_line(headers)
+        var request_line = first_line_and_headers.first_line
+        var rest_of_headers = first_line_and_headers.rest
 
         # Parse the request line
         var n = request_line.find(" ")
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
 
-        let method = request_line[:n]
-        let rest_of_request_line = request_line[n + 1 :]
+        var method = request_line[:n]
+        var rest_of_request_line = request_line[n + 1 :]
 
         # Defaults to HTTP/1.1
         var proto_str = String(strHttp11)
@@ -213,11 +213,11 @@ struct RequestHeader:
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
-            let proto = rest_of_request_line[n + 1 :]
+            var proto = rest_of_request_line[n + 1 :]
             if proto != strHttp11:
                 proto_str = proto
 
-        let request_uri = rest_of_request_line[:n]
+        var request_uri = rest_of_request_line[:n]
 
         _ = self.set_method(method)
         _ = self.set_protocol(proto_str)
@@ -238,24 +238,24 @@ struct RequestHeader:
                     raise Error("Invalid header key")
 
                 if s.key[0] == "h" or s.key[0] == "H":
-                    if s.key.tolower() == "host":
+                    if s.key.lower() == "host":
                         _ = self.set_host(s.value)
                         continue
                 elif s.key[0] == "u" or s.key[0] == "U":
-                    if s.key.tolower() == "user-agent":
+                    if s.key.lower() == "user-agent":
                         _ = self.set_user_agent(s.value)
                         continue
                 elif s.key[0] == "c" or s.key[0] == "C":
-                    if s.key.tolower() == "content-type":
+                    if s.key.lower() == "content-type":
                         _ = self.set_content_type(s.value)
                         continue
-                    if s.key.tolower() == "content-length":
+                    if s.key.lower() == "content-length":
                         if self.content_length != -1:
-                            let content_length = s.value
+                            var content_length = s.value
                             self.content_length = atol(content_length)
                             self.content_length_bytes = content_length._buffer
                         continue
-                    if s.key.tolower() == "connection":
+                    if s.key.lower() == "connection":
                         if s.value == "close":
                             _ = self.set_connection_close()
                         else:
@@ -263,12 +263,12 @@ struct RequestHeader:
                             # _ = self.appendargbytes(s.key, s.value)
                         continue
                 elif s.key[0] == "t" or s.key[0] == "T":
-                    if s.key.tolower() == "transfer-encoding":
+                    if s.key.lower() == "transfer-encoding":
                         if s.value != "identity":
                             self.content_length = -1
                             # _ = self.setargbytes(s.key, strChunked)
                         continue
-                    if s.key.tolower() == "trailer":
+                    if s.key.lower() == "trailer":
                         _ = self.set_trailer(s.value)
 
                 # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
@@ -455,7 +455,7 @@ struct ResponseHeader:
         return self.__connection_close
 
     fn parse_headers(inout self, header_str: String) raises -> None:
-        let first_line_str = header_str
+        var first_line_str = header_str
         var next = next_line(first_line_str)
         var line = next.first_line
         var rest = next.rest
@@ -469,7 +469,7 @@ struct ResponseHeader:
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
 
-        let method = line[:n]
+        var method = line[:n]
         line = line[n + 1 :]
 
         # Defaults to HTTP/1.1
@@ -483,7 +483,7 @@ struct ResponseHeader:
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
-            let proto = line[n + 1 :]
+            var proto = line[n + 1 :]
             if proto != strHttp11:
                 proto_str = proto
 
@@ -510,7 +510,7 @@ struct ResponseHeader:
                         continue
                     if s.key.tolower() == "content-length":
                         if self.content_length != -1:
-                            let content_length = s.value
+                            var content_length = s.value
                             self.content_length = atol(content_length)
                             self.content_length_bytes = content_length._buffer
                         continue
@@ -565,7 +565,7 @@ struct headerScanner:
             self.next_line = -1
             self.initialized = True
 
-        let bLen = len(self.b)
+        var bLen = len(self.b)
 
         if bLen >= 2 and self.b[0] == rChar[0] and self.b[1] == nChar[0]:
             self.b = self.b[2:]
@@ -584,7 +584,7 @@ struct headerScanner:
         else:
             n = self.b.find(":")
             # There can't be a \n inside the header name, check for this.
-            let x = self.b.find(nChar)
+            var x = self.b.find(nChar)
             if x < 0:
                 # A header name should always at some point be followed by a \n
                 # even if it's the one that terminates the header block.
@@ -624,10 +624,10 @@ struct headerScanner:
                 break
             if self.b[n + 1] != " " and self.b[n + 1] != "\t":
                 break
-            let d = self.b[n + 1 :].find(nChar)
+            var d = self.b[n + 1 :].find(nChar)
             if d <= 0:
                 break
-            let e = n + d + 1
+            var e = n + d + 1
             if self.b[n + 1 : e].find(":") != -1:
                 break
             is_multi_line_value = True
@@ -637,7 +637,7 @@ struct headerScanner:
             self.err = errNeedMore
             return False
 
-        let old_b = self.b
+        var old_b = self.b
         self.value = self.b[:n]
         self.subslice_len += n + 1
         self.b = self.b[n + 1 :]

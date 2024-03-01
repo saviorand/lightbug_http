@@ -9,11 +9,11 @@ fn test_multiple_connections[T: Client](inout client: T) raises -> None:
     WIP: Test making multiple simultaneous connections.
     Validate that the server can handle multiple simultaneous connections without dropping or mixing up data.
     """
-    let uri = URI("http", "localhost", "/123")
-    let request = HTTPRequest(uri)
-    # let response1 = client.get(request)
-    # let response2 = client.get(request)
-    # let response3 = client.get(request)
+    var uri = URI("http", "localhost", "/123")
+    var request = HTTPRequest(uri)
+    # var response1 = client.get(request)
+    # var response2 = client.get(request)
+    # var response3 = client.get(request)
     # testing.assert_equal(response1.header.status_code(), 200)
     # testing.assert_equal(response2.header.status_code(), 200)
     # testing.assert_equal(response3.header.status_code(), 200)
@@ -24,9 +24,9 @@ fn test_idle_connections[T: Client](inout client: T) raises -> None:
     WIP: Test idle connections.
     Establish a connection and then remain idle for longer than the server’s timeout setting to ensure the server properly closes the connection.
     """
-    let uri = URI("http", "localhost", "/123")
-    let request = HTTPRequest(uri)
-    # let response = client.get(request)
+    var uri = URI("http", "localhost", "/123")
+    var request = HTTPRequest(uri)
+    # var response = client.get(request)
     # testing.assert_equal(response.header.status_code(), 200)
 
 

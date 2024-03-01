@@ -12,10 +12,10 @@ struct Modules:
 
     @staticmethod
     fn __load_socket() raises -> PythonObject:
-        let socket = Python.import_module("socket")
+        var socket = Python.import_module("socket")
         return socket
 
     @staticmethod
     fn __load_builtins() raises -> PythonObject:
-        let builtins = Python.import_module("builtins")
+        var builtins = Python.import_module("builtins")
         return builtins

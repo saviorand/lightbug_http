@@ -214,7 +214,7 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
 
 fn encode(res: HTTPResponse) -> Bytes:
     var res_str = String()
-    let protocol = strHttp11
+    var protocol = strHttp11
     var current_time = String()
     try:
         current_time = Morrow.utcnow().__str__()

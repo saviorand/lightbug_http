@@ -36,7 +36,7 @@ struct PythonTCPListener(Listener):
 
     @always_inline
     fn accept[T: Connection](self) raises -> T:
-        let conn_addr = self.socket.accept()
+        var conn_addr = self.socket.accept()
         return PythonConnection(self.__pymodules, conn_addr)
 
     fn close(self) raises:
@@ -61,7 +61,7 @@ struct PythonListenConfig(ListenConfig):
         self.__pymodules = Modules()
 
     fn listen(inout self, network: String, address: String) raises -> PythonTCPListener:
-        let addr = resolve_internet_addr(network, address)
+        var addr = resolve_internet_addr(network, address)
         var listener = PythonTCPListener(self.__pymodules.builtins, addr)
         listener.socket = self.__pymodules.socket.socket(
             self.__pymodules.socket.AF_INET,
@@ -99,14 +99,14 @@ struct PythonConnection(Connection):
         self.pymodules = pymodules
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        let data = self.conn.recv(default_buffer_size)
+        var data = self.conn.recv(default_buffer_size)
         buf = String(
             self.pymodules.bytes.decode(data, CharSet.utf8.value).__str__()
         )._buffer
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:
-        let data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
+        var data = self.pymodules.bytes(String(buf), CharSet.utf8.value)
         _ = self.conn.sendall(data)
         return len(buf)
 

@@ -51,22 +51,22 @@ struct SysServer:
         T: HTTPService
     ](inout self, address: String, handler: T) raises -> None:
         var __net = SysNet()
-        let listener = __net.listen(NetworkType.tcp4.value, address)
+        var listener = __net.listen(NetworkType.tcp4.value, address)
         self.serve(listener, handler)
 
     fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
-        # let max_worker_count = self.get_concurrency()
+        # var max_worker_count = self.get_concurrency()
         # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
 
         self.ln = ln
 
         while True:
-            let conn = self.ln.accept[SysConnection]()
+            var conn = self.ln.accept()
             var buf = Bytes()
-            let read_len = conn.read(buf)
-            let first_line_and_headers = next_line(buf)
-            let request_line = first_line_and_headers.first_line
-            let rest_of_headers = first_line_and_headers.rest
+            var read_len = conn.read(buf)
+            var first_line_and_headers = next_line(buf)
+            var request_line = first_line_and_headers.first_line
+            var rest_of_headers = first_line_and_headers.rest
 
             var uri = URI(request_line)
             try:
@@ -82,13 +82,13 @@ struct SysServer:
                 conn.close()
                 raise Error("Failed to parse request header")
 
-            let res = handler.func(
+            var res = handler.func(
                 HTTPRequest(
                     uri,
                     buf,
                     header,
                 )
             )
-            let res_encoded = encode(res)
+            var res_encoded = encode(res)
             _ = conn.write(res_encoded)
             conn.close()

@@ -34,7 +34,7 @@ struct PythonClient(Client):
         except e:
             print("error parsing uri: " + e.__str__())
 
-        let host = String(uri.host())
+        var host = String(uri.host())
 
         if host == "":
             raise Error("URI is nil")
@@ -42,19 +42,19 @@ struct PythonClient(Client):
         if uri.is_https():
             is_tls = True
 
-        let host_port = host.split(":")
-        let host_str = host_port[0]
+        var host_port = host.split(":")
+        var host_str = host_port[0]
 
-        let port = atol(host_port[1])
+        var port = atol(host_port[1])
 
         _ = self.socket.connect((UnsafeString(host_str), port))
 
-        let data = self.pymodules.builtins.bytes(
+        var data = self.pymodules.builtins.bytes(
             String(req.body_raw), CharSet.utf8.value
         )
         _ = self.socket.sendall(data)
 
-        let res = self.socket.recv(1024).decode()
+        var res = self.socket.recv(1024).decode()
         _ = self.socket.close()
 
         return HTTPResponse(res.__str__()._buffer)
