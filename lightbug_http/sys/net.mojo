@@ -57,11 +57,10 @@ struct SysListener(Listener):
         self.__addr = addr
         self.fd = fd
 
-    @always_inline
-    fn accept[T: Connection](self) raises -> T:
-        let their_addr_ptr = Pointer[sockaddr].alloc(1)
+    fn accept(self) raises -> SysConnection:
+        var their_addr_ptr = Pointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
-        let new_sockfd = accept(
+        var new_sockfd = accept(
             self.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
         )
         if new_sockfd == -1:
@@ -71,7 +70,7 @@ struct SysListener(Listener):
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
-        let close_status = close(self.fd)
+        var close_status = close(self.fd)
         if close_status == -1:
             print("Failed to close new_sockfd")
 
@@ -89,22 +88,22 @@ struct SysListenConfig(ListenConfig):
         self.__keep_alive = Duration(keep_alive)
 
     fn listen(inout self, network: String, address: String) raises -> SysListener:
-        let addr = resolve_internet_addr(network, address)
-        let address_family = AF_INET
+        var addr = resolve_internet_addr(network, address)
+        var address_family = AF_INET
         var ip_buf_size = 4
         if address_family == AF_INET6:
             ip_buf_size = 16
 
-        let ip_buf = Pointer[c_void].alloc(ip_buf_size)
-        let conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
-        let raw_ip = ip_buf.bitcast[c_uint]().load()
+        var ip_buf = Pointer[c_void].alloc(ip_buf_size)
+        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
+        var raw_ip = ip_buf.bitcast[c_uint]().load()
 
-        let bin_port = htons(UInt16(addr.port))
+        var bin_port = htons(UInt16(addr.port))
 
         var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
-        let ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
+        var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
-        let sockfd = socket(address_family, SOCK_STREAM, 0)
+        var sockfd = socket(address_family, SOCK_STREAM, 0)
         if sockfd == -1:
             print("Socket creation error")
 
@@ -124,7 +123,7 @@ struct SysListenConfig(ListenConfig):
         if listen(sockfd, c_int(128)) == -1:
             print("Listen failed.\n on sockfd " + sockfd.__str__())
 
-        let listener = SysListener(addr, sockfd)
+        var listener = SysListener(addr, sockfd)
 
         print("🔥🐝 Lightbug is listening on " + "http://" + addr.ip + ":" + addr.port.__str__())
         print("Ready to accept connections...")
@@ -154,23 +153,23 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        let new_buf = Pointer[UInt8]().alloc(default_buffer_size)
-        let bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
+        var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
+        var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
             print("Failed to receive message")
-        let bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
+        var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
         buf = bytes_str._buffer
         return bytes_recv
 
     fn write(self, buf: Bytes) raises -> Int:
-        let msg = String(buf)
+        var msg = String(buf)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             print("Failed to send response")
         return len(buf)
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
-        let close_status = close(self.fd)
+        var close_status = close(self.fd)
         if close_status == -1:
             print("Failed to close new_sockfd")
 

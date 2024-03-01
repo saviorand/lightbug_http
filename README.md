@@ -97,7 +97,7 @@ Once you have Mojo set up locally,
    @value
    struct Printer(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-         let body = req.body_raw
+         var body = req.body_raw
          print(String(body))
 
          return OK(body)
@@ -107,8 +107,8 @@ Once you have Mojo set up locally,
    @value
    struct ExampleRouter(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-         let body = req.body_raw
-         let uri = req.uri()
+         var body = req.body_raw
+         var uri = req.uri()
 
          if uri.path() == "/":
                print("I'm on the index path!")
@@ -131,7 +131,7 @@ Once you have Mojo set up locally,
 
    fn main() raises:
       var server = SysServer()
-      let handler = Printer()
+      var handler = Printer()
       server.listen_and_serve("0.0.0.0:8080", handler)
    ```
    Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.

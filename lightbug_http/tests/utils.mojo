@@ -28,7 +28,7 @@ alias defaultExpectedGetResponse = String(
 @parameter
 fn new_httpx_client() -> PythonObject:
     try:
-        let httpx = Python.import_module("httpx")
+        var httpx = Python.import_module("httpx")
         return httpx
     except e:
         print("Could not set up httpx client: " + e.__str__())
@@ -89,14 +89,14 @@ struct FakeClient(Client):
 
         self.req_full_uri = full_uri
 
-        let host = String(full_uri.host())
+        var host = String(full_uri.host())
 
         if host == "":
             raise Error("URI host is nil")
 
         self.req_host = host
 
-        let is_tls = full_uri.is_https()
+        var is_tls = full_uri.is_https()
         self.req_is_tls = is_tls
 
         return ReqInfo(full_uri, host, is_tls)
@@ -139,7 +139,7 @@ struct FakeServer(ServerTrait):
 @value
 struct FakeResponder(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        let method = String(req.header.method())
+        var method = String(req.header.method())
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
         return OK(String("Hello, world!")._buffer)

@@ -20,8 +20,8 @@ fn test_python_server[C: Client](client: C, ln: PythonListenConfig) raises -> No
     Validate that the server is listening on the provided port.
     """
     ...
-    # let conn = ln.accept()
-    # let res = client.do(
+    # var conn = ln.accept()
+    # var res = client.do(
     #     HTTPRequest(
     #         URI(default_server_conn_string),
     #         String("Hello world!")._buffer,
