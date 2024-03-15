@@ -1,3 +1,4 @@
+# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
 from external.libc import c_ssize_t, c_size_t, c_int, char_pointer
 from ..builtins._bytes import Bytes, Byte
 

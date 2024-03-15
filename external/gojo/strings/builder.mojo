@@ -1,3 +1,4 @@
+# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
 # Adapted from https://github.com/maniartech/mojo-strings/blob/master/strings/builder.mojo
 # Modified to use DynamicVector[Int8] instead of DynamicVector[String]
 

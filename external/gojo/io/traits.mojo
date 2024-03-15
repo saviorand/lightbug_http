@@ -1,3 +1,4 @@
+# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
 from ..builtins._bytes import Bytes, Byte
 
 alias Rune = Int32
