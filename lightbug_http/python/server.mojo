@@ -96,5 +96,5 @@ struct PythonServer:
                 )
             )
             var res_encoded = encode(res)
-            _ = conn.write(res_encoded)
+            _ = conn.write(res_encoded._vector)
             conn.close()
