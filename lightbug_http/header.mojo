@@ -502,19 +502,19 @@ struct ResponseHeader:
                 if s.key.find(" ") != -1 or s.key.find("\t") != -1:
                     raise Error("Invalid header key")
                 elif s.key[0] == "c" or s.key[0] == "C":
-                    if s.key.tolower() == "content-type":
+                    if s.key.lower() == "content-type":
                         _ = self.set_content_type(s.value)
                         continue
-                    if s.key.tolower() == "content-encoding":
+                    if s.key.lower() == "content-encoding":
                         _ = self.set_content_encoding(s.value)
                         continue
-                    if s.key.tolower() == "content-length":
+                    if s.key.lower() == "content-length":
                         if self.content_length != -1:
                             var content_length = s.value
                             self.content_length = atol(content_length)
                             self.content_length_bytes = content_length._buffer
                         continue
-                    if s.key.tolower() == "connection":
+                    if s.key.lower() == "connection":
                         if s.value == "close":
                             _ = self.set_connection_close()
                         else:
@@ -522,17 +522,17 @@ struct ResponseHeader:
                             # _ = self.appendargbytes(s.key, s.value)
                         continue
                 elif s.key[0] == "s" or s.key[0] == "S":
-                    if s.key.tolower() == "server":
+                    if s.key.lower() == "server":
                         _ = self.set_server(s.value)
                         continue
                     # TODO: set cookie
                 elif s.key[0] == "t" or s.key[0] == "T":
-                    if s.key.tolower() == "transfer-encoding":
+                    if s.key.lower() == "transfer-encoding":
                         if s.value != "identity":
                             self.content_length = -1
                             # _ = self.setargbytes(s.key, strChunked)
                         continue
-                    if s.key.tolower() == "trailer":
+                    if s.key.lower() == "trailer":
                         _ = self.set_trailer(s.value)
 
 

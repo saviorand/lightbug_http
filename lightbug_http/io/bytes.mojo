@@ -9,7 +9,7 @@ struct UnsafeString:
     var data: Pointer[Int8]
     var len: Int
 
-    fn __init__(inout self, str: StringLiteral) -> UnsafeString:
+    fn __init__(str: StringLiteral) -> UnsafeString:
         var l = str.__len__()
         var s = String(str)
         var p = Pointer[Int8].alloc(l)

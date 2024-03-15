@@ -47,7 +47,7 @@ struct PythonClient(Client):
 
         var port = atol(host_port[1])
 
-        _ = self.socket.connect((UnsafeString(host_str), port))
+        _ = self.socket.connect((UnsafeString(host_str.__str__()), port))
 
         var data = self.pymodules.builtins.bytes(
             String(req.body_raw), CharSet.utf8.value

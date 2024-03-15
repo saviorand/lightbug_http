@@ -14,7 +14,7 @@ from lightbug_http.strings import CharSet
 
 
 @value
-struct PythonTCPListener(Listener):
+struct PythonTCPListener:
     var __pymodules: PythonObject
     var __addr: TCPAddr
     var socket: PythonObject
@@ -33,6 +33,13 @@ struct PythonTCPListener(Listener):
         self.__pymodules = pymodules
         self.__addr = addr
         self.socket = None
+
+    fn __init__(
+        inout self, pymodules: PythonObject, addr: TCPAddr, socket: PythonObject
+    ) raises:
+        self.__pymodules = pymodules
+        self.__addr = addr
+        self.socket = socket
 
     @always_inline
     fn accept[T: Connection](self) raises -> T:
@@ -62,10 +69,13 @@ struct PythonListenConfig(ListenConfig):
 
     fn listen(inout self, network: String, address: String) raises -> PythonTCPListener:
         var addr = resolve_internet_addr(network, address)
-        var listener = PythonTCPListener(self.__pymodules.builtins, addr)
-        listener.socket = self.__pymodules.socket.socket(
-            self.__pymodules.socket.AF_INET,
-            self.__pymodules.socket.SOCK_STREAM,
+        var listener = PythonTCPListener(
+            self.__pymodules.builtins,
+            addr,
+            self.__pymodules.socket.socket(
+                self.__pymodules.socket.AF_INET,
+                self.__pymodules.socket.SOCK_STREAM,
+            ),
         )
         _ = listener.socket.bind((UnsafeString(addr.ip), addr.port))
         _ = listener.socket.listen()

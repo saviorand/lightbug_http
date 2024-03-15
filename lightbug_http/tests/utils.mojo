@@ -170,7 +170,7 @@ struct FakeConnection(Connection):
 
 
 @value
-struct FakeListener(Listener):
+struct FakeListener:
     var request_count: Int
     var request: Bytes
     var closed: Bool
