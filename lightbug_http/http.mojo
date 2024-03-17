@@ -1,9 +1,11 @@
 from time import now
 from external.morrow import Morrow
-from external.gojo.strings import StringBuilder, Reader, new_reader
-from external.gojo.builtins import Bytes
-import external.gojo.io
+
+# from external.gojo.strings import StringBuilder, Reader, new_reader
+# from external.gojo.builtins import Bytes
+# import external.gojo.io
 from lightbug_http.uri import URI
+from lightbug_http.io.bytes import Bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
@@ -120,7 +122,7 @@ struct HTTPRequest(Request):
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
-        _ = self.__uri.set_host_bytes(host._vector)
+        _ = self.__uri.set_host_bytes(host)
         return self
 
     fn host(self) -> String:
@@ -132,7 +134,7 @@ struct HTTPRequest(Request):
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
-        _ = self.header.set_request_uri_bytes(request_uri._vector)
+        _ = self.header.set_request_uri_bytes(request_uri)
         return self
 
     fn request_uri(inout self) -> String:
@@ -223,33 +225,32 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     except e:
         print("Error getting current time: " + e.__str__())
         current_time = now().__str__()
-    var builder = StringBuilder()
-    _ = builder.write_string(protocol)
-    _ = builder.write_string(" ")
-    _ = builder.write_string(res.header.status_code().__str__())
-    _ = builder.write_string(" ")
-    _ = builder.write_string(res.header.status_message())
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Server: lightbug_http")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Content-Type: ")
-    _ = builder.write_string(res.header.content_type())
+    res_str += protocol
+    res_str += String(" ")
+    res_str += res.header.status_code().__str__()
+    res_str += String(" ")
+    res_str += String(res.header.status_message())
+    res_str += String("\r\n")
+    res_str += String("Server: lightbug_http")
+    res_str += String("\r\n")
+    res_str += String("Content-Type: ")
+    res_str += String(res.header.content_type())
     # TODO: propagate charset
     # res_str += String("; charset=utf-8")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Content-Length: ")
+    res_str += String("\r\n")
+    res_str += String("Content-Length: ")
     # TODO: fix this
-    _ = builder.write_string((res.body_raw.__len__() - 1).__str__())
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Connection: ")
+    res_str += (res.body_raw.__len__() - 1).__str__()
+    res_str += String("\r\n")
+    res_str += String("Connection: ")
     if res.connection_close():
-        _ = builder.write_string("close")
+        res_str += String("close")
     else:
-        _ = builder.write_string("keep-alive")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Date: ")
-    _ = builder.write_string(current_time)
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("\r\n")
-    _ = builder.write(res.body_raw)
-    return builder._vector
+        res_str += String("keep-alive")
+    res_str += String("\r\n")
+    res_str += String("Date: ")
+    res_str += current_time
+    res_str += String("\r\n")
+    res_str += String("\r\n")
+    res_str += res.body_raw
+    return res_str._buffer

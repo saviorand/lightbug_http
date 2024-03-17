@@ -103,3 +103,7 @@ struct SysServer:
                 conn.close()
             except:
                 raise Error("Failed to serve request")
+            )
+            var res_encoded = encode(res)
+            _ = conn.write(res_encoded)
+            conn.close()
