@@ -186,11 +186,11 @@ struct SysConnection(Connection):
         if bytes_recv == -1:
             raise Error("Failed to receive message")
         var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
-        buf = bytes_str._buffer
+        buf += bytes_str.as_bytes()
         return bytes_recv
 
     fn write(self, buf: Bytes) raises -> Int:
-        var msg = String(buf)
+        var msg = buf.__str__()
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
             raise Error("Failed to send response")
         return len(buf)

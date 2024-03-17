@@ -96,14 +96,10 @@ struct SysServer:
                 )
                 var res_encoded = encode(res)
                 try:
-                    _ = conn.write(res_encoded._vector)
+                    _ = conn.write(res_encoded)
                 except:
                     conn.close()
                     raise Error("Failed to write response")
                 conn.close()
             except:
                 raise Error("Failed to serve request")
-            )
-            var res_encoded = encode(res)
-            _ = conn.write(res_encoded)
-            conn.close()

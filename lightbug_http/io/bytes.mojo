@@ -1,6 +1,5 @@
 from python import PythonObject
-
-alias Bytes = DynamicVector[Int8]
+from external.gojo.builtins._bytes import Bytes
 
 
 @value
@@ -30,4 +29,4 @@ struct UnsafeString:
 
 
 fn bytes_equal(a: Bytes, b: Bytes) -> Bool:
-    return String(a) == String(b)
+    return a == b
