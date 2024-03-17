@@ -1,11 +1,9 @@
 from time import now
 from external.morrow import Morrow
-
-# from external.gojo.strings import StringBuilder, Reader, new_reader
-# from external.gojo.builtins import Bytes
-# import external.gojo.io
+from external.gojo.strings import StringBuilder, Reader, new_reader
+from external.gojo.builtins import Bytes
+import external.gojo.io
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
@@ -122,7 +120,7 @@ struct HTTPRequest(Request):
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
-        _ = self.__uri.set_host_bytes(host)
+        _ = self.__uri.set_host_bytes(host._vector)
         return self
 
     fn host(self) -> String:
@@ -134,7 +132,7 @@ struct HTTPRequest(Request):
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
-        _ = self.header.set_request_uri_bytes(request_uri)
+        _ = self.header.set_request_uri_bytes(request_uri._vector)
         return self
 
     fn request_uri(inout self) -> String:
@@ -200,6 +198,13 @@ struct HTTPResponse(Response):
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
 
+    fn set_body_raw(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
+
+    fn body(self) -> Bytes:
+        return self.body_raw
+
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
@@ -225,32 +230,37 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     except e:
         print("Error getting current time: " + e.__str__())
         current_time = now().__str__()
-    res_str += protocol
-    res_str += String(" ")
-    res_str += res.header.status_code().__str__()
-    res_str += String(" ")
-    res_str += String(res.header.status_message())
-    res_str += String("\r\n")
-    res_str += String("Server: lightbug_http")
-    res_str += String("\r\n")
-    res_str += String("Content-Type: ")
-    res_str += String(res.header.content_type())
+    var builder = StringBuilder()
+    _ = builder.write(String(protocol).as_bytes())
+    _ = builder.write(String(" ").as_bytes())
+    _ = builder.write(String(res.header.status_code().__str__()).as_bytes())
+    _ = builder.write(String(" ").as_bytes())
+    _ = builder.write(String("OK").as_bytes())  # res.header.status_message()
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Server: lightbug_http").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Content-Type: ").as_bytes())
+    _ = builder.write(String("text/html").as_bytes())  # res.header.content_type()
     # TODO: propagate charset
     # res_str += String("; charset=utf-8")
-    res_str += String("\r\n")
-    res_str += String("Content-Length: ")
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Content-Length: ").as_bytes())
     # TODO: fix this
-    res_str += (res.body_raw.__len__() - 1).__str__()
-    res_str += String("\r\n")
-    res_str += String("Connection: ")
+    _ = builder.write(
+        String(355871).as_bytes()
+    )  # (res.body_raw.__len__() - 1).__str__()
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Connection: ").as_bytes())
     if res.connection_close():
-        res_str += String("close")
+        _ = builder.write(String("close").as_bytes())
     else:
-        res_str += String("keep-alive")
-    res_str += String("\r\n")
-    res_str += String("Date: ")
-    res_str += current_time
-    res_str += String("\r\n")
-    res_str += String("\r\n")
-    res_str += res.body_raw
-    return res_str._buffer
+        _ = builder.write(String("keep-alive").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Date: ").as_bytes())
+    _ = builder.write(String(current_time).as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("<div>hello frend</div>").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    # _ = builder.write(res.body())
+    return builder._vector

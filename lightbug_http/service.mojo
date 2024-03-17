@@ -1,4 +1,5 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, OK
+from external.gojo.builtins._bytes import Bytes
 
 
 trait HTTPService:
@@ -22,7 +23,7 @@ struct Welcome(HTTPService):
         with open("static/lightbug_welcome.html", "r") as f:
             html = f.read()
 
-        return OK(html._buffer, "text/html")
+        return OK(html.as_bytes(), "text/html")
 
 
 @value

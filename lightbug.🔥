@@ -1,7 +1,13 @@
 from lightbug_http import *
+from external.gojo.strings import StringBuilder, Reader, new_reader
+from external.gojo.builtins import Bytes
+import external.gojo.io
 
 
-fn main() raises:
-    var server = SysServer()
-    var handler = Welcome()
-    server.listen_and_serve("0.0.0.0:8080", handler)
+fn main():
+    try:
+        var server = SysServer()
+        var handler = Welcome()
+        server.listen_and_serve("0.0.0.0:8080", handler)
+    except e:
+        print("Oh.. Failed to start server. Error: ", e)
