@@ -61,34 +61,45 @@ struct SysServer:
         self.ln = ln
 
         while True:
-            var conn = self.ln.accept()
-            var buf = Bytes()
-            var read_len = conn.read(buf)
-            var first_line_and_headers = next_line(buf)
-            var request_line = first_line_and_headers.first_line
-            var rest_of_headers = first_line_and_headers.rest
-
-            var uri = URI(request_line)
             try:
-                uri.parse()
-            except:
-                conn.close()
-                raise Error("Failed to parse request line")
+                var conn = self.ln.accept()
+                var buf = Bytes()
+                try:
+                    var read_len = conn.read(buf)
+                except:
+                    conn.close()
+                    raise Error("Failed to read request")
+                var first_line_and_headers = next_line(buf)
+                var request_line = first_line_and_headers.first_line
+                var rest_of_headers = first_line_and_headers.rest
 
-            var header = RequestHeader(buf)
-            try:
-                header.parse()
-            except:
-                conn.close()
-                raise Error("Failed to parse request header")
+                var uri = URI(request_line)
+                try:
+                    uri.parse()
+                except:
+                    conn.close()
+                    raise Error("Failed to parse request line")
 
-            var res = handler.func(
-                HTTPRequest(
-                    uri,
-                    buf,
-                    header,
+                var header = RequestHeader(buf)
+                try:
+                    header.parse()
+                except:
+                    conn.close()
+                    raise Error("Failed to parse request header")
+
+                var res = handler.func(
+                    HTTPRequest(
+                        uri,
+                        buf,
+                        header,
+                    )
                 )
-            )
-            var res_encoded = encode(res)
-            _ = conn.write(res_encoded._vector)
-            conn.close()
+                var res_encoded = encode(res)
+                try:
+                    _ = conn.write(res_encoded._vector)
+                except:
+                    conn.close()
+                    raise Error("Failed to write response")
+                conn.close()
+            except:
+                raise Error("Failed to serve request")

@@ -555,6 +555,38 @@ fn setsockopt(
     ](socket, level, option_name, option_value, option_len)
 
 
+fn getsockopt(
+    socket: c_int,
+    level: c_int,
+    option_name: c_int,
+    option_value: Pointer[c_void],
+    option_len: Pointer[socklen_t],
+) -> c_int:
+    """Libc POSIX `getsockopt` function
+    Reference: https://man7.org/linux/man-pages/man2/getsockopt.2.html
+    Fn signature: int getsockopt(int socket, int level, int option_name, void *option_value, socklen_t *option_len).
+
+    Args:
+        socket: A File Descriptor.
+        level: The protocol level at which the option resides.
+        option_name: The name of the option to retrieve.
+        option_value: A pointer to the buffer that receives the value of the option.
+        option_len: A pointer to a variable that specifies the size of the option_value buffer; on return, it will contain the actual size of the value returned.
+
+    Returns:
+        0 on success, -1 on error.
+    """
+    return external_call[
+        "getsockopt",
+        c_int,  # FnName, RetType
+        c_int,  # socket
+        c_int,  # level
+        c_int,  # option_name
+        Pointer[c_void],  # option_value
+        Pointer[socklen_t],  # option_len
+    ](socket, level, option_name, option_value, option_len)
+
+
 fn bind(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -> c_int:
     """Libc POSIX `bind` function
     Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
@@ -831,6 +863,17 @@ fn write(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
     return external_call["write", c_ssize_t, c_int, Pointer[c_void], c_size_t](
         fildes, buf, nbyte
     )
+
+
+fn free(ptr: Pointer[c_void]):
+    """Libc `free` function to deallocate memory.
+    Reference: https://man7.org/linux/man-pages/man3/free.3.html
+    Fn signature: void free(void *ptr).
+
+    Args:
+        ptr: A pointer to the memory block to be freed, previously allocated by a call to `malloc`, `calloc` or `realloc`.
+    """
+    _ = external_call["free", c_void, Pointer[c_void]](ptr)
 
 
 # --- ( Testing Functions ) ----------------------------------------------------

@@ -30,6 +30,7 @@ from external.libc import (
     to_char_ptr,
     socket,
     setsockopt,
+    getsockopt,
     listen,
     accept,
     send,
@@ -37,6 +38,7 @@ from external.libc import (
     bind,
     shutdown,
     close,
+    free,
 )
 
 
@@ -64,15 +66,17 @@ struct SysListener(Listener):
             self.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
         )
         if new_sockfd == -1:
-            print("Failed to accept connection")
+            raise Error("Failed to accept connection")
         # TODO: pass raddr to connection
+        # free memory
+
         return SysConnection(self.__addr, TCPAddr("", 0), new_sockfd)
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
         var close_status = close(self.fd)
         if close_status == -1:
-            print("Failed to close new_sockfd")
+            raise Error("Failed to close new_sockfd")
 
     fn addr(self) -> TCPAddr:
         return self.__addr
@@ -108,24 +112,48 @@ struct SysListenConfig(ListenConfig):
             print("Socket creation error")
 
         var yes: Int = 1
-        _ = setsockopt(
+        var setoptstatus = setsockopt(
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
             Pointer[Int].address_of(yes).bitcast[c_void](),
             sizeof[Int](),
         )
+        # if setoptstatus == -1:
+        #     var option_value: Int = 0
+        #     var option_len: socklen_t = sizeof[Int]()
+        #     var status = getsockopt(
+        #         sockfd,
+        #         SOL_SOCKET,
+        #         SO_REUSEADDR,
+        #         Pointer[Int].address_of(option_value).bitcast[c_void](),
+        #         Pointer[socklen_t].address_of(option_len),
+        #     )
+        #     if status == -1:
+        #         print("Failed to get socket option SO_REUSEADDR")
+        #     else:
+        #         print("SO_REUSEADDR is set to: ", option_value)
+        #     raise Error("Setsockopt failed")
 
         if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
             _ = shutdown(sockfd, SHUT_RDWR)
-            print("Binding socket failed. Wait a few seconds and try again?")
+            var close_status = close(sockfd)
+            if close_status == -1:
+                raise Error("Failed to close new_sockfd")
+            raise Error("Binding socket failed. Wait a few seconds and try again?")
 
         if listen(sockfd, c_int(128)) == -1:
             print("Listen failed.\n on sockfd " + sockfd.__str__())
 
         var listener = SysListener(addr, sockfd)
 
-        print("🔥🐝 Lightbug is listening on " + "http://" + addr.ip + ":" + addr.port.__str__())
+        print(
+            "🔥🐝 Lightbug is listening on "
+            + "http://"
+            + addr.ip
+            + ":"
+            + addr.port.__str__()
+        )
         print("Ready to accept connections...")
 
         return listener
@@ -156,7 +184,7 @@ struct SysConnection(Connection):
         var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
-            print("Failed to receive message")
+            raise Error("Failed to receive message")
         var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
         buf = bytes_str._buffer
         return bytes_recv
@@ -164,7 +192,7 @@ struct SysConnection(Connection):
     fn write(self, buf: Bytes) raises -> Int:
         var msg = String(buf)
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
-            print("Failed to send response")
+            raise Error("Failed to send response")
         return len(buf)
 
     fn close(self) raises:
