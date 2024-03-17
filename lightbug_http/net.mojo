@@ -54,7 +54,7 @@ trait Connection(Movable):
     fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
         ...
 
-    fn read(self, inout buf: Bytes) raises -> Int:
+    fn read(self) raises -> Bytes:
         ...
 
     fn write(self, buf: Bytes) raises -> Int:

@@ -180,14 +180,13 @@ struct SysConnection(Connection):
         self.laddr = laddr
         self.fd = fd
 
-    fn read(self, inout buf: Bytes) raises -> Int:
+    fn read(self) raises -> Bytes:
         var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
             raise Error("Failed to receive message")
         var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
-        buf += bytes_str.as_bytes()
-        return bytes_recv
+        return bytes_str.as_bytes()
 
     fn write(self, buf: Bytes) raises -> Int:
         var msg = buf.__str__()
@@ -221,4 +220,7 @@ struct SysNet(Net):
         self.__lc = SysListenConfig(keep_alive)
 
     fn listen(inout self, network: String, addr: String) raises -> SysListener:
-        return self.__lc.listen(network, addr)
+        try:
+            return self.__lc.listen(network, addr)
+        except e:
+            raise Error("Could not listen on the port: " + e.__str__())

@@ -63,9 +63,9 @@ struct SysServer:
         while True:
             try:
                 var conn = self.ln.accept()
-                var buf = Bytes()
+                var buf: Bytes
                 try:
-                    var read_len = conn.read(buf)
+                    buf = conn.read()
                 except:
                     conn.close()
                     raise Error("Failed to read request")

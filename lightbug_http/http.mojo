@@ -198,6 +198,13 @@ struct HTTPResponse(Response):
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
 
+    fn set_body_raw(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
+
+    fn body(self) -> Bytes:
+        return self.body_raw
+
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
@@ -224,32 +231,36 @@ fn encode(res: HTTPResponse) raises -> Bytes:
         print("Error getting current time: " + e.__str__())
         current_time = now().__str__()
     var builder = StringBuilder()
-    _ = builder.write_string(protocol)
-    _ = builder.write_string(" ")
-    _ = builder.write_string(res.header.status_code().__str__())
-    _ = builder.write_string(" ")
-    _ = builder.write_string(res.header.status_message())
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Server: lightbug_http")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Content-Type: ")
-    _ = builder.write_string(res.header.content_type())
+    _ = builder.write(String(protocol).as_bytes())
+    _ = builder.write(String(" ").as_bytes())
+    _ = builder.write(String(res.header.status_code().__str__()).as_bytes())
+    _ = builder.write(String(" ").as_bytes())
+    _ = builder.write(String("OK").as_bytes())  # res.header.status_message()
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Server: lightbug_http").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Content-Type: ").as_bytes())
+    _ = builder.write(String("text/html").as_bytes())  # res.header.content_type()
     # TODO: propagate charset
     # res_str += String("; charset=utf-8")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Content-Length: ")
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Content-Length: ").as_bytes())
     # TODO: fix this
-    _ = builder.write_string((res.body_raw.__len__() - 1).__str__())
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Connection: ")
+    _ = builder.write(
+        String(355871).as_bytes()
+    )  # (res.body_raw.__len__() - 1).__str__()
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Connection: ").as_bytes())
     if res.connection_close():
-        _ = builder.write_string("close")
+        _ = builder.write(String("close").as_bytes())
     else:
-        _ = builder.write_string("keep-alive")
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("Date: ")
-    _ = builder.write_string(current_time)
-    _ = builder.write_string("\r\n")
-    _ = builder.write_string("\r\n")
-    _ = builder.write(res.body_raw)
+        _ = builder.write(String("keep-alive").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("Date: ").as_bytes())
+    _ = builder.write(String(current_time).as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    _ = builder.write(String("<div>hello frend</div>").as_bytes())
+    _ = builder.write(String("\r\n").as_bytes())
+    # _ = builder.write(res.body())
     return builder._vector
