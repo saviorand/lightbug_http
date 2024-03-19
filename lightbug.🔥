@@ -4,16 +4,10 @@ from external.gojo.builtins import Bytes
 import external.gojo.io
 
 
-@value
-struct Dummy(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        return OK(String("test").as_bytes())
-
-
 fn main():
     try:
         var server = SysServer()
-        var handler = Dummy()
+        var handler = Welcome()
         server.listen_and_serve("0.0.0.0:8080", handler)
     except e:
         print("Oh.. Failed to start server. Error: ", e)
