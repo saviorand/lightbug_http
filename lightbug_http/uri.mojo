@@ -37,7 +37,7 @@ struct URI:
         self.__hash = Bytes()
         self.__host = Bytes()
         self.disable_path_normalization = False
-        self.__full_uri = full_uri._buffer
+        self.__full_uri = full_uri.as_bytes()
         self.__request_uri = Bytes()
         self.__username = Bytes()
         self.__password = Bytes()
@@ -48,12 +48,12 @@ struct URI:
         host: String,
         path: String,
     ) -> None:
-        self.__path_original = path._buffer
-        self.__scheme = scheme._buffer
-        self.__path = normalise_path(path._buffer, self.__path_original)
+        self.__path_original = path.as_bytes()
+        self.__scheme = scheme.as_bytes()
+        self.__path = normalise_path(path.as_bytes(), self.__path_original)
         self.__query_string = Bytes()
         self.__hash = Bytes()
-        self.__host = host._buffer
+        self.__host = host.as_bytes()
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
         self.__request_uri = Bytes()
@@ -90,7 +90,7 @@ struct URI:
         return self.__path_original
 
     fn set_path(inout self, path: String) -> Self:
-        self.__path = normalise_path(path._buffer, self.__path_original)
+        self.__path = normalise_path(path.as_bytes(), self.__path_original)
         return self
 
     fn set_path_sbytes(inout self, path: Bytes) -> Self:
@@ -104,7 +104,7 @@ struct URI:
         return String(processed_path)
 
     fn set_scheme(inout self, scheme: String) -> Self:
-        self.__scheme = scheme._buffer
+        self.__scheme = scheme.as_bytes()
         return self
 
     fn set_scheme_bytes(inout self, scheme: Bytes) -> Self:
@@ -124,7 +124,7 @@ struct URI:
         return bytes_equal(self.__scheme, strHttp) or len(self.__scheme) == 0
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.__request_uri = request_uri._buffer
+        self.__request_uri = request_uri.as_bytes()
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
@@ -132,7 +132,7 @@ struct URI:
         return self
 
     fn set_query_string(inout self, query_string: String) -> Self:
-        self.__query_string = query_string._buffer
+        self.__query_string = query_string.as_bytes()
         return self
 
     fn set_query_string_bytes(inout self, query_string: Bytes) -> Self:
@@ -140,7 +140,7 @@ struct URI:
         return self
 
     fn set_hash(inout self, hash: String) -> Self:
-        self.__hash = hash._buffer
+        self.__hash = hash.as_bytes()
         return self
 
     fn set_hash_bytes(inout self, hash: Bytes) -> Self:
@@ -151,7 +151,7 @@ struct URI:
         return self.__hash
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = host._buffer
+        self.__host = host.as_bytes()
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -187,27 +187,27 @@ struct URI:
             var host_and_port = request_uri[n + 3 :]
             n = host_and_port.find("/")
             if n >= 0:
-                self.__host = host_and_port[:n]._buffer
+                self.__host = host_and_port[:n].as_bytes()
                 request_uri = request_uri[n + 3 :]
             else:
-                self.__host = host_and_port._buffer
+                self.__host = host_and_port.as_bytes()
                 request_uri = strSlash
         else:
             n = request_uri.find("/")
             if n >= 0:
-                self.__host = request_uri[:n]._buffer
+                self.__host = request_uri[:n].as_bytes()
                 request_uri = request_uri[n:]
             else:
-                self.__host = request_uri._buffer
+                self.__host = request_uri.as_bytes()
                 request_uri = strSlash
 
         # Parse path
         n = request_uri.find("?")
         if n >= 0:
-            self.__path_original = request_uri[:n]._buffer
-            self.__query_string = request_uri[n + 1 :]._buffer
+            self.__path_original = request_uri[:n].as_bytes()
+            self.__query_string = request_uri[n + 1 :].as_bytes()
         else:
-            self.__path_original = request_uri._buffer
+            self.__path_original = request_uri.as_bytes()
             self.__query_string = Bytes()
 
         self.__path = normalise_path(self.__path_original, self.__path_original)
@@ -219,7 +219,7 @@ struct URI:
         return self.__request_uri
 
     fn set_username(inout self, username: String) -> Self:
-        self.__username = username._buffer
+        self.__username = username.as_bytes()
         return self
 
     fn set_username_bytes(inout self, username: Bytes) -> Self:
@@ -227,7 +227,7 @@ struct URI:
         return self
 
     fn set_password(inout self, password: String) -> Self:
-        self.__password = password._buffer
+        self.__password = password.as_bytes()
         return self
 
     fn set_password_bytes(inout self, password: Bytes) -> Self:

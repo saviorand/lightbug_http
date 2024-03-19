@@ -18,7 +18,7 @@ alias getRequest = String(
     " Firefox Chrome MSIE Opera\r\n"
     + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
     " aa=aakslsdweriwereowriewroire\r\n\r\n"
-)._buffer
+).as_bytes()
 
 alias defaultExpectedGetResponse = String(
     "HTTP/1.1 200 OK\r\nServer: M\r\nDate: Content-Length: 13\r\n\r\nHello world!"
@@ -78,7 +78,7 @@ struct FakeClient(Client):
         self.req_is_tls = False
 
     fn do(self, req: HTTPRequest) raises -> HTTPResponse:
-        return OK(String(defaultExpectedGetResponse)._buffer)
+        return OK(String(defaultExpectedGetResponse).as_bytes())
 
     fn extract(inout self, req: HTTPRequest) raises -> ReqInfo:
         var full_uri = req.uri()
@@ -142,7 +142,7 @@ struct FakeResponder(HTTPService):
         var method = String(req.header.method())
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
-        return OK(String("Hello, world!")._buffer)
+        return OK(String("Hello, world!").as_bytes())
 
 
 @value
@@ -212,7 +212,7 @@ struct TestStruct:
     fn __init__(inout self, a: String, b: String) -> None:
         self.a = a
         self.b = b
-        self.c = String("c")._buffer
+        self.c = String("c").as_bytes()
         self.d = 1
         self.e = TestStructNested("a", 1)
 

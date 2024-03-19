@@ -14,7 +14,7 @@ fn test_client_lightbug[T: Client](client: T) raises:
     var res = client.do(
         HTTPRequest(
             URI(default_server_conn_string),
-            String("Hello world!")._buffer,
+            String("Hello world!").as_bytes(),
             RequestHeader(getRequest),
         )
     )

@@ -112,7 +112,7 @@ struct PythonConnection(Connection):
         var data = self.conn.recv(default_buffer_size)
         buf = String(
             self.pymodules.bytes.decode(data, CharSet.utf8.value).__str__()
-        )._buffer
+        ).as_bytes()
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:

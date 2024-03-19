@@ -24,7 +24,7 @@ fn test_python_server[C: Client](client: C, ln: PythonListenConfig) raises -> No
     # var res = client.do(
     #     HTTPRequest(
     #         URI(default_server_conn_string),
-    #         String("Hello world!")._buffer,
+    #         String("Hello world!").as_bytes(),
     #         RequestHeader(getRequest),
     #     )
     # )
