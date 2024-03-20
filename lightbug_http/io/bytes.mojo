@@ -13,14 +13,14 @@ struct UnsafeString:
         var s = String(str)
         var p = Pointer[Int8].alloc(l)
         for i in range(l):
-            p.store(i, s.as_bytes()[i])
+            p.store(i, s._buffer[i])
         return UnsafeString(p, l)
 
     fn __init__(str: String) -> UnsafeString:
         var l = str.__len__()
         var p = Pointer[Int8].alloc(l)
         for i in range(l):
-            p.store(i, str.as_bytes()[i])
+            p.store(i, str._buffer[i])
         return UnsafeString(p, l)
 
     fn to_string(self) -> String:
