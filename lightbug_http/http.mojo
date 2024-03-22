@@ -259,4 +259,8 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(String("\r\n"))
     # _ = builder.write(res.body())
     print(str(builder))
+    
+    # Currently the server is expecting a null terminated string since it's not using gojo Bytes yet.
+    var result = str(builder).as_bytes()
+    result.append(0)
     return str(builder).as_bytes()
