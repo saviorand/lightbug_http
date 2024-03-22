@@ -17,6 +17,6 @@ export MODULAR_HOME="$HOME/.modular"
 export PATH="$HOME/.modular/pkg/packages.modular.com_mojo/bin:$PATH"
 
 rm -rf ./src
-git clone -b feature/builder https://github.com/thatstoasty/lightbug_http.git ./src
+git clone https://github.com/saviorand/lightbug_http.git ./src
 cd src
 mojo bench.mojo
