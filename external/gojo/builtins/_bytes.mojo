@@ -1,6 +1,4 @@
 # gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
-from time import now
-
 alias Byte = Int8
 
 

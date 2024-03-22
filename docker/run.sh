@@ -11,7 +11,6 @@ set +a
 curl https://get.modular.com | sudo -u $username MODULAR_AUTH=$MOJO_AUTH bash -
 
 # Install the mojo package
-sudo -u $username modular auth $MOJO_AUTH
 sudo -u $username modular install mojo
 
 export MODULAR_HOME="$HOME/.modular"
