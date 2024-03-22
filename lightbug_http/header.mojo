@@ -90,7 +90,7 @@ struct RequestHeader:
         self.__trailer = trailer
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type._buffer
+        self.__content_type = content_type.as_bytes()
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -101,7 +101,7 @@ struct RequestHeader:
         return self.__content_type
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = host._buffer
+        self.__host = host.as_bytes()
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -112,7 +112,7 @@ struct RequestHeader:
         return self.__host
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
-        self.__user_agent = user_agent._buffer
+        self.__user_agent = user_agent.as_bytes()
         return self
 
     fn set_user_agent_bytes(inout self, user_agent: Bytes) -> Self:
@@ -123,7 +123,7 @@ struct RequestHeader:
         return self.__user_agent
 
     fn set_method(inout self, method: String) -> Self:
-        self.__method = method._buffer
+        self.__method = method.as_bytes()
         return self
 
     fn set_method_bytes(inout self, method: Bytes) -> Self:
@@ -136,8 +136,8 @@ struct RequestHeader:
         return self.__method
 
     fn set_protocol(inout self, method: String) -> Self:
-        self.no_http_1_1 = bytes_equal(method._buffer, strHttp11)
-        self.proto = method._buffer
+        self.no_http_1_1 = bytes_equal(method.as_bytes(), strHttp11)
+        self.proto = method.as_bytes()
         return self
 
     fn set_protocol_bytes(inout self, method: Bytes) -> Self:
@@ -151,7 +151,7 @@ struct RequestHeader:
         return self.proto
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.__request_uri = request_uri._buffer
+        self.__request_uri = request_uri.as_bytes()
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
@@ -164,7 +164,7 @@ struct RequestHeader:
         return self.__request_uri
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer._buffer
+        self.__trailer = trailer.as_bytes()
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -253,7 +253,7 @@ struct RequestHeader:
                         if self.content_length != -1:
                             var content_length = s.value
                             self.content_length = atol(content_length)
-                            self.content_length_bytes = content_length._buffer
+                            self.content_length_bytes = content_length.as_bytes()
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
@@ -394,7 +394,7 @@ struct ResponseHeader:
         return self.__content_type
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type._buffer
+        self.__content_type = content_type.as_bytes()
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -405,7 +405,7 @@ struct ResponseHeader:
         return self.__content_encoding
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
-        self.__content_encoding = content_encoding._buffer
+        self.__content_encoding = content_encoding.as_bytes()
         return self
 
     fn set_content_encoding_bytes(inout self, content_encoding: Bytes) -> Self:
@@ -416,7 +416,7 @@ struct ResponseHeader:
         return self.__server
 
     fn set_server(inout self, server: String) -> Self:
-        self.__server = server._buffer
+        self.__server = server.as_bytes()
         return self
 
     fn set_server_bytes(inout self, server: Bytes) -> Self:
@@ -433,7 +433,7 @@ struct ResponseHeader:
         return self.__protocol
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer._buffer
+        self.__trailer = trailer.as_bytes()
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -487,7 +487,7 @@ struct ResponseHeader:
             if proto != strHttp11:
                 proto_str = proto
 
-        _ = self.set_protocol(proto_str._buffer)
+        _ = self.set_protocol(proto_str.as_bytes())
 
         self.content_length = -2
 
@@ -512,7 +512,7 @@ struct ResponseHeader:
                         if self.content_length != -1:
                             var content_length = s.value
                             self.content_length = atol(content_length)
-                            self.content_length_bytes = content_length._buffer
+                            self.content_length_bytes = content_length.as_bytes()
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":

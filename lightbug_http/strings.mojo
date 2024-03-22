@@ -1,15 +1,15 @@
 from lightbug_http.io.bytes import Bytes
 
-alias strSlash = String("/")._buffer
-alias strHttp = String("http")._buffer
-alias strHttps = String("https")._buffer
-alias strHttp11 = String("HTTP/1.1")._buffer
-alias strHttp10 = String("HTTP/1.0")._buffer
+alias strSlash = String("/").as_bytes()
+alias strHttp = String("http").as_bytes()
+alias strHttps = String("https").as_bytes()
+alias strHttp11 = String("HTTP/1.1").as_bytes()
+alias strHttp10 = String("HTTP/1.0").as_bytes()
 
-alias strMethodGet = String("GET")._buffer
+alias strMethodGet = String("GET").as_bytes()
 
-alias rChar = String("\r")._buffer
-alias nChar = String("\n")._buffer
+alias rChar = String("\r").as_bytes()
+alias nChar = String("\n").as_bytes()
 
 
 # TODO: tuples don't work with strings in Mojo currently, to be replaced with a tuple
