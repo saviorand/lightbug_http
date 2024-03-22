@@ -204,7 +204,7 @@ struct HTTPResponse(Response):
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(
-            True, 200, String("OK").as_bytes(), String("Content-Type: text/plain").as_bytes()
+            True, 200, String("OK")._buffer, String("Content-Type: text/plain").as_bytes()
         ),
         body,
     )
@@ -212,7 +212,7 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()), body
+        ResponseHeader(True, 200, String("OK")._buffer, content_type.as_bytes()), body
     )
 
 
@@ -228,7 +228,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     var builder = StringBuilder()
     _ = builder.write(protocol)
     _ = builder.write(String(" "))
-    _ = builder.write(res.header.status_code())
+    _ = builder.write(String(res.header.status_code()))
     _ = builder.write(String(" "))
     _ = builder.write(String(res.header.status_message()))
     _ = builder.write(String("\r\n"))
