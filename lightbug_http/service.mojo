@@ -22,7 +22,7 @@ struct Welcome(HTTPService):
         with open("static/lightbug_welcome.html", "r") as f:
             html = f.read()
 
-        return OK(html._buffer, "text/html")
+        return OK(html.as_bytes(), "text/html")
 
 
 @value
@@ -50,10 +50,10 @@ struct TechEmpowerRouter(HTTPService):
         var uri = req.uri()
 
         if uri.path() == "/plaintext":
-            return OK(String("Hello, World!")._buffer, "text/plain")
+            return OK(String("Hello, World!").as_bytes(), "text/plain")
         elif uri.path() == "/json":
             return OK(
-                String('{"message": "Hello, World!"}')._buffer, "application/json"
+                String('{"message": "Hello, World!"}').as_bytes(), "application/json"
             )
 
-        return OK(String("Hello world!")._buffer, "text/plain")
+        return OK(String("Hello world!").as_bytes(), "text/plain")

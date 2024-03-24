@@ -4,7 +4,7 @@
 
 from collections.vector import DynamicVector
 import ..io
-from ..builtins._bytes import Bytes
+from ..builtins import Bytes
 
 
 @value
@@ -46,7 +46,25 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
           string if the string builder is empty.
         """
         # Don't need to add a null terminator because we can pass the length of the string.
-        return StringRef(self._vector._vector.data.value, len(self._vector))
+        return str(self._vector)
+      
+    fn get_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder.
+
+        Returns:
+          The byte array of the string builder.
+        """
+        return self._vector.get_bytes()
+      
+    fn get_null_terminated_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder with a null terminator.
+
+        Returns:
+          The byte array of the string builder with a null terminator.
+        """
+        return self._vector.get_null_terminated_bytes()
 
     fn write(inout self, src: Bytes) raises -> Int:
         """
