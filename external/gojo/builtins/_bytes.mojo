@@ -134,6 +134,7 @@ struct Bytes(Stringable, Sized, CollectionElement):
         # Don't need to add a null terminator becasue we know the exact length of the string.
         # It seems like this works even with unicode characters because len() does return 1-4 depending on the character.
         # If Bytes has funky output for this function, go back to copying the internal vector and null terminating it.
+        print("write position: ", self.write_position)
         return StringRef(self._vector.data.value, self.write_position)
 
     fn __repr__(self) -> String:
