@@ -1,5 +1,5 @@
 from lightbug_http import *
-
+from lightbug_http.service import TechEmpowerRouter
 
 fn main() raises:
     var server = SysServer()

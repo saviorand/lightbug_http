@@ -4,7 +4,7 @@
 
 from collections.vector import DynamicVector
 import ..io
-from ..builtins._bytes import Bytes
+from ..builtins import Bytes
 
 
 @value
@@ -46,7 +46,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
           string if the string builder is empty.
         """
         # Don't need to add a null terminator because we can pass the length of the string.
-        return StringRef(self._vector._vector.data.value, len(self._vector))
+        return str(self._vector)
 
     fn write(inout self, src: Bytes) raises -> Int:
         """

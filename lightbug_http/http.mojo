@@ -116,6 +116,9 @@ struct HTTPRequest(Request):
         self.server_is_tls = server_is_tls
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
+    
+    fn get_body(self) -> Bytes:
+        return self.body_raw
 
     fn set_host(inout self, host: String) -> Self:
         _ = self.__uri.set_host(host)
@@ -185,6 +188,9 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
+    
+    fn get_body(self) -> Bytes:
+        return self.body_raw
 
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
@@ -228,7 +234,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     var builder = StringBuilder()
     _ = builder.write(protocol)
     _ = builder.write(String(" "))
-    _ = builder.write(res.header.status_code())
+    _ = builder.write(String(res.header.status_code()))
     _ = builder.write(String(" "))
     _ = builder.write(res.header.status_message())
     _ = builder.write(String("\r\n"))
@@ -242,7 +248,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(String("Content-Length: "))
     # TODO: fix this
     _ = builder.write(
-        len(res.body_raw) - 1
+        String(len(res.body_raw))
     )
     _ = builder.write(String("\r\n"))
     _ = builder.write(String("Connection: "))
@@ -258,9 +264,17 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(String("<div>hello frend</div>"))
     _ = builder.write(String("\r\n"))
     # _ = builder.write(res.body())
-    print(str(builder))
+    # print(res.get_body())
+    var body = res.get_body()
+    _ = builder.write(body)
+    print("builder done")
+    # print(str(builder))
     
     # Currently the server is expecting a null terminated string since it's not using gojo Bytes yet.
+    print(builder)
     var result = str(builder).as_bytes()
+    print(len(result))
+    print("got bytes")
     result.append(0)
-    return str(builder).as_bytes()
+    print("appended null byte")
+    return result
