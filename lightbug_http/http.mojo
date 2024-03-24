@@ -217,6 +217,7 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
+    print("the body", String(body))
     return HTTPResponse(
         ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()), body
     )
@@ -248,7 +249,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(String("Content-Length: "))
     # TODO: fix this
     _ = builder.write(
-        String(len(res.body_raw))
+        String(len(res.body_raw)) 
     )
     _ = builder.write(String("\r\n"))
     _ = builder.write(String("Connection: "))
@@ -261,8 +262,8 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(String(current_time))
     _ = builder.write(String("\r\n"))
     _ = builder.write(String("\r\n"))
-    _ = builder.write(String("<div>hello frend</div>"))
-    _ = builder.write(String("\r\n"))
+    # _ = builder.write_string("<div>hello frend</div>")
+    # _ = builder.write(String("\r\n"))
     # _ = builder.write(res.body())
     # print(res.get_body())
     var body = res.get_body()
@@ -277,4 +278,5 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     print("got bytes")
     result.append(0)
     print("appended null byte")
+    # print(result[-1])
     return result
