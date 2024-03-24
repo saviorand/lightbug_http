@@ -217,7 +217,6 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
-    print("the body", String(body))
     return HTTPResponse(
         ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()), body
     )
@@ -265,18 +264,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     # _ = builder.write_string("<div>hello frend</div>")
     # _ = builder.write(String("\r\n"))
     # _ = builder.write(res.body())
-    # print(res.get_body())
-    var body = res.get_body()
-    _ = builder.write(body)
-    print("builder done")
-    # print(str(builder))
+    _ = builder.write(res.body_raw)
     
-    # Currently the server is expecting a null terminated string since it's not using gojo Bytes yet.
-    print(builder)
-    var result = str(builder).as_bytes()
-    print(len(result))
-    print("got bytes")
-    result.append(0)
-    print("appended null byte")
-    # print(result[-1])
-    return result
+    # Currently the server is expecting a null terminated string for conn.send().
+    return builder.get_null_terminated_bytes()

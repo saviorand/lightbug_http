@@ -47,6 +47,24 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         # Don't need to add a null terminator because we can pass the length of the string.
         return str(self._vector)
+      
+    fn get_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder.
+
+        Returns:
+          The byte array of the string builder.
+        """
+        return self._vector.get_bytes()
+      
+    fn get_null_terminated_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder with a null terminator.
+
+        Returns:
+          The byte array of the string builder with a null terminator.
+        """
+        return self._vector.get_null_terminated_bytes()
 
     fn write(inout self, src: Bytes) raises -> Int:
         """

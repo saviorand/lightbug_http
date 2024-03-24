@@ -134,7 +134,6 @@ struct Bytes(Stringable, Sized, CollectionElement):
         # Don't need to add a null terminator becasue we know the exact length of the string.
         # It seems like this works even with unicode characters because len() does return 1-4 depending on the character.
         # If Bytes has funky output for this function, go back to copying the internal vector and null terminating it.
-        print("write position: ", self.write_position)
         return StringRef(self._vector.data.value, self.write_position)
 
     fn __repr__(self) -> String:
@@ -212,3 +211,31 @@ struct Bytes(Stringable, Sized, CollectionElement):
     fn capacity(self) -> Int:
         """Returns the capacity of the Bytes struct."""
         return self._vector.capacity
+
+    fn copy(self) -> Self:
+        """Returns a copy of the Bytes struct. Only copies up to what has been written to the Bytes struct."""
+        # Copy elements up to the write position, don't need to copy over empty elements from end of the vector.
+        var bytes_copy = Self(size=self.write_position)
+        for i in range(self.write_position):
+            bytes_copy.append(self._vector[i])
+        return bytes_copy
+    
+    fn get_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder.
+
+        Returns:
+          The byte array of the string builder.
+        """
+        return self.copy()._vector
+      
+    fn get_null_terminated_bytes(self) -> DynamicVector[Int8]:
+        """
+        Returns a copy of the byte array of the string builder with a null terminator.
+
+        Returns:
+          The byte array of the string builder with a null terminator.
+        """
+        var new_bytes = self.copy()._vector
+        new_bytes.append(0)
+        return new_bytes
