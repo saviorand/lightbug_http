@@ -1,6 +1,6 @@
 from python import PythonObject
 
-alias Bytes = DynamicVector[Int8]
+alias Bytes = List[Int8]
 
 
 @value

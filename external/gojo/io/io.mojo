@@ -1,13 +1,12 @@
-# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
 from collections.optional import Optional
-from ..builtins import cap, copy
-from ..builtins._bytes import Bytes, Byte
+from ..builtins import cap, copy, Byte, Result, WrappedError, panic
+from .traits import ERR_UNEXPECTED_EOF
 
 
 alias BUFFER_SIZE = 4096
 
 
-fn write_string[W: Writer](inout writer: W, string: String) raises -> Int:
+fn write_string[W: Writer](inout writer: W, string: String) -> Result[Int]:
     """Writes the contents of the string s to w, which accepts a slice of bytes.
     If w implements [StringWriter], [StringWriter.write_string] is invoked directly.
     Otherwise, [Writer.write] is called exactly once.
@@ -22,7 +21,7 @@ fn write_string[W: Writer](inout writer: W, string: String) raises -> Int:
     return writer.write(string.as_bytes())
 
 
-fn write_string[W: StringWriter](inout writer: W, string: String) raises -> Int:
+fn write_string[W: StringWriter](inout writer: W, string: String) -> Result[Int]:
     """Writes the contents of the string s to w, which accepts a slice of bytes.
     If w implements [StringWriter], [StringWriter.write_string] is invoked directly.
     Otherwise, [Writer.write] is called exactly once.
@@ -36,7 +35,9 @@ fn write_string[W: StringWriter](inout writer: W, string: String) raises -> Int:
     return writer.write_string(string)
 
 
-fn read_at_least[R: Reader](inout reader: R, dest: Bytes, min: Int) raises -> Int:
+fn read_at_least[
+    R: Reader
+](inout reader: R, inout dest: List[Byte], min: Int) -> Result[Int]:
     """Reads from r into buf until it has read at least min bytes.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -53,19 +54,26 @@ fn read_at_least[R: Reader](inout reader: R, dest: Bytes, min: Int) raises -> In
 
     Returns:
         The number of bytes read."""
+    var error: Optional[WrappedError] = None
     if len(dest) < min:
-        raise Error(io.ERR_SHORT_BUFFER)
+        return Result(0, WrappedError(io.ERR_SHORT_BUFFER))
 
-    var n: Int = 0
-    while n < min:
-        var sl = dest[n:]
-        var nn: Int = reader.read(sl)
-        n += nn
+    var total_bytes_read: Int = 0
+    while total_bytes_read < min and not error:
+        var result = reader.read(dest)
+        var bytes_read = result.value
+        var error = result.get_error()
+        total_bytes_read += bytes_read
 
-    return n
+    if total_bytes_read >= min:
+        error = None
+    elif total_bytes_read > 0 and str(error.value()):
+        error = WrappedError(ERR_UNEXPECTED_EOF)
+
+    return Result(total_bytes_read, None)
 
 
-fn read_full[R: Reader](inout reader: R, dest: Bytes) raises -> Int:
+fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> Result[Int]:
     """Reads exactly len(buf) bytes from r into buf.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -127,7 +135,7 @@ fn read_full[R: Reader](inout reader: R, dest: Bytes) raises -> Int:
 # }
 
 
-# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Bytes) raises -> Int64:
+# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: List[Byte]) raises -> Int64:
 #     """Actual implementation of copy and CopyBuffer.
 #     if buf is nil, one is allocated.
 #     """
@@ -147,11 +155,11 @@ fn read_full[R: Reader](inout reader: R, dest: Bytes) raises -> Int:
 #     return written
 
 
-# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Bytes) -> Int64:
+# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: List[Byte]) -> Int64:
 #     return src.write_to(dst)
 
 
-# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Bytes) -> Int64:
+# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: List[Byte]) -> Int64:
 #     return dst.read_from(src)
 
 # # LimitReader returns a Reader that reads from r
@@ -238,7 +246,7 @@ fn read_full[R: Reader](inout reader: R, dest: Bytes) raises -> Int:
 # }
 
 # fn (s *SectionReader) ReadAt(p bytes, off int64) (n Int, err error) {
-# 	if off < 0 or off >= s.Size() {
+# 	if off < 0 or off >= s.capacity {
 # 		return 0, EOF
 # 	}
 # 	off += s.base
@@ -401,7 +409,7 @@ fn read_full[R: Reader](inout reader: R, dest: Bytes) raises -> Int:
 # }
 
 
-fn read_all[R: Reader](inout reader: R) raises -> Bytes:
+fn read_all[R: Reader](inout reader: R) -> Result[List[Byte]]:
     """Reads from r until an error or EOF and returns the data it read.
     A successful call returns err == nil, not err == EOF. Because ReadAll is
     defined to read from src until EOF, it does not treat an EOF from Read
@@ -412,23 +420,26 @@ fn read_all[R: Reader](inout reader: R) raises -> Bytes:
 
     Returns:
         The data read."""
-    var dest = Bytes(BUFFER_SIZE)
+    var dest = List[Byte](capacity=BUFFER_SIZE)
     var index: Int = 0
+    var at_eof: Bool = False
 
     while True:
-        try:
-            var temp = Bytes(BUFFER_SIZE)
-            _ = reader.read(temp)
+        var temp = List[Byte](capacity=BUFFER_SIZE)
+        var result = reader.read(temp)
+        var bytes_read = result.value
+        var err = result.get_error()
+        if err:
+            if str(err.value()) != EOF:
+                return Result(dest, err)
 
-            # If new bytes will overflow the result, resize it.
-            if len(dest) + len(temp) > dest.size():
-                dest.resize(dest.size() * 2)
-            dest += temp
+            at_eof = True
 
-            if len(temp) < BUFFER_SIZE:
-                raise Error(io.EOF)
-        except e:
-            if str(e) == "EOF":
-                break
-            raise
-    return dest
+        # If new bytes will overflow the result, resize it.
+        # if some bytes were written, how do I append before returning result on the last one?
+        if len(dest) + len(temp) > dest.capacity:
+            dest.reserve(dest.capacity * 2)
+        dest.extend(temp)
+
+        if at_eof:
+            return Result(dest, err.value())

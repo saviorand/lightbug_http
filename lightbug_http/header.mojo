@@ -185,6 +185,9 @@ struct RequestHeader:
     fn connection_close(self) -> Bool:
         return self.__connection_close
 
+    fn headers(self) -> String:
+        return String(self.raw_headers)
+
     # This is translated to Mojo from Golang FastHTTP
     fn parse(inout self) raises -> None:
         var headers = self.raw_headers

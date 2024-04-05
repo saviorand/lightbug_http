@@ -2,6 +2,7 @@ from time import now
 from external.morrow import Morrow
 
 from external.gojo.strings import StringBuilder
+
 # from external.gojo.builtins import Bytes
 # import external.gojo.io
 from lightbug_http.uri import URI
@@ -116,7 +117,7 @@ struct HTTPRequest(Request):
         self.server_is_tls = server_is_tls
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
-    
+
     fn get_body(self) -> Bytes:
         return self.body_raw
 
@@ -188,7 +189,7 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-    
+
     fn get_body(self) -> Bytes:
         return self.body_raw
 
@@ -210,7 +211,10 @@ struct HTTPResponse(Response):
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(
-            True, 200, String("OK").as_bytes(), String("Content-Type: text/plain").as_bytes()
+            True,
+            200,
+            String("OK").as_bytes(),
+            String("Content-Type: text/plain").as_bytes(),
         ),
         body,
     )
@@ -218,7 +222,8 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()), body
+        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()),
+        body,
     )
 
 
@@ -233,38 +238,36 @@ fn encode(res: HTTPResponse) raises -> Bytes:
         current_time = str(now())
     var builder = StringBuilder()
     _ = builder.write(protocol)
-    _ = builder.write(String(" "))
-    _ = builder.write(String(res.header.status_code()))
-    _ = builder.write(String(" "))
+    _ = builder.write_string(String(" "))
+    _ = builder.write_string(String(res.header.status_code()))
+    _ = builder.write_string(String(" "))
     _ = builder.write(res.header.status_message())
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("Server: lightbug_http"))
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("Content-Type: "))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("Server: lightbug_http"))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("Content-Type: "))
     _ = builder.write(res.header.content_type())
     # TODO: propagate charset
     # res_str += String("; charset=utf-8")
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("Content-Length: "))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("Content-Length: "))
     # TODO: fix this
-    _ = builder.write(
-        String(len(res.body_raw)) 
-    )
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("Connection: "))
+    _ = builder.write_string(String(len(res.body_raw)))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("Connection: "))
     if res.connection_close():
-        _ = builder.write(String("close"))
+        _ = builder.write_string(String("close"))
     else:
-        _ = builder.write(String("keep-alive"))
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("Date: "))
-    _ = builder.write(String(current_time))
-    _ = builder.write(String("\r\n"))
-    _ = builder.write(String("\r\n"))
+        _ = builder.write_string(String("keep-alive"))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("Date: "))
+    _ = builder.write_string(String(current_time))
+    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(String("\r\n"))
     # _ = builder.write_string("<div>hello frend</div>")
     # _ = builder.write(String("\r\n"))
     # _ = builder.write(res.body())
     _ = builder.write(res.body_raw)
-    
+
     # Currently the server is expecting a null terminated string for conn.send().
     return builder.get_null_terminated_bytes()

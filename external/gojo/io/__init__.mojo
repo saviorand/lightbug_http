@@ -1,4 +1,3 @@
-# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
 from .traits import (
     Reader,
     Writer,

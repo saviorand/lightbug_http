@@ -1,1 +1,1 @@
-# gojo, Created by thatstoasty, https://github.com/thatstoasty/gojo
+# gojo, created by thastoasty, https://github.com/thatstoasty/gojo/

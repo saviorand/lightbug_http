@@ -14,34 +14,34 @@ alias GRND_NONBLOCK: UInt8 = 1
 alias char_pointer = AnyPointer[c_char]
 
 
-@value
-struct Str:
-    var vector: DynamicVector[c_char]
+# @value
+# struct Str:
+#     var vector: List[c_char]
 
-    fn __init__(inout self, string: String):
-        self.vector = DynamicVector[c_char](capacity=len(string) + 1)
-        for i in range(len(string)):
-            self.vector.push_back(ord(string[i]))
-        self.vector.push_back(0)
+#     fn __init__(inout self, string: String):
+#         self.vector = List[c_char](capacity=len(string) + 1)
+#         for i in range(len(string)):
+#             self.vector.push_back(ord(string[i]))
+#         self.vector.push_back(0)
 
-    fn __init__(inout self, size: Int):
-        self.vector = DynamicVector[c_char]()
-        self.vector.resize(size + 1, 0)
+#     fn __init__(inout self, size: Int):
+#         self.vector = List[c_char]()
+#         self.vector.resize(size + 1, 0)
 
-    fn __len__(self) -> Int:
-        for i in range(len(self.vector)):
-            if self.vector[i] == 0:
-                return i
-        return -1
+#     fn __len__(self) -> Int:
+#         for i in range(len(self.vector)):
+#             if self.vector[i] == 0:
+#                 return i
+#         return -1
 
-    fn to_string(self, size: Int) -> String:
-        var result: String = ""
-        for i in range(size):
-            result += chr(self.vector[i].to_int())
-        return result
+#     fn to_string(self, size: Int) -> String:
+#         var result: String = ""
+#         for i in range(size):
+#             result += chr(self.vector[i].to_int())
+#         return result
 
-    fn __enter__(owned self: Self) -> Self:
-        return self ^
+#     fn __enter__(owned self: Self) -> Self:
+#         return self ^
 
 
 # Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
@@ -338,14 +338,14 @@ struct in_addr:
 @value
 @register_passable("trivial")
 struct in6_addr:
-    var s6_addr: StaticTuple[16, c_char]
+    var s6_addr: StaticTuple[c_char, 16]
 
 
 @value
 @register_passable("trivial")
 struct sockaddr:
     var sa_family: sa_family_t
-    var sa_data: StaticTuple[14, c_char]
+    var sa_data: StaticTuple[c_char, 14]
 
 
 @value
@@ -354,7 +354,7 @@ struct sockaddr_in:
     var sin_family: sa_family_t
     var sin_port: in_port_t
     var sin_addr: in_addr
-    var sin_zero: StaticTuple[8, c_char]
+    var sin_zero: StaticTuple[c_char, 8]
 
 
 @value
@@ -877,7 +877,7 @@ fn __test_socket_client__():
     var bin_port = htons(UInt16(port))
     print("htons: " + "\n" + bin_port.__str__())
 
-    var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
+    var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
     var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
     var sockfd = socket(address_family, SOCK_STREAM, 0)
@@ -929,7 +929,7 @@ fn __test_socket_server__() raises:
     var bin_port = htons(UInt16(port))
     print("htons: " + "\n" + bin_port.__str__())
 
-    var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
+    var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
     var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
     var sockfd = socket(address_family, SOCK_STREAM, 0)

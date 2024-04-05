@@ -100,7 +100,7 @@ struct SysListenConfig(ListenConfig):
 
         var bin_port = htons(UInt16(addr.port))
 
-        var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[8, c_char]())
+        var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
         var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
         var sockfd = socket(address_family, SOCK_STREAM, 0)
@@ -125,7 +125,13 @@ struct SysListenConfig(ListenConfig):
 
         var listener = SysListener(addr, sockfd)
 
-        print("🔥🐝 Lightbug is listening on " + "http://" + addr.ip + ":" + addr.port.__str__())
+        print(
+            "🔥🐝 Lightbug is listening on "
+            + "http://"
+            + addr.ip
+            + ":"
+            + addr.port.__str__()
+        )
         print("Ready to accept connections...")
 
         return listener

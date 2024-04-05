@@ -84,7 +84,7 @@ trait Addr(CollectionElement):
         ...
 
 
-alias TCPAddrList = DynamicVector[TCPAddr]
+alias TCPAddrList = List[TCPAddr]
 
 
 @value
