@@ -210,7 +210,7 @@ Want your name to show up here? See [CONTRIBUTING.md](./CONTRIBUTING.md)!
   <img src="https://contrib.rocks/image?repo=saviorand/lightbug_http" />
 </a>
 
-Made with [contrib.rocks](https://contrib.rocks).
+<sub>Made with [contrib.rocks](https://contrib.rocks).</sub>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
