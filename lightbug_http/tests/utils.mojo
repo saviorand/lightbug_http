@@ -9,9 +9,7 @@ from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
 
 
-alias default_server_host = "localhost"
-alias default_server_port = 8080
-alias default_server_conn_string = "http://" + default_server_host + ":" + default_server_port.__str__()
+alias default_server_conn_string = "http://localhost:8080"
 
 alias getRequest = String(
     "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
@@ -21,7 +19,9 @@ alias getRequest = String(
 )._buffer
 
 alias defaultExpectedGetResponse = String(
-    "HTTP/1.1 200 OK\r\nServer: M\r\nDate: Content-Length: 13\r\n\r\nHello world!"
+    "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
+    " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: \r\n\r\nHello"
+    " world!"
 )
 
 

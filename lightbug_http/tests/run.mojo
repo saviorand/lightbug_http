@@ -1,6 +1,5 @@
 from lightbug_http.python.client import PythonClient
-from lightbug_http.tests.utils import FakeClient
-from lightbug_http.tests.test_client import test_client_lightbug
+from lightbug_http.tests.test_client import test_python_client_lightbug
 
 
 fn run_tests() raises:
@@ -8,10 +7,8 @@ fn run_tests() raises:
 
 
 fn run_client_tests() raises:
-    var fake_client = FakeClient()
     var py_client = PythonClient()
-    test_client_lightbug[FakeClient](fake_client)
-    test_client_lightbug[PythonClient](py_client)
+    test_python_client_lightbug(py_client)
 
 
 fn main():
