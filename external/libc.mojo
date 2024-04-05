@@ -555,6 +555,48 @@ fn setsockopt(
     ](socket, level, option_name, option_value, option_len)
 
 
+fn getsockname(
+    socket: c_int, address: Pointer[sockaddr], address_len: Pointer[socklen_t]
+) -> c_int:
+    """Libc POSIX `getsockname` function
+    Reference: https://man7.org/linux/man-pages/man3/getsockname.3p.html
+    Fn signature: int getsockname(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
+
+    Args: socket: A File Descriptor.
+        address: A pointer to a buffer to store the address of the peer.
+        address_len: A pointer to the size of the buffer.
+    Returns: 0 on success, -1 on error.
+    """
+    return external_call[
+        "getsockname",
+        c_int,  # FnName, RetType
+        c_int,
+        Pointer[sockaddr],
+        Pointer[socklen_t],  # Args
+    ](socket, address, address_len)
+
+
+fn getpeername(
+    sockfd: c_int, addr: Pointer[sockaddr], address_len: Pointer[socklen_t]
+) -> c_int:
+    """Libc POSIX `getpeername` function
+    Reference: https://man7.org/linux/man-pages/man2/getpeername.2.html
+    Fn signature:   int getpeername(int socket, struct sockaddr *restrict addr, socklen_t *restrict address_len).
+
+    Args: sockfd: A File Descriptor.
+        addr: A pointer to a buffer to store the address of the peer.
+        address_len: A pointer to the size of the buffer.
+    Returns: 0 on success, -1 on error.
+    """
+    return external_call[
+        "getpeername",
+        c_int,  # FnName, RetType
+        c_int,
+        Pointer[sockaddr],
+        Pointer[socklen_t],  # Args
+    ](sockfd, addr, address_len)
+
+
 fn bind(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -> c_int:
     """Libc POSIX `bind` function
     Reference: https://man7.org/linux/man-pages/man3/bind.3p.html

@@ -62,6 +62,7 @@ struct SysServer:
 
         while True:
             var conn = self.ln.accept()
+            print("Remote address:", conn.raddr.ip, conn.laddr.port)
             var buf = Bytes()
             var read_len = conn.read(buf)
             var first_line_and_headers = next_line(buf)

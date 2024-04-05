@@ -8,7 +8,7 @@ alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
 trait Net(DefaultConstructible):
-    fn __init__(inout self):
+    fn __init__(inout self) raises:
         ...
 
     fn __init__(inout self, keep_alive: Duration) raises:
