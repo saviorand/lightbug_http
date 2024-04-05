@@ -203,7 +203,14 @@ We were drawing a lot on the following projects:
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+## Contributors
+Want your name to show up here? See [CONTRIBUTING.md](./CONTRIBUTING.md)!
 
+<a href="https://github.com/saviorand/lightbug_http/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=saviorand/lightbug_http" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
