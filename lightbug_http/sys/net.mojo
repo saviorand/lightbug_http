@@ -7,6 +7,7 @@ from lightbug_http.net import (
     resolve_internet_addr,
     default_buffer_size,
     default_tcp_keep_alive,
+    get_peer_name,
 )
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
@@ -65,8 +66,9 @@ struct SysListener(Listener):
         )
         if new_sockfd == -1:
             print("Failed to accept connection")
-        # TODO: pass raddr to connection
-        return SysConnection(self.__addr, TCPAddr("", 0), new_sockfd)
+        var peer = get_peer_name(new_sockfd)
+
+        return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)

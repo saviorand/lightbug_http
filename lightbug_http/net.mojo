@@ -2,6 +2,17 @@ from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.sys.net import SysConnection
+from external.libc import (
+    c_void,
+    AF_INET,
+    sockaddr,
+    sockaddr_in,
+    socklen_t,
+    getsockname,
+    getpeername,
+    ntohs,
+    inet_ntop
+)
 
 alias default_buffer_size = 4096
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
@@ -201,3 +212,76 @@ fn split_host_port(hostport: String) raises -> HostPort:
     if host == "":
         raise Error("missing host")
     return HostPort(host, port)
+
+
+fn convert_binary_port_to_int(port: UInt16) -> Int:
+    return int(ntohs(port))
+
+
+fn convert_binary_ip_to_string(
+    owned ip_address: UInt32, address_family: Int32, address_length: UInt32
+) -> String:
+    """Convert a binary IP address to a string by calling inet_ntop.
+
+    Args:
+        ip_address: The binary IP address.
+        address_family: The address family of the IP address.
+        address_length: The length of the address.
+
+    Returns:
+        The IP address as a string.
+    """
+    # It seems like the len of the buffer depends on the length of the string IP.
+    # Allocating 10 works for localhost (127.0.0.1) which I suspect is 9 bytes + 1 null terminator byte. So max should be 16 (15 + 1).
+    var ip_buffer = Pointer[c_void].alloc(16)
+    var ip_address_ptr = Pointer.address_of(ip_address).bitcast[c_void]()
+    _ = inet_ntop(address_family, ip_address_ptr, ip_buffer, 16)
+
+    var string_buf = ip_buffer.bitcast[Int8]()
+    var index = 0
+    while True:
+        if string_buf[index] == 0:
+            break
+        index += 1
+
+    return StringRef(string_buf, index)
+
+
+fn get_sock_name(fd: Int32) raises -> HostPort:
+    """Return the address of the socket."""
+    var local_address_ptr = Pointer[sockaddr].alloc(1)
+    var local_address_ptr_size = socklen_t(sizeof[sockaddr]())
+    var status = getsockname(
+        fd,
+        local_address_ptr,
+        Pointer[socklen_t].address_of(local_address_ptr_size),
+    )
+    if status == -1:
+        raise Error("get_sock_name: Failed to get address of local socket.")
+    var addr_in = local_address_ptr.bitcast[sockaddr_in]().load()
+
+    return HostPort(
+        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
+        port=convert_binary_port_to_int(addr_in.sin_port),
+    )
+
+
+fn get_peer_name(fd: Int32) raises -> HostPort:
+    """Return the address of the peer connected to the socket."""
+    var remote_address_ptr = Pointer[sockaddr].alloc(1)
+    var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
+    var status = getpeername(
+        fd,
+        remote_address_ptr,
+        Pointer[socklen_t].address_of(remote_address_ptr_size),
+    )
+    if status == -1:
+        raise Error("get_peer_name: Failed to get address of remote socket.")
+
+    # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
+    var addr_in = remote_address_ptr.bitcast[sockaddr_in]().load()
+
+    return HostPort(
+        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
+        port=convert_binary_port_to_int(addr_in.sin_port),
+    )
