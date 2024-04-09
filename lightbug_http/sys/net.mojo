@@ -7,7 +7,6 @@ from lightbug_http.net import (
     resolve_internet_addr,
     default_buffer_size,
     default_tcp_keep_alive,
-    HostPort,
     get_peer_name,
 )
 from lightbug_http.strings import NetworkType
