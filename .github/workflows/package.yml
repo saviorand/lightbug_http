@@ -26,7 +26,7 @@ jobs:
         run: echo "/home/runner/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
 
       - name: Create package
-        run: mojo package src -o lightbug_http.mojopkg
+        run: mojo package lightbug_http -o lightbug_http.mojopkg
 
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
