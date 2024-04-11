@@ -17,9 +17,11 @@ from external.libc import (
     c_int,
     c_uint,
     c_char,
+    in_addr,
     sockaddr,
     sockaddr_in,
     socklen_t,
+    AI_PASSIVE,
     AF_INET,
     AF_INET6,
     SOCK_STREAM,
@@ -30,6 +32,7 @@ from external.libc import (
     inet_pton,
     to_char_ptr,
     socket,
+    connect,
     setsockopt,
     listen,
     accept,
@@ -39,6 +42,37 @@ from external.libc import (
     shutdown,
     close,
 )
+from sys.info import os_is_macos
+
+
+trait AnAddrInfo:
+    fn get_ip_address(self, host: String) raises -> in_addr:
+        ...
+
+
+fn getaddrinfo[
+    T: AnAddrInfo
+](
+    nodename: Pointer[c_char],
+    servname: Pointer[c_char],
+    hints: Pointer[T],
+    res: Pointer[Pointer[T]],
+) -> c_int:
+    """
+    Overwrites the existing libc `getaddrinfo` function to use the AnAddrInfo trait.
+
+    Libc POSIX `getaddrinfo` function
+    Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
+    Fn signature: int getaddrinfo(const char *restrict nodename, const char *restrict servname, const struct addrinfo *restrict hints, struct addrinfo **restrict res).
+    """
+    return external_call[
+        "getaddrinfo",
+        c_int,  # FnName, RetType
+        Pointer[c_char],
+        Pointer[c_char],
+        Pointer[T],  # Args
+        Pointer[Pointer[T]],  # Args
+    ](nodename, servname, hints, res)
 
 
 @value
@@ -68,7 +102,9 @@ struct SysListener(Listener):
             print("Failed to accept connection")
         var peer = get_peer_name(new_sockfd)
 
-        return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
+        return SysConnection(
+            self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd
+        )
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
@@ -202,3 +238,154 @@ struct SysNet(Net):
 
     fn listen(inout self, network: String, addr: String) raises -> SysListener:
         return self.__lc.listen(network, addr)
+
+
+@value
+@register_passable("trivial")
+struct addrinfo_macos(AnAddrInfo):
+    """
+    For MacOS, I had to swap the order of ai_canonname and ai_addr.
+    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
+    """
+
+    var ai_flags: c_int
+    var ai_family: c_int
+    var ai_socktype: c_int
+    var ai_protocol: c_int
+    var ai_addrlen: socklen_t
+    var ai_canonname: Pointer[c_char]
+    var ai_addr: Pointer[sockaddr]
+    var ai_next: Pointer[c_void]
+
+    fn __init__() -> Self:
+        return Self(
+            0, 0, 0, 0, 0, Pointer[c_char](), Pointer[sockaddr](), Pointer[c_void]()
+        )
+
+    fn get_ip_address(self, host: String) raises -> in_addr:
+        var host_ptr = to_char_ptr(host)
+        var servinfo = Pointer[Self]().alloc(1)
+        servinfo.store(Self())
+
+        var hints = Self()
+        hints.ai_family = AF_INET
+        hints.ai_socktype = SOCK_STREAM
+        hints.ai_flags = AI_PASSIVE
+
+        var error = getaddrinfo[Self](
+            host_ptr,
+            Pointer[UInt8](),
+            Pointer.address_of(hints),
+            Pointer.address_of(servinfo),
+        )
+        if error != 0:
+            print("getaddrinfo failed")
+            raise Error("Failed to get IP address. getaddrinfo failed.")
+
+        var addrinfo = servinfo.load()
+
+        var ai_addr = addrinfo.ai_addr
+        if not ai_addr:
+            print("ai_addr is null")
+            raise Error(
+                "Failed to get IP address. getaddrinfo was called successfully, but"
+                " ai_addr is null."
+            )
+
+        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+
+        return addr_in.sin_addr
+
+
+@value
+@register_passable("trivial")
+struct addrinfo_unix(AnAddrInfo):
+    """
+    For MacOS, I had to swap the order of ai_canonname and ai_addr.
+    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
+    """
+
+    var ai_flags: c_int
+    var ai_family: c_int
+    var ai_socktype: c_int
+    var ai_protocol: c_int
+    var ai_addrlen: socklen_t
+    var ai_addr: Pointer[sockaddr]
+    var ai_canonname: Pointer[c_char]
+    var ai_next: Pointer[c_void]
+
+    fn __init__() -> Self:
+        return Self(
+            0, 0, 0, 0, 0, Pointer[sockaddr](), Pointer[c_char](), Pointer[c_void]()
+        )
+
+    fn get_ip_address(self, host: String) raises -> in_addr:
+        var host_ptr = to_char_ptr(host)
+        var servinfo = Pointer[Self]().alloc(1)
+        servinfo.store(Self())
+
+        var hints = Self()
+        hints.ai_family = AF_INET
+        hints.ai_socktype = SOCK_STREAM
+        hints.ai_flags = AI_PASSIVE
+
+        var error = getaddrinfo[Self](
+            host_ptr,
+            Pointer[UInt8](),
+            Pointer.address_of(hints),
+            Pointer.address_of(servinfo),
+        )
+        if error != 0:
+            print("getaddrinfo failed")
+            raise Error("Failed to get IP address. getaddrinfo failed.")
+
+        var addrinfo = servinfo.load()
+
+        var ai_addr = addrinfo.ai_addr
+        if not ai_addr:
+            print("ai_addr is null")
+            raise Error(
+                "Failed to get IP address. getaddrinfo was called successfully, but"
+                " ai_addr is null."
+            )
+
+        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+
+        return addr_in.sin_addr
+
+
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
+    """Connect to a server using a socket.
+
+    Args:
+        sock: Int32 - The socket file descriptor.
+        host: String - The host to connect to.
+        port: UInt16 - The port to connect to.
+
+    Returns:
+        Int32 - The socket file descriptor.
+    """
+    var ip: in_addr
+    if os_is_macos():
+        ip = addrinfo_macos().get_ip_address(host)
+    else:
+        ip = addrinfo_unix().get_ip_address(host)
+
+    # Convert ip address to network byte order.
+    var addr: sockaddr_in = sockaddr_in(
+        AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
+    )
+    var addr_ptr = Pointer[sockaddr_in].address_of(addr).bitcast[sockaddr]()
+
+    print("Connecting to server...")
+    if connect(sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
+        _ = shutdown(sock, SHUT_RDWR)
+        print("Connection error")
+        raise Error("Failed to connect to server")
+
+    print("Connected to server")
+
+    var laddr = TCPAddr()
+    var raddr = TCPAddr(host, port.to_int())
+    var conn = SysConnection(sock, laddr, raddr)
+    return conn
