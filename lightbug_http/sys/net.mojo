@@ -47,6 +47,10 @@ from sys.info import os_is_macos
 
 trait AnAddrInfo:
     fn get_ip_address(self, host: String) raises -> in_addr:
+        """
+        TODO: Once default functions can be implemented in traits, this function should use the functions currently
+        implemented in the `addrinfo_macos` and `addrinfo_unix` structs.
+        """
         ...
 
 
@@ -301,8 +305,7 @@ struct addrinfo_macos(AnAddrInfo):
 @register_passable("trivial")
 struct addrinfo_unix(AnAddrInfo):
     """
-    For MacOS, I had to swap the order of ai_canonname and ai_addr.
-    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
+    Standard addrinfo struct for Unix systems. Overwrites the existing libc `getaddrinfo` function to adhere to the AnAddrInfo trait.
     """
 
     var ai_flags: c_int
@@ -377,10 +380,8 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     )
     var addr_ptr = Pointer[sockaddr_in].address_of(addr).bitcast[sockaddr]()
 
-    print("Connecting to server...")
     if connect(sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
-        print("Connection error")
         raise Error("Failed to connect to server")
 
     print("Connected to server")

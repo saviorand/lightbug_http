@@ -84,7 +84,6 @@ struct HTTPClient(Client):
         var conn = create_connection(self.sock, host, port)
 
         # Send the request
-        print("Sending message...")
         var bytes_sent = conn.write(req.get_body())
         if bytes_sent == -1:
             raise Error("Failed to send message")
