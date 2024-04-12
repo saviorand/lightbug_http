@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - main
-
+permissions:
+  contents: write
 jobs:
   run-tests:
     name: Release package
@@ -31,7 +32,6 @@ jobs:
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
         with:
-          repo_token: ${{ secrets.TOKEN }}
           file: lightbug_http.mojopkg
           tag: latest-build
           overwrite: true
