@@ -14,7 +14,7 @@ fn run_client_tests() raises:
     var py_client = PythonClient()
     var mojo_client = MojoClient()
     test_mojo_client_lightbug(mojo_client)
-    # test_python_client_lightbug(py_client)
+    test_python_client_lightbug(py_client)
 
 
 fn main():

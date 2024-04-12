@@ -384,9 +384,10 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server")
 
-    print("Connected to server")
+    print("Connected to server at " + host + ":" + port.__str__())
 
     var laddr = TCPAddr()
     var raddr = TCPAddr(host, port.to_int())
     var conn = SysConnection(sock, laddr, raddr)
+
     return conn
