@@ -1,0 +1,37 @@
+name: Package and Release
+
+on:
+  push:
+    branches:
+      - main
+permissions:
+  contents: write
+jobs:
+  run-tests:
+    name: Release package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install modular
+        run: |
+          curl -s https://get.modular.com | sh -
+          modular auth examples
+
+      - name: Install Mojo
+        run: modular install mojo
+
+      - name: Add to PATH
+        run: echo "/home/runner/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
+
+      - name: Create package
+        run: mojo package lightbug_http -o lightbug_http.mojopkg
+
+      - name: Upload package to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: lightbug_http.mojopkg
+          tag: latest-build
+          overwrite: true
