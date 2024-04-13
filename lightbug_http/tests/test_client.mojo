@@ -10,6 +10,7 @@ from lightbug_http.tests.utils import (
     getRequest,
 )
 
+
 fn test_mojo_client_lightbug(client: MojoClient) raises:
     var res = client.do(
         HTTPRequest(
@@ -25,6 +26,7 @@ fn test_mojo_client_lightbug(client: MojoClient) raises:
             " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: "
         ),
     )
+
 
 fn test_python_client_lightbug(client: PythonClient) raises:
     var res = client.do(

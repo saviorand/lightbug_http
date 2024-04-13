@@ -74,9 +74,19 @@ struct MojoClient(Client):
         if uri.is_https():
             is_tls = True
 
-        var host_port = host.split(":")
-        var host_str = host_port[0]
-        var port = atol(host_port[1])
+        var host_str: String
+        var port: Int
+
+        if host.__contains__(":"):
+            var host_port = host.split(":")
+            host_str = host_port[0]
+            port = atol(host_port[1])
+        else:
+            host_str = host
+            if is_tls:
+                port = 443
+            else:
+                port = 80
 
         var conn = create_connection(self.fd, host_str, port)
 
