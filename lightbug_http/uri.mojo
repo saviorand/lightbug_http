@@ -4,11 +4,13 @@ from lightbug_http.strings import (
     strHttp11,
     strHttp10,
     strHttp,
+    http,
     strHttps,
+    https,
 )
 
 
-# TODO: convenience type, not currently used properly but will be helpful in the future
+# TODO: this really needs refactoring
 @value
 struct URI:
     var __path_original: Bytes
@@ -17,6 +19,7 @@ struct URI:
     var __query_string: Bytes
     var __hash: Bytes
     var __host: Bytes
+    var __http_version: Bytes
 
     var disable_path_normalization: Bool
 
@@ -35,7 +38,8 @@ struct URI:
         self.__path = Bytes()
         self.__query_string = Bytes()
         self.__hash = Bytes()
-        self.__host = Bytes()
+        self.__host = String("127.0.0.1")._buffer
+        self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = full_uri._buffer
         self.__request_uri = Bytes()
@@ -54,6 +58,7 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = host._buffer
+        self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
         self.__request_uri = Bytes()
@@ -68,6 +73,7 @@ struct URI:
         query_string: Bytes,
         hash: Bytes,
         host: Bytes,
+        http_version: Bytes,
         disable_path_normalization: Bool,
         full_uri: Bytes,
         request_uri: Bytes,
@@ -80,6 +86,7 @@ struct URI:
         self.__query_string = query_string
         self.__hash = hash
         self.__host = host
+        self.__http_version = http_version
         self.disable_path_normalization = disable_path_normalization
         self.__full_uri = full_uri
         self.__request_uri = request_uri
@@ -117,11 +124,24 @@ struct URI:
             processed_scheme = strHttp
         return processed_scheme
 
+    fn http_version(self) -> Bytes:
+        return self.__http_version
+
+    fn set_http_version(inout self, http_version: String) -> Self:
+        self.__http_version = http_version._buffer
+        return self
+
+    fn is_http_1_1(self) -> Bool:
+        return bytes_equal(self.__http_version, strHttp11)
+
+    fn is_http_1_0(self) -> Bool:
+        return bytes_equal(self.__http_version, strHttp10)
+
     fn is_https(self) -> Bool:
-        return bytes_equal(self.__scheme, strHttps)
+        return bytes_equal(self.__scheme, https._buffer)
 
     fn is_http(self) -> Bool:
-        return bytes_equal(self.__scheme, strHttp) or len(self.__scheme) == 0
+        return bytes_equal(self.__scheme, http._buffer) or len(self.__scheme) == 0
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         self.__request_uri = request_uri._buffer
@@ -171,7 +191,6 @@ struct URI:
         var n = raw_uri.rfind(" ")
         if n < 0:
             n = len(raw_uri)
-            proto_str = strHttp10
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
@@ -183,8 +202,15 @@ struct URI:
 
         # Parse host from requestURI
         n = request_uri.find("://")
+
+        var is_https = False
+
         if n >= 0:
             var host_and_port = request_uri[n + 3 :]
+
+            if request_uri[:n] == https:
+                is_https = True
+
             n = host_and_port.find("/")
             if n >= 0:
                 self.__host = host_and_port[:n]._buffer
@@ -201,6 +227,11 @@ struct URI:
                 self.__host = request_uri._buffer
                 request_uri = strSlash
 
+        if is_https:
+            _ = self.set_scheme(https)
+        else:
+            _ = self.set_scheme(http)
+
         # Parse path
         n = request_uri.find("?")
         if n >= 0:
@@ -212,7 +243,6 @@ struct URI:
 
         self.__path = normalise_path(self.__path_original, self.__path_original)
 
-        _ = self.set_scheme(proto_str)
         _ = self.set_request_uri(request_uri)
 
     fn request_uri(self) -> Bytes:

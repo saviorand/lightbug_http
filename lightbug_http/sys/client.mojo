@@ -1,5 +1,5 @@
 from lightbug_http.client import Client
-from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes
 from external.libc import (
@@ -71,6 +71,7 @@ struct MojoClient(Client):
         if host == "":
             raise Error("URI is nil")
         var is_tls = False
+
         if uri.is_https():
             is_tls = True
 
@@ -90,12 +91,14 @@ struct MojoClient(Client):
 
         var conn = create_connection(self.fd, host_str, port)
 
-        var bytes_sent = conn.write(req.get_body())
+        var req_encoded = encode(req)
+        var bytes_sent = conn.write(req_encoded)
         if bytes_sent == -1:
             raise Error("Failed to send message")
 
         var response: String = ""
         var new_buf = Bytes()
+
         while True:
             var bytes_recv = conn.read(new_buf)
             if bytes_recv == -1:

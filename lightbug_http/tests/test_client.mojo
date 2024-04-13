@@ -1,7 +1,7 @@
 import testing
 from lightbug_http.python.client import PythonClient
 from lightbug_http.sys.client import MojoClient
-from lightbug_http.http import HTTPRequest
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from external.morrow import Morrow
@@ -26,6 +26,17 @@ fn test_mojo_client_lightbug(client: MojoClient) raises:
             " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: "
         ),
     )
+
+
+fn test_mojo_client_lightbug_external_req(client: MojoClient) raises:
+    var req = HTTPRequest(
+        URI("http://grandinnerastoundingspell.neverssl.com/online/"),
+    )
+    try:
+        var res = client.do(req)
+        testing.assert_equal(res.header.status_code(), 200)
+    except e:
+        print(e)
 
 
 fn test_python_client_lightbug(client: PythonClient) raises:

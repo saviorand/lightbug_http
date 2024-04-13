@@ -83,6 +83,15 @@ struct HTTPRequest(Request):
     var disable_redirect_path_normalization: Bool
 
     fn __init__(inout self, uri: URI):
+        self.header = RequestHeader(String("127.0.0.1"))
+        self.__uri = uri
+        self.body_raw = Bytes()
+        self.parsed_uri = False
+        self.server_is_tls = False
+        self.timeout = Duration()
+        self.disable_redirect_path_normalization = False
+
+    fn __init__(inout self, uri: URI, headers: RequestHeader):
         self.header = RequestHeader()
         self.__uri = uri
         self.body_raw = Bytes()
@@ -227,6 +236,48 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     )
 
 
+fn encode(req: HTTPRequest) raises -> Bytes:
+    var res_str = String()
+    var protocol = strHttp11
+    var current_time = String()
+
+    var builder = StringBuilder()
+
+    _ = builder.write(req.header.method())
+    _ = builder.write_string(String(" "))
+    _ = builder.write(req.header.request_uri())
+    _ = builder.write_string(String(" "))
+    _ = builder.write(protocol)
+    _ = builder.write_string(String("\r\n"))
+
+    _ = builder.write_string(String("Host: " + req.host()))
+    _ = builder.write_string(String("\r\n"))
+
+    if len(req.body_raw) > 0:
+        _ = builder.write_string(String("Content-Type: "))
+        _ = builder.write(req.header.content_type())
+        _ = builder.write_string(String("\r\n"))
+
+        _ = builder.write_string(String("Content-Length: "))
+        _ = builder.write_string(String(len(req.body_raw)))
+        _ = builder.write_string(String("\r\n"))
+
+    _ = builder.write_string(String("Connection: "))
+    if req.connection_close():
+        _ = builder.write_string(String("close"))
+    else:
+        _ = builder.write_string(String("keep-alive"))
+    _ = builder.write_string(String("\r\n"))
+
+    _ = builder.write_string(String("\r\n"))
+    if len(req.body_raw) > 0:
+        _ = builder.write_string(String("\r\n"))
+        _ = builder.write(req.body_raw)
+
+    # Currently the server is expecting a null terminated string for conn.send().
+    return builder.get_null_terminated_bytes()
+
+
 fn encode(res: HTTPResponse) raises -> Bytes:
     var res_str = String()
     var protocol = strHttp11
@@ -236,38 +287,45 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     except e:
         print("Error getting current time: " + str(e))
         current_time = str(now())
+
     var builder = StringBuilder()
+
     _ = builder.write(protocol)
     _ = builder.write_string(String(" "))
     _ = builder.write_string(String(res.header.status_code()))
     _ = builder.write_string(String(" "))
     _ = builder.write(res.header.status_message())
     _ = builder.write_string(String("\r\n"))
+
     _ = builder.write_string(String("Server: lightbug_http"))
     _ = builder.write_string(String("\r\n"))
+
     _ = builder.write_string(String("Content-Type: "))
     _ = builder.write(res.header.content_type())
+    _ = builder.write_string(String("\r\n"))
+
     # TODO: propagate charset
     # res_str += String("; charset=utf-8")
-    _ = builder.write_string(String("\r\n"))
-    _ = builder.write_string(String("Content-Length: "))
-    # TODO: fix this
-    _ = builder.write_string(String(len(res.body_raw)))
-    _ = builder.write_string(String("\r\n"))
+
+    if len(res.body_raw) > 0:
+        _ = builder.write_string(String("Content-Length: "))
+        _ = builder.write_string(String(len(res.body_raw)))
+        _ = builder.write_string(String("\r\n"))
+
     _ = builder.write_string(String("Connection: "))
     if res.connection_close():
         _ = builder.write_string(String("close"))
     else:
         _ = builder.write_string(String("keep-alive"))
     _ = builder.write_string(String("\r\n"))
+
     _ = builder.write_string(String("Date: "))
     _ = builder.write_string(String(current_time))
-    _ = builder.write_string(String("\r\n"))
-    _ = builder.write_string(String("\r\n"))
-    # _ = builder.write_string("<div>hello frend</div>")
-    # _ = builder.write(String("\r\n"))
-    # _ = builder.write(res.body())
-    _ = builder.write(res.body_raw)
+
+    if len(res.body_raw) > 0:
+        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string(String("\r\n"))
+        _ = builder.write(res.body_raw)
 
     # Currently the server is expecting a null terminated string for conn.send().
     return builder.get_null_terminated_bytes()

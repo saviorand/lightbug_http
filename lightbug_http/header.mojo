@@ -44,6 +44,21 @@ struct RequestHeader:
         self.raw_headers = Bytes()
         self.__trailer = Bytes()
 
+    fn __init__(inout self, host: String) -> None:
+        self.disable_normalization = False
+        self.no_http_1_1 = False
+        self.__connection_close = False
+        self.content_length = 0
+        self.content_length_bytes = Bytes()
+        self.__method = Bytes()
+        self.__request_uri = Bytes()
+        self.proto = Bytes()
+        self.__host = host._buffer
+        self.__content_type = Bytes()
+        self.__user_agent = Bytes()
+        self.raw_headers = Bytes()
+        self.__trailer = Bytes()
+
     fn __init__(inout self, rawheaders: Bytes) -> None:
         self.disable_normalization = False
         self.no_http_1_1 = False
