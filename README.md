@@ -36,6 +36,7 @@ Lightbug currently has the following features:
 
 
 We're working on support for the following (contributors welcome!):
+ - [ ] SSL/HTTPS
  - [ ] Better error handling, improved form/multipart and JSON support
  - [ ] Multiple simultaneous connections, parallelization and performance optimizations
  - [ ] WebSockets, HTTP 2.0
