@@ -13,9 +13,10 @@
 
    ![Written in Mojo][language-shield]
    [![MIT License][license-shield]][license-url]
-   [![Contributors Welcome][contributors-shield]][contributors-url]
+   ![Build status][build-shield]
+   <br/>
    [![Join our Discord][discord-shield]][discord-url]
-   
+   [![Contributors Welcome][contributors-shield]][contributors-url]
    
 
   </p>
@@ -36,10 +37,11 @@ Lightbug currently has the following features:
 
 
 We're working on support for the following (contributors welcome!):
- - [ ] SSL/HTTPS
- - [ ] Better error handling, improved form/multipart and JSON support
- - [ ] Multiple simultaneous connections, parallelization and performance optimizations
- - [ ] WebSockets, HTTP 2.0
+ - [ ] [SSL/HTTPS support](https://github.com/saviorand/lightbug_http/issues/20)
+ - [ ] [Better error handling](https://github.com/saviorand/lightbug_http/issues/3), [improved form/multipart and JSON support](https://github.com/saviorand/lightbug_http/issues/4)
+ - [ ] [Multiple simultaneous connections](https://github.com/saviorand/lightbug_http/issues/5), [parallelization and performance optimizations](https://github.com/saviorand/lightbug_http/issues/6)
+ - [ ] [WebSockets](https://github.com/saviorand/lightbug_http/issues/7), [HTTP 2.0 support](https://github.com/saviorand/lightbug_http/issues/8)
+ - [ ] [ASGI spec conformance](https://github.com/saviorand/lightbug_http/issues/17)
 
 The test coverage is also something we're working on.
 
@@ -208,13 +210,14 @@ We were drawing a lot on the following projects:
 Want your name to show up here? See [CONTRIBUTING.md](./CONTRIBUTING.md)!
 
 <a href="https://github.com/saviorand/lightbug_http/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=saviorand/lightbug_http" />
+  <img src="https://contrib.rocks/image?repo=saviorand/lightbug_http&max=100" />
 </a>
 
 <sub>Made with [contrib.rocks](https://contrib.rocks).</sub>
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+[build-shield]: https://img.shields.io/github/actions/workflow/status/saviorand/lightbug_http/.github%2Fworkflows%2Fpackage.yml
 [language-shield]: https://img.shields.io/badge/language-mojo-orange
 [license-shield]: https://img.shields.io/github/license/saviorand/lightbug_http?logo=github
 [license-url]: https://github.com/saviorand/lightbug_http/blob/main/LICENSE
