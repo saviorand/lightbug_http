@@ -2,7 +2,9 @@ from lightbug_http.io.bytes import Bytes
 
 alias strSlash = String("/").as_bytes()
 alias strHttp = String("http").as_bytes()
+alias http = String("http")
 alias strHttps = String("https").as_bytes()
+alias https = String("https")
 alias strHttp11 = String("HTTP/1.1").as_bytes()
 alias strHttp10 = String("HTTP/1.0").as_bytes()
 
