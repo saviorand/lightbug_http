@@ -80,7 +80,7 @@ fn getaddrinfo[
 
 
 @value
-struct SysListener(Listener):
+struct SysListener:
     var fd: c_int
     var __addr: TCPAddr
 
