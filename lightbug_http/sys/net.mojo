@@ -81,6 +81,10 @@ fn getaddrinfo[
 
 @value
 struct SysListener:
+    """
+    A TCP listener that listens for incoming connections and can accept them.
+    """
+
     var fd: c_int
     var __addr: TCPAddr
 
@@ -267,6 +271,16 @@ struct addrinfo_macos(AnAddrInfo):
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
+        """
+        Returns an IP address based on the host.
+        This is a MacOS-specific implementation.
+
+        Args:
+            host: String - The host to get the IP from.
+
+        Returns:
+            UInt32 - The IP address.
+        """
         var host_ptr = to_char_ptr(host)
         var servinfo = Pointer[Self]().alloc(1)
         servinfo.store(Self())
@@ -323,6 +337,16 @@ struct addrinfo_unix(AnAddrInfo):
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
+        """
+        Returns an IP address based on the host.
+        This is a Unix-specific implementation.
+
+        Args:
+            host: String - The host to get IP from.
+
+        Returns:
+            UInt32 - The IP address.
+        """
         var host_ptr = to_char_ptr(host)
         var servinfo = Pointer[Self]().alloc(1)
         servinfo.store(Self())
@@ -358,7 +382,8 @@ struct addrinfo_unix(AnAddrInfo):
 
 
 fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
-    """Connect to a server using a socket.
+    """
+    Connect to a server using a socket.
 
     Args:
         sock: Int32 - The socket file descriptor.

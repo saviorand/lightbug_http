@@ -12,6 +12,10 @@ from lightbug_http.strings import next_line, NetworkType
 
 
 struct SysServer:
+    """
+    A Mojo-based server that accept incoming requests and delivers HTTP services.
+    """
+
     var error_handler: ErrorHandler
 
     var name: String
@@ -42,6 +46,13 @@ struct SysServer:
         self.ln = SysListener()
 
     fn get_concurrency(self) -> Int:
+        """
+        Retrieve the concurrency level which is either
+        the configured max_concurrent_connections or the DefaultConcurrency.
+
+        Returns:
+            Int: concurrency level for the server.
+        """
         var concurrency = self.max_concurrent_connections
         if concurrency <= 0:
             concurrency = DefaultConcurrency
@@ -50,11 +61,28 @@ struct SysServer:
     fn listen_and_serve[
         T: HTTPService
     ](inout self, address: String, handler: T) raises -> None:
+        """
+        Listen for incoming connections and serve HTTP requests.
+
+        Args:
+            address : String - The address (host:port) to listen on.
+            handler : HTTPService - An object that handles incoming HTTP requests.
+        """
         var __net = SysNet()
         var listener = __net.listen(NetworkType.tcp4.value, address)
         self.serve(listener, handler)
 
     fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
+        """
+        Serve HTTP requests.
+
+        Args:
+            ln : SysListener - TCP server that listens for incoming connections.
+            handler : HTTPService - An object that handles incoming HTTP requests.
+
+        Raises:
+        If there is an error while serving requests.
+        """
         # var max_worker_count = self.get_concurrency()
         # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
 
