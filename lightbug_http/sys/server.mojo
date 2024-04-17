@@ -13,7 +13,7 @@ from lightbug_http.strings import next_line, NetworkType
 
 struct SysServer:
     """
-    Server that accept request and deliver HTTP services.
+    A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
 
     var error_handler: ErrorHandler
@@ -47,8 +47,8 @@ struct SysServer:
 
     fn get_concurrency(self) -> Int:
         """
-        Get the concurrency level which is either :
-        The configured max_concurrent_connections or the DefaultConcurrency.
+        Retrieve the concurrency level which is either
+        the configured max_concurrent_connections or the DefaultConcurrency.
 
         Returns:
             Int: concurrency level for the server.
