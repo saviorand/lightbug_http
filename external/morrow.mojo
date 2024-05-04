@@ -51,7 +51,7 @@ struct TimeZone:
     @staticmethod
     fn local() -> TimeZone:
         var local_t = c_localtime(0)
-        return TimeZone(local_t.tm_gmtoff.to_int(), "local")
+        return TimeZone(int(local_t.tm_gmtoff), "local")
 
     @staticmethod
     fn from_utc(utc_str: String) raises -> TimeZone:
@@ -247,15 +247,15 @@ struct Morrow:
             tz = TimeZone(0, "UTC")
         else:
             tm = c_localtime(t.tv_sec)
-            tz = TimeZone(tm.tm_gmtoff.to_int(), "local")
+            tz = TimeZone(int(tm.tm_gmtoff), "local")
 
         var result = Self(
-            tm.tm_year.to_int() + 1900,
-            tm.tm_mon.to_int() + 1,
-            tm.tm_mday.to_int(),
-            tm.tm_hour.to_int(),
-            tm.tm_min.to_int(),
-            tm.tm_sec.to_int(),
+            int(tm.tm_year) + 1900,
+            int(tm.tm_mon) + 1,
+            int(tm.tm_mday),
+            int(tm.tm_hour),
+            int(tm.tm_min),
+            int(tm.tm_sec),
             t.tv_usec,
             tz,
         )
@@ -264,13 +264,13 @@ struct Morrow:
     @staticmethod
     fn fromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(timestamp_.to_int())
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, False)
 
     @staticmethod
     fn utcfromtimestamp(timestamp: Float64) raises -> Self:
         var timestamp_ = normalize_timestamp(timestamp)
-        var t = CTimeval(timestamp_.to_int())
+        var t = CTimeval(int(timestamp_))
         return Self._fromtimestamp(t, True)
 
 

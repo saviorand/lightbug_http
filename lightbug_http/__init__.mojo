@@ -4,5 +4,5 @@ from lightbug_http.sys.server import SysServer
 
 
 trait DefaultConstructible:
-    fn __init__(inout self):
+    fn __init__(inout self) raises:
         ...

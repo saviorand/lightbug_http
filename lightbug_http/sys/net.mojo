@@ -128,10 +128,10 @@ struct SysListenConfig(ListenConfig):
     var __keep_alive: Duration
 
     fn __init__(inout self) raises:
-        self.__keep_alive = Duration(default_tcp_keep_alive)
+        self.__keep_alive = default_tcp_keep_alive
 
     fn __init__(inout self, keep_alive: Duration) raises:
-        self.__keep_alive = Duration(keep_alive)
+        self.__keep_alive = keep_alive
 
     fn listen(inout self, network: String, address: String) raises -> SysListener:
         var addr = resolve_internet_addr(network, address)
@@ -235,11 +235,8 @@ struct SysConnection(Connection):
 struct SysNet(Net):
     var __lc: SysListenConfig
 
-    fn __init__(inout self):
-        try:
-            self.__lc = SysListenConfig(default_tcp_keep_alive)
-        except e:
-            print("Could not initialize SysListenConfig: " + e.__str__())
+    fn __init__(inout self) raises:
+        self.__lc = SysListenConfig(default_tcp_keep_alive)
 
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__lc = SysListenConfig(keep_alive)
