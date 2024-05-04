@@ -13,37 +13,6 @@ alias GRND_NONBLOCK: UInt8 = 1
 
 alias char_pointer = AnyPointer[c_char]
 
-
-# @value
-# struct Str:
-#     var vector: List[c_char]
-
-#     fn __init__(inout self, string: String):
-#         self.vector = List[c_char](capacity=len(string) + 1)
-#         for i in range(len(string)):
-#             self.vector.push_back(ord(string[i]))
-#         self.vector.push_back(0)
-
-#     fn __init__(inout self, size: Int):
-#         self.vector = List[c_char]()
-#         self.vector.resize(size + 1, 0)
-
-#     fn __len__(self) -> Int:
-#         for i in range(len(self.vector)):
-#             if self.vector[i] == 0:
-#                 return i
-#         return -1
-
-#     fn to_string(self, size: Int) -> String:
-#         var result: String = ""
-#         for i in range(size):
-#             result += chr(int(self.vector[i]))
-#         return result
-
-#     fn __enter__(owned self: Self) -> Self:
-#         return self ^
-
-
 # Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
 # C types
 alias c_void = UInt8
