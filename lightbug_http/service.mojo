@@ -19,6 +19,9 @@ struct Printer(HTTPService):
 struct Welcome(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri()
+        var html: String
+        with open("static/index.html", "r") as f:
+            html = f.read()
 
         if uri.path() == "/":
             var html: Bytes
