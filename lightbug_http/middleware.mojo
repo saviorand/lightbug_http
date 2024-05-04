@@ -1,42 +1,47 @@
-from lightbug_http.http import HTTPRequest, HTTPResponse
+from lightbug_http.http import *
+from lightbug_http.service import HTTPService
 
+@value
 struct Context:
-    var request: Request
-    var params: Dict[String, AnyType]
+    var request: HTTPRequest
+    var params: Dict[String, String]
 
-    fn __init__(self, request: Request):
+    fn __init__(inout self, request: HTTPRequest):
         self.request = request
-        self.params = Dict[String, AnyType]()
+        self.params = Dict[String, String]()
 
 trait Middleware:
-    var next: Middleware
-
-    fn call(self, context: Context) -> Response:
+    fn call(self, context: Context) -> HTTPResponse:
         ...
 
 struct ErrorMiddleware(Middleware):
-    fn call(self, context: Context) -> Response:
+    var next: Middleware
+
+    fn call(inout self, context: Context) -> HTTPResponse:
         try:
-            return next.call(context: context)
+            return next.call(context)
         catch e: Exception:
             return InternalServerError()
 
 struct LoggerMiddleware(Middleware):
-    fn call(self, context: Context) -> Response:
-        print("Request: \(context.request)")
-        return next.call(context: context)
+    var next: Middleware
+
+    fn call(self, context: Context) -> HTTPResponse:
+        print(f"Request: {context.request}")
+        return next.call(context)
 
 struct StaticMiddleware(Middleware):
+    var next: Middleware
     var path: String
 
-    fnt __init__(self, path: String):
+    fn __init__(self, path: String):
         self.path = path
 
-    fn call(self, context: Context) -> Response:
-        if context.request.path == "/":
+    fn call(self, context: Context) -> HTTPResponse:
+        if context.request.uri().path() == "/":
             var file = File(path: path + "index.html")
         else:
-            var file = File(path: path + context.request.path)
+            var file = File(path: path + context.request.uri().path())
 
         if file.exists:
           var html: String
@@ -44,30 +49,32 @@ struct StaticMiddleware(Middleware):
               html = f.read()
           return OK(html.as_bytes(), "text/html")
         else:
-            return next.call(context: context)
+            return next.call(context)
 
 struct CorsMiddleware(Middleware):
+    var next: Middleware
     var allow_origin: String
 
     fn __init__(self, allow_origin: String):
         self.allow_origin = allow_origin
 
-    fn call(self, context: Context) -> Response:
-        if context.request.method == "OPTIONS":
-            var response = next.call(context: context)
+    fn call(self, context: Context) -> HTTPResponse:
+        if context.request.header.method() == "OPTIONS":
+            var response = next.call(context)
             response.headers["Access-Control-Allow-Origin"] = allow_origin
             response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
             response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
             return response
 
         if context.request.origin == allow_origin:
-            return next.call(context: context)
+            return next.call(context)
         else:
             return Unauthorized()
 
 struct CompressionMiddleware(Middleware):
-    fn call(self, context: Context) -> Response:
-        var response = next.call(context: context)
+    var next: Middleware
+    fn call(self, context: Context) -> HTTPResponse:
+        var response = next.call(context)
         response.body = compress(response.body)
         return response
 
@@ -75,26 +82,28 @@ struct CompressionMiddleware(Middleware):
         #TODO: implement compression
         return body
 
-
 struct RouterMiddleware(Middleware):
+    var next: Middleware
     var routes: Dict[String, Middleware]
 
-    fn __init__(self):
+    fn __init__(inout self):
         self.routes = Dict[String, Middleware]()
 
     fn add(self, method: String, route: String, middleware: Middleware):
-      routes[method + ":" + route] = middleware
+        self.routes[method + ":" + route] = middleware
 
-    fn call(self, context: Context) -> Response:
+    fn call(self, context: Context) -> HTTPResponse:
         # TODO: create a more advanced router
-        var method = context.request.method
-        var route = context.request.path
-        if middleware = routes[method + ":" + route]:
-            return middleware.call(context: context)
+        var method = context.request.header.method()
+        var route = context.request.uri().path()
+        var middleware = self.routes.find(method + ":" + route)
+        if middleware:
+            return middleware.value().call(context)
         else:
-            return next.call(context: context)
+            return next.call(context)
 
 struct BasicAuthMiddleware(Middleware):
+    var next: Middleware
     var username: String
     var password: String
 
@@ -102,38 +111,37 @@ struct BasicAuthMiddleware(Middleware):
         self.username = username
         self.password = password
 
-    fn call(self, context: Context) -> Response:
+    fn call(self, context: Context) -> HTTPResponse:
         var request = context.request
         var auth = request.headers["Authorization"]
-        if auth == "Basic \(username):\(password)":
+        if auth == f"Basic {username}:{password}":
             context.params["username"] = username
-            return next.call(context: context)
+            return next.call(context)
         else:
-            return Unauthorized()
+            return Unauthorized("Requires Basic Authentication")
 
 # always add at the end of the middleware chain
 struct NotFoundMiddleware(Middleware):
-    fn call(self, context: Context) -> Response:
-        return NotFound()
+    fn call(self, context: Context) -> HTTPResponse:
+        return NotFound(String("Not Found").as_bytes())
 
-struct MiddlewareChain(HttpService):
-    var middlewares: Array[Middleware]
+struct MiddlewareChain(HTTPService):
+    var middlewares: List[Middleware]
 
-    fn __init__(self):
+    fn __init__(inout self):
         self.middlewares = Array[Middleware]()
 
     fn add(self, middleware: Middleware):
-        if middlewares.count == 0:
-            middlewares.append(middleware)
+        if self.middlewares.count == 0:
+            self.middlewares.append(middleware)
         else:
-            var last = middlewares[middlewares.count - 1]
+            var last = self.middlewares[middlewares.count - 1]
             last.next = middleware
-            middlewares.append(middleware)
+            self.middlewares.append(middleware)
 
-    fn func(self, request: Request) -> Response:
-        self.add(NotFoundMiddleware())
-        var context = Context(request: request, response: response)
-        return middlewares[0].call(context: context)
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var context = Context(request)
+        return self.middlewares[0].call(context)
 
 fn OK(body: Bytes) -> HTTPResponse:
     return OK(body, String("text/plain"))
@@ -145,7 +153,7 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     )
 
 fn NotFound(body: Bytes) -> HTTPResponse:
-    return NotFoundResponse(body, String("text/plain"))
+    return NotFound(body, String("text/plain"))
 
 fn NotFound(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
@@ -166,7 +174,10 @@ fn Unauthorized(body: Bytes) -> HTTPResponse:
     return UnauthorizedResponse(body, String("text/plain"))
 
 fn Unauthorized(body: Bytes, content_type: String) -> HTTPResponse:
+    var header = ResponseHeader(True, 401, String("Unauthorized").as_bytes(), content_type.as_bytes())
+    header.headers["WWW-Authenticate"] = "Basic realm=\"Login Required\""
+
     return HTTPResponse(
-        ResponseHeader(True, 401, String("Unauthorized").as_bytes(), content_type.as_bytes()),
+        header,
         body,
     )

@@ -2,17 +2,18 @@ from lightbug_http import *
 
 fn main() raises:
     var server = SysServer()
+
+    var router = RouterMiddleware()
+    router.add("GET", "/static", StaticMiddleware("static"))
+
     var middleware = MiddlewareChain()
     middleware.add(CompressionMiddleware())
     middleware.add(ErrorMiddleware())
     middleware.add(LoggerMiddleware())
     middleware.add(CorsMiddleware(allows_origin = "*"))
     middleware.add(BasicAuthMiddleware("admin", "password"))
-
-    var router = RouterMiddleware()
-    router.add("GET", "/static", StaticMiddleware("static"))
-
     middleware.add(router)
-    
+    middleware.add(NotFoundMiddleware())
+
     server.listen_and_serve("0.0.0.0:8080", middleware)
 
