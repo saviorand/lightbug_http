@@ -1,4 +1,5 @@
 from lightbug_http import *
+from lightbug_http.middleware.helpers import Success
 
 struct HelloWorld(HTTPHandler):
     fn handle(self, context: Context) -> HTTPResponse:
