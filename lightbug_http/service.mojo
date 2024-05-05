@@ -5,6 +5,10 @@ trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         ...
 
+@value
+struct HelloWorld(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        return OK("Hello, World!".as_bytes(), "text/plain")
 
 @value
 struct Printer(HTTPService):

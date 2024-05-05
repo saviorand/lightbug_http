@@ -1,10 +1,12 @@
 from lightbug_http import *
 
-fn main() raises:
-    var server = SysServer()
+struct HelloWorld(HTTPHandler):
+    fn handle(self, context: Context) -> HTTPResponse:
+        return OK(String("Hello, World!").as_bytes())
 
+fn main() raises:
     var router = RouterMiddleware()
-    router.add("GET", "/static", StaticMiddleware("static"))
+    router.add("GET", "/hello", HelloWorld())
 
     var middleware = MiddlewareChain()
     middleware.add(CompressionMiddleware())
@@ -12,8 +14,10 @@ fn main() raises:
     middleware.add(LoggerMiddleware())
     middleware.add(CorsMiddleware(allows_origin = "*"))
     middleware.add(BasicAuthMiddleware("admin", "password"))
+    middleware.add(StaticMiddleware("static"))
     middleware.add(router)
     middleware.add(NotFoundMiddleware())
 
+    var server = SysServer()
     server.listen_and_serve("0.0.0.0:8080", middleware)
 
