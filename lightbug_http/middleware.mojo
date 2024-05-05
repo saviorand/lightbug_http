@@ -8,11 +8,11 @@ from lightbug_http.service import HTTPService
 @value
 struct Context:
     var request: HTTPRequest
-    var params: Dict[String, String]
+    var params: Dict[String, AnyType]
 
     fn __init__(inout self, request: HTTPRequest):
         self.request = request
-        self.params = Dict[String, String]()
+        self.params = Dict[String, AnyType]()
 
 
 ## Middleware is an interface for processing HTTP requests.
@@ -24,6 +24,7 @@ trait Middleware:
         ...
 
 ## MiddlewareChain is a chain of middleware that processes the request.
+## The chain is a linked list of middleware objects.
 @value
 struct MiddlewareChain(HTTPService):
     var root: Middleware

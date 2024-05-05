@@ -2,7 +2,8 @@ from lightbug_http import *
 
 struct HelloWorld(HTTPHandler):
     fn handle(self, context: Context) -> HTTPResponse:
-        return Success("Hello, World!")
+        var name = context.params.get("username", "world")
+        return Success("Hello, " + name + "!")
 
 fn main() raises:
     var router = RouterMiddleware()
