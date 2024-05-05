@@ -2,7 +2,7 @@ from lightbug_http import *
 
 struct HelloWorld(HTTPHandler):
     fn handle(self, context: Context) -> HTTPResponse:
-        return OK(String("Hello, World!").as_bytes())
+        return Success("Hello, World!")
 
 fn main() raises:
     var router = RouterMiddleware()

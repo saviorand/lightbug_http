@@ -58,7 +58,7 @@ struct ErrorMiddleware(Middleware):
         try:
             return self.next.call(context)
         except e:
-            return InternalServerError(e.as_bytes())
+            return InternalServerError(e)
 
 
 ## Compression middleware compresses the response body.
@@ -164,7 +164,7 @@ struct StaticMiddleware(Middleware):
           with open(file, "r") as f:
               html = f.read()
 
-          return OK(html.as_bytes(), "text/html")
+          return Success(html, "text/html")
       except e:
             return self.next.call(context)
 
@@ -208,46 +208,46 @@ struct RouterMiddleware(Middleware):
 @value
 struct NotFoundMiddleware(Middleware):
     fn call(self, context: Context) -> HTTPResponse:
-        return NotFound(String("Not Found").as_bytes())
+        return NotFound("Not Found")
 
 
 
 ### Helper functions to create HTTP responses
-fn OK(body: Bytes) -> HTTPResponse:
-    return OK(body, String("text/plain"))
+fn Success(body: String) -> HTTPResponse:
+    return Success(body, String("text/plain"))
 
-fn OK(body: Bytes, content_type: String) -> HTTPResponse:
+fn Success(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()),
-        body,
+        ResponseHeader(True, 200, String("Success").as_bytes(), content_type.as_bytes()),
+        body.as_bytes(),
     )
 
-fn NotFound(body: Bytes) -> HTTPResponse:
+fn NotFound(body: String) -> HTTPResponse:
     return NotFound(body, String("text/plain"))
 
-fn NotFound(body: Bytes, content_type: String) -> HTTPResponse:
+fn NotFound(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(True, 404, String("Not Found").as_bytes(), content_type.as_bytes()),
-        body,
+        body.as_bytes(),
     )
 
-fn InternalServerError(body: Bytes) -> HTTPResponse:
+fn InternalServerError(body: String) -> HTTPResponse:
    return InternalServerErrorResponse(body, String("text/plain"))
 
-fn InternalServerError(body: Bytes, content_type: String) -> HTTPResponse:
+fn InternalServerError(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(True, 500, String("Internal Server Error").as_bytes(), content_type.as_bytes()),
-        body,
+        body.as_bytes(),
     )
 
-fn Unauthorized(body: Bytes) -> HTTPResponse:
+fn Unauthorized(body: String) -> HTTPResponse:
     return UnauthorizedResponse(body, String("text/plain"))
 
-fn Unauthorized(body: Bytes, content_type: String) -> HTTPResponse:
+fn Unauthorized(body: String, content_type: String) -> HTTPResponse:
     var header = ResponseHeader(True, 401, String("Unauthorized").as_bytes(), content_type.as_bytes())
     header.headers["WWW-Authenticate"] = "Basic realm=\"Login Required\""
 
     return HTTPResponse(
         header,
-        body,
+        body.as_bytes(),
     )
