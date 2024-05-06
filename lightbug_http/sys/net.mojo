@@ -232,7 +232,7 @@ struct SysConnection(Connection):
         return self.raddr
 
 
-struct SysNet(Net):
+struct SysNet:
     var __lc: SysListenConfig
 
     fn __init__(inout self) raises:
@@ -409,7 +409,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     print("Connected to server at " + host + ":" + port.__str__())
 
     var laddr = TCPAddr()
-    var raddr = TCPAddr(host, port.to_int())
+    var raddr = TCPAddr(host, int(port))
     var conn = SysConnection(sock, laddr, raddr)
 
     return conn

@@ -11,7 +11,7 @@ alias FD_STDERR: c_int = 2
 alias SUCCESS = 0
 alias GRND_NONBLOCK: UInt8 = 1
 
-alias char_pointer = AnyPointer[c_char]
+alias char_pointer = UnsafePointer[c_char]
 
 # Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
 # C types

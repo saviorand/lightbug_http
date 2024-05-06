@@ -42,7 +42,7 @@ struct PythonTCPListener:
         self.socket = socket
 
     @always_inline
-    fn accept[T: Connection](self) raises -> T:
+    fn accept(self) raises -> PythonConnection:
         var conn_addr = self.socket.accept()
         return PythonConnection(self.__pymodules, conn_addr)
 
@@ -55,16 +55,16 @@ struct PythonTCPListener:
         return self.__addr
 
 
-struct PythonListenConfig(ListenConfig):
+struct PythonListenConfig:
     var __pymodules: Modules
     var __keep_alive: Duration
 
-    fn __init__(inout self) raises:
-        self.__keep_alive = Duration(default_tcp_keep_alive)
+    fn __init__(inout self):
+        self.__keep_alive = default_tcp_keep_alive
         self.__pymodules = Modules()
 
-    fn __init__(inout self, keep_alive: Duration) raises:
-        self.__keep_alive = Duration(keep_alive)
+    fn __init__(inout self, keep_alive: Duration):
+        self.__keep_alive = keep_alive
         self.__pymodules = Modules()
 
     fn listen(inout self, network: String, address: String) raises -> PythonTCPListener:
@@ -132,14 +132,11 @@ struct PythonConnection(Connection):
         return TCPAddr(self.raddr[0].__str__(), self.raddr[1].__int__())
 
 
-struct PythonNet(Net):
+struct PythonNet:
     var __lc: PythonListenConfig
 
     fn __init__(inout self):
-        try:
-            self.__lc = PythonListenConfig(default_tcp_keep_alive)
-        except e:
-            print("Could not initialize PythonListenConfig: " + e.__str__())
+        self.__lc = PythonListenConfig(default_tcp_keep_alive)
 
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__lc = PythonListenConfig(keep_alive)

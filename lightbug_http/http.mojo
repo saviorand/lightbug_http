@@ -1,10 +1,6 @@
 from time import now
 from external.morrow import Morrow
-
 from external.gojo.strings import StringBuilder
-
-# from external.gojo.builtins import Bytes
-# import external.gojo.io
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.header import RequestHeader, ResponseHeader

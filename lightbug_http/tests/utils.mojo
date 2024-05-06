@@ -113,10 +113,7 @@ struct FakeServer(ServerTrait):
     fn __init__(
         inout self, addr: String, service: HTTPService, error_handler: ErrorHandler
     ):
-        try:
-            self.__listener = FakeListener()
-        except e:
-            print(e)
+        self.__listener = FakeListener()
         self.__handler = FakeResponder()
 
     fn get_concurrency(self) -> Int:
@@ -128,7 +125,7 @@ struct FakeServer(ServerTrait):
     fn serve(inout self) -> None:
         while not self.__listener.closed:
             try:
-                _ = self.__listener.accept[FakeConnection]()
+                _ = self.__listener.accept()
             except e:
                 print(e)
 
@@ -175,23 +172,23 @@ struct FakeListener:
     var request: Bytes
     var closed: Bool
 
-    fn __init__(inout self) raises:
+    fn __init__(inout self):
         self.request_count = 0
         self.request = Bytes()
         self.closed = False
 
-    fn __init__(inout self, addr: TCPAddr) raises:
+    fn __init__(inout self, addr: TCPAddr):
         self.request_count = 0
         self.request = Bytes()
         self.closed = False
 
-    fn __init__(inout self, request_count: Int, request: Bytes) -> None:
+    fn __init__(inout self, request_count: Int, request: Bytes):
         self.request_count = request_count
         self.request = request
         self.closed = False
 
     @always_inline
-    fn accept[T: Connection](self) raises -> T:
+    fn accept(self) raises -> FakeConnection:
         return FakeConnection()
 
     fn close(self) raises:
