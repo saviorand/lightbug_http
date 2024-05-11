@@ -1,3 +1,5 @@
+from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+
 ### Helper functions to create HTTP responses
 fn Success(body: String) -> HTTPResponse:
     return Success(body, String("text/plain"))

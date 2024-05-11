@@ -1,18 +1,18 @@
 ## HTTPHandler is an interface for handling HTTP requests in the RouterMiddleware.
 ## It is a leaf node in the middleware chain.
-trait HTTPHandler:
+trait HTTPHandler(CollectionElement):
     fn handle(self, context: Context) -> HTTPResponse:
         ...
 
 
 ## Router middleware routes requests to different middleware based on the path.
 @value
-struct RouterMiddleware(Middleware):
+struct RouterMiddleware[HTTPHandlerType: HTTPHandler](Middleware):
     var next: Middleware
-    var routes: Dict[String, HTTPHandler]
+    var routes: Dict[String, HTTPHandlerType]
 
     fn __init__(inout self):
-        self.routes = Dict[String, HTTPHandler]()
+        self.routes = Dict[String, HTTPHandlerType]()
 
     fn set_next(self, next: Middleware):
         self.next = next

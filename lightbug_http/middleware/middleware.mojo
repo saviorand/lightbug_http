@@ -6,13 +6,13 @@ from lightbug_http.middleware import *
 ## It is passed to each middleware in the chain.
 ## It also contains a dictionary of parameters that can be shared between middleware.
 @value
-struct Context:
+struct Context[ParamType: CollectionElement]:
     var request: HTTPRequest
-    var params: Dict[String, AnyType]
+    var params: Dict[String, ParamType]
 
     fn __init__(inout self, request: HTTPRequest):
         self.request = request
-        self.params = Dict[String, AnyType]()
+        self.params = Dict[String, ParamType]()
 
 
 ## Middleware is an interface for processing HTTP requests.
