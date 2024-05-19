@@ -92,23 +92,31 @@ struct SysServer:
             var conn = self.ln.accept()
             var buf = Bytes()
             var read_len = conn.read(buf)
-            var first_line_and_headers = next_line(buf)
-            var request_line = first_line_and_headers.first_line
-            var rest_of_headers = first_line_and_headers.rest
-
-            var uri = URI(request_line)
+            var request = next_line(buf)
+            var headers_and_body = next_line(request.rest, "\n\n")
+            var request_headers = headers_and_body.first_line
+            var request_body = headers_and_body.rest
+            var uri = URI(request.first_line)
             try:
                 uri.parse()
-            except:
+            except e:
                 conn.close()
-                raise Error("Failed to parse request line")
+                raise Error("Failed to parse request line:" + e.__str__())
 
-            var header = RequestHeader(buf)
+            var header = RequestHeader(request_headers._buffer)
             try:
-                header.parse()
-            except:
+                header.parse(request.first_line)
+            except e:
                 conn.close()
-                raise Error("Failed to parse request header")
+                raise Error("Failed to parse request header: " + e.__str__())
+            
+            if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
+                var remaining_body = Bytes()
+                var remaining_len = header.content_length() - len(request_body + 1)
+                while remaining_len > 0:
+                    var read_len = conn.read(remaining_body)
+                    buf.extend(remaining_body)
+                    remaining_len -= read_len
 
             var res = handler.func(
                 HTTPRequest(
