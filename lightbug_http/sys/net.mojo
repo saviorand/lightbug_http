@@ -163,12 +163,17 @@ struct SysListenConfig(ListenConfig):
         )
 
         var bind_success = False
+        var bind_fail_logged = False
         while not bind_success:
             var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
             if bind == 0:
                 bind_success = True
             else:
-                print("Bind attempt failed. The address might be in use or the socket might not be available. Retrying in 1 second...")
+                if not bind_fail_logged:
+                    print("Bind attempt failed. The address might be in use or the socket might not be available.")
+                    print("Retrying. Might take 10-15 seconds.")
+                    bind_fail_logged = True
+                print(".", end="", flush=True)
                 _ = shutdown(sockfd, SHUT_RDWR)
                 sleep(1)
 
@@ -178,7 +183,7 @@ struct SysListenConfig(ListenConfig):
         var listener = SysListener(addr, sockfd)
 
         print(
-            "🔥🐝 Lightbug is listening on "
+            "\n🔥🐝 Lightbug is listening on "
             + "http://"
             + addr.ip
             + ":"

@@ -2,13 +2,6 @@ from lightbug_http import *
 from sys import is_defined
 
 fn main() raises:
-    if is_defined["TEST"]():
-        try:
-            run_tests()
-            print("Test suite passed")
-        except e:
-            print("Test suite failed: " + e.__str__())
-    else:
-        var server = SysServer()
-        var handler = Welcome()
-        server.listen_and_serve("0.0.0.0:8080", handler)
+    var server = SysServer()
+    var handler = Welcome()
+    server.listen_and_serve("0.0.0.0:8080", handler)
