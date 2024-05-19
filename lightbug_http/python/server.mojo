@@ -83,7 +83,7 @@ struct PythonServer:
 
             var header = RequestHeader(buf)
             try:
-                header.parse()
+                header.parse(request_line)
             except:
                 conn.close()
                 raise Error("Failed to parse request header")
