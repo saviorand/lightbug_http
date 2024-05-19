@@ -18,8 +18,8 @@ struct RequestHeader:
     var disable_normalization: Bool
     var no_http_1_1: Bool
     var __connection_close: Bool
-    var content_length: Int
-    var content_length_bytes: Bytes
+    var __content_length: Int
+    var __content_length_bytes: Bytes
     var __method: Bytes
     var __request_uri: Bytes
     var proto: Bytes
@@ -33,8 +33,8 @@ struct RequestHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -48,8 +48,8 @@ struct RequestHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -63,8 +63,8 @@ struct RequestHeader:
         self.disable_normalization = False
         self.no_http_1_1 = False
         self.__connection_close = False
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -93,8 +93,8 @@ struct RequestHeader:
         self.disable_normalization = disable_normalization
         self.no_http_1_1 = no_http_1_1
         self.__connection_close = connection_close
-        self.content_length = content_length
-        self.content_length_bytes = content_length_bytes
+        self.__content_length = content_length
+        self.__content_length_bytes = content_length_bytes
         self.__method = method
         self.__request_uri = request_uri
         self.proto = proto
@@ -164,6 +164,17 @@ struct RequestHeader:
         if len(self.proto) == 0:
             return strHttp11
         return self.proto
+    
+    fn content_length(self) -> Int:
+        return self.__content_length
+
+    fn set_content_length(inout self, content_length: Int) -> Self:
+        self.__content_length = content_length
+        return self
+
+    fn set_content_length_bytes(inout self, content_length: Bytes) -> Self:
+        self.__content_length_bytes = content_length
+        return self
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         self.__request_uri = request_uri.as_bytes()
@@ -204,15 +215,9 @@ struct RequestHeader:
         return String(self.raw_headers)
 
     # This is translated to Mojo from Golang FastHTTP
-    fn parse(inout self) raises -> None:
+    fn parse(inout self, request_line: String) raises -> None:
         var headers = self.raw_headers
-
-        # Extract the first line (request line) and the rest of the headers
-        var first_line_and_headers = next_line(headers)
-        var request_line = first_line_and_headers.first_line
-        var rest_of_headers = first_line_and_headers.rest
-
-        # Parse the request line
+        
         var n = request_line.find(" ")
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
@@ -242,7 +247,7 @@ struct RequestHeader:
         _ = self.set_request_uri(request_uri)
 
         # Now process the rest of the headers
-        self.content_length = -2
+        _ = self.set_content_length(-2)
 
         var s = headerScanner()
         s.b = headers
@@ -268,10 +273,10 @@ struct RequestHeader:
                         _ = self.set_content_type(s.value)
                         continue
                     if s.key.lower() == "content-length":
-                        if self.content_length != -1:
+                        if self.content_length() != -1:
                             var content_length = s.value
-                            self.content_length = atol(content_length)
-                            self.content_length_bytes = content_length.as_bytes()
+                            _ = self.set_content_length(atol(content_length))
+                            _ = self.set_content_length_bytes(content_length.as_bytes())
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
@@ -283,7 +288,7 @@ struct RequestHeader:
                 elif s.key[0] == "t" or s.key[0] == "T":
                     if s.key.lower() == "transfer-encoding":
                         if s.value != "identity":
-                            self.content_length = -1
+                            _ = self.set_content_length(-1)
                             # _ = self.setargbytes(s.key, strChunked)
                         continue
                     if s.key.lower() == "trailer":
@@ -302,8 +307,8 @@ struct ResponseHeader:
     var __status_code: Int
     var __status_message: Bytes
     var __protocol: Bytes
-    var content_length: Int
-    var content_length_bytes: Bytes
+    var __content_length: Int
+    var __content_length_bytes: Bytes
     var __content_type: Bytes
     var __content_encoding: Bytes
     var __server: Bytes
@@ -318,8 +323,8 @@ struct ResponseHeader:
         self.__status_code = 200
         self.__status_message = Bytes()
         self.__protocol = Bytes()
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__content_type = Bytes()
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -337,8 +342,8 @@ struct ResponseHeader:
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = Bytes()
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__content_type = content_type
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -357,8 +362,8 @@ struct ResponseHeader:
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = Bytes()
-        self.content_length = 0
-        self.content_length_bytes = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
         self.__content_type = content_type
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -385,8 +390,8 @@ struct ResponseHeader:
         self.__status_code = status_code
         self.__status_message = status_message
         self.__protocol = protocol
-        self.content_length = content_length
-        self.content_length_bytes = content_length_bytes
+        self.__content_length = content_length
+        self.__content_length_bytes = content_length_bytes
         self.__content_type = content_type
         self.__content_encoding = content_encoding
         self.__server = server
@@ -428,6 +433,17 @@ struct ResponseHeader:
 
     fn set_content_encoding_bytes(inout self, content_encoding: Bytes) -> Self:
         self.__content_encoding = content_encoding
+        return self
+    
+    fn content_length(self) -> Int:
+        return self.__content_length
+    
+    fn set_content_length(inout self, content_length: Int) -> Self:
+        self.__content_length = content_length
+        return self
+    
+    fn set_content_length_bytes(inout self, content_length: Bytes) -> Self:
+        self.__content_length_bytes = content_length
         return self
 
     fn server(self) -> Bytes:
@@ -481,7 +497,6 @@ struct ResponseHeader:
             next = next_line(rest)
             line = next.first_line
             rest = next.rest
-
         # Parse method
         var n = line.find(" ")
         if n <= 0:
@@ -506,8 +521,7 @@ struct ResponseHeader:
                 proto_str = proto
 
         _ = self.set_protocol(proto_str.as_bytes())
-
-        self.content_length = -2
+        _ = self.set_content_length(-2)
 
         var s = headerScanner()
         s.b = header_str
@@ -527,10 +541,10 @@ struct ResponseHeader:
                         _ = self.set_content_encoding(s.value)
                         continue
                     if s.key.lower() == "content-length":
-                        if self.content_length != -1:
+                        if self.content_length() != -1:
                             var content_length = s.value
-                            self.content_length = atol(content_length)
-                            self.content_length_bytes = content_length.as_bytes()
+                            _ = self.set_content_length(atol(content_length))
+                            _ = self.set_content_length_bytes(content_length.as_bytes())
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
@@ -547,7 +561,7 @@ struct ResponseHeader:
                 elif s.key[0] == "t" or s.key[0] == "T":
                     if s.key.lower() == "transfer-encoding":
                         if s.value != "identity":
-                            self.content_length = -1
+                            _ = self.set_content_length(-1)
                             # _ = self.setargbytes(s.key, strChunked)
                         continue
                     if s.key.lower() == "trailer":
@@ -575,96 +589,45 @@ struct headerScanner:
         self.next_colon = 0
         self.next_line = 0
         self.initialized = False
-
-    # This is translated from Golang FastHTTP
-    fn next(inout self) raises -> Bool:
+    
+    fn next(inout self) -> Bool:
         if not self.initialized:
-            self.next_colon = -1
-            self.next_line = -1
             self.initialized = True
 
-        var bLen = len(self.b)
-
-        if bLen >= 2 and self.b[0] == rChar[0] and self.b[1] == nChar[0]:
+        if self.b.startswith('\n\n'):
             self.b = self.b[2:]
-            self.subslice_len += 2
+            print("Error: Double newline")
             return False
 
-        if bLen >= 1 and self.b[0] == nChar:
+        if self.b.startswith('\n'):
             self.b = self.b[1:]
-            self.subslice_len += 1
+            print("Error: Newline at start")
             return False
 
-        var n: Int
-        if self.next_colon >= 0:
-            n = self.next_colon
-            self.next_colon = -1
-        else:
-            n = self.b.find(":")
-            # There can't be a \n inside the header name, check for this.
-            var x = self.b.find(nChar)
-            if x < 0:
-                # A header name should always at some point be followed by a \n
-                # even if it's the one that terminates the header block.
-                self.err = errNeedMore
+        var n = self.b.find(':')
+        var x = self.b.find('\n')
+        if x != -1 and x < n:
+            print("Error: Newline before colon")
+            return False
+
+        if n == -1:
+            # If we don't find a colon, assume we have reached the end
+            return False
+
+        self.key = self.b[:n].strip()
+        self.b = self.b[n+1:].strip()
+
+        x = self.b.find('\n')
+        if x == -1:
+            # If we don't find a newline, assume we have reached the end
+            if len(self.b) == 0:
+                print("Error: No ending newline and no data after colon")
                 return False
-
-            if x < n:
-                # There was a \n before the :
-                self.err = errInvalidName
-                return False
-        if n < 0:
-            self.err = errNeedMore
-            return False
-
-        self.key = self.b[:n]
-
-        # Skip spaces after the colon
-        n += 1
-        while len(self.b) > n and self.b[n] == " ":
-            n += 1
-
-        self.next_colon += n
-        self.b = self.b[n:]
-        if self.next_line >= 0:
-            n = self.next_line
-            self.next_line = -1
+            self.value = self.b.strip()  
+            self.b = ''
         else:
-            n = self.b.find(nChar)
-        if n < 0:
-            self.err = errNeedMore
-            return False
-
-        var is_multi_line_value = False
-        # Check for multiline headers
-        while True:
-            if n + 1 >= len(self.b):
-                break
-            if self.b[n + 1] != " " and self.b[n + 1] != "\t":
-                break
-            var d = self.b[n + 1 :].find(nChar)
-            if d <= 0:
-                break
-            var e = n + d + 1
-            if self.b[n + 1 : e].find(":") != -1:
-                break
-            is_multi_line_value = True
-            n = e
-
-        if n >= len(self.b):
-            self.err = errNeedMore
-            return False
-
-        var old_b = self.b
-        self.value = self.b[:n]
-        self.subslice_len += n + 1
-        self.b = self.b[n + 1 :]
-
-        # Trim the value
-        if n > 0 and self.value[n - 1] == rChar[0]:
-            n -= 1
-        while n > 0 and self.value[n - 1] == " ":
-            n -= 1
-        self.value = self.value[:n]
+            self.value = self.b[:x].strip()
+            self.b = self.b[x+1:]
 
         return True
+    

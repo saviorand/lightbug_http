@@ -25,12 +25,14 @@ struct TwoLines:
         self.rest = rest
 
 
-# Helper function to get the next line
-fn next_line(s: String) raises -> TwoLines:
-    var split = s.split("\n")
-    return TwoLines(split[0].strip(), split[1]) if len(split) == 2 else TwoLines(
-        split[0].strip(), String()
-    )
+# Helper function to split a string into two lines by delimiter
+fn next_line(s: String, delimiter: String = "\n") raises -> TwoLines:
+    var first_newline = s.find(delimiter)
+    if first_newline == -1:
+        return TwoLines(s, String())
+    var before_newline = s[0:first_newline]
+    var after_newline = s[first_newline + 1 :]
+    return TwoLines(before_newline.strip(), after_newline)
 
 
 @value

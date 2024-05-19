@@ -43,7 +43,7 @@ from external.libc import (
     close,
 )
 from sys.info import os_is_macos
-
+from time import sleep
 
 trait AnAddrInfo:
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -162,9 +162,15 @@ struct SysListenConfig(ListenConfig):
             sizeof[Int](),
         )
 
-        if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
-            _ = shutdown(sockfd, SHUT_RDWR)
-            print("Binding socket failed. Wait a few seconds and try again?")
+        var bind_success = False
+        while not bind_success:
+            var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
+            if bind == 0:
+                bind_success = True
+            else:
+                print("Bind attempt failed. The address might be in use or the socket might not be available. Retrying in 1 second...")
+                _ = shutdown(sockfd, SHUT_RDWR)
+                sleep(1)
 
         if listen(sockfd, c_int(128)) == -1:
             print("Listen failed.\n on sockfd " + sockfd.__str__())
