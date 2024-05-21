@@ -70,6 +70,9 @@ struct PythonServer:
             var conn = self.ln.accept()
             var buf = Bytes()
             var read_len = conn.read(buf)
+            if read_len == 0:
+                conn.close()
+                break
             var first_line_and_headers = next_line(buf)
             var request_line = first_line_and_headers.first_line
             var rest_of_headers = first_line_and_headers.rest

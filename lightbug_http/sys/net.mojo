@@ -220,6 +220,9 @@ struct SysConnection(Connection):
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
             print("Failed to receive message")
+            return 0
+        if bytes_recv == 0:
+            return 0
         var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
         buf = bytes_str._buffer
         return bytes_recv

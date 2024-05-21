@@ -214,10 +214,9 @@ struct RequestHeader:
     fn headers(self) -> String:
         return String(self.raw_headers)
 
-    # This is translated to Mojo from Golang FastHTTP
     fn parse(inout self, request_line: String) raises -> None:
         var headers = self.raw_headers
-        
+
         var n = request_line.find(" ")
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
@@ -254,6 +253,7 @@ struct RequestHeader:
         s.disable_normalization = self.disable_normalization
 
         while s.next():
+            # The below is based on the code from Golang's FastHTTP library
             if len(s.key) > 0:
                 # Spaces between the header key and colon are not allowed.
                 # See RFC 7230, Section 3.2.4.
