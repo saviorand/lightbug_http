@@ -1,7 +1,9 @@
 from lightbug_http.client import Client
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
+from lightbug_http.header import ResponseHeader
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes
+from lightbug_http.strings import next_line
 from external.libc import (
     c_int,
     AF_INET,
@@ -96,18 +98,36 @@ struct MojoClient(Client):
         if bytes_sent == -1:
             raise Error("Failed to send message")
 
-        var response: String = ""
         var new_buf = Bytes()
 
-        while True:
-            var bytes_recv = conn.read(new_buf)
-            if bytes_recv == -1:
-                raise Error("Failed to receive message")
-            elif bytes_recv == 0:
-                break
-            else:
-                response += String(new_buf)
+        var bytes_recv = conn.read(new_buf)
+        if bytes_recv == 0:
+            conn.close()
+        
+        var response = next_line(new_buf)
+        var headers_and_body = next_line(new_buf, "\n\n")
+        var headers_full = next_line(headers_and_body.first_line, "\n\n")
+        var headers_with_first_line = next_line(headers_full.first_line)
+        var first_line = headers_with_first_line.first_line
+        var response_headers = headers_with_first_line.rest
+        var response_body = headers_and_body.rest
+        var header = ResponseHeader(response_headers._buffer)
+        
+        try:
+            header.parse(first_line)
+        except e:
+            conn.close()
+            raise Error("Failed to parse response header: " + e.__str__())
+        
+        var total_recv = bytes_recv
+
+        while header.content_length() > total_recv:
+            if header.content_length() != 0 and header.content_length() != -2:
+                var remaining_body = Bytes()
+                var read_len = conn.read(remaining_body)
+                response_body += remaining_body
+                total_recv += read_len
 
         conn.close()
 
-        return HTTPResponse(response._buffer)
+        return HTTPResponse(header, response_body._buffer)

@@ -313,6 +313,7 @@ struct ResponseHeader:
     var __content_encoding: Bytes
     var __server: Bytes
     var __trailer: Bytes
+    var raw_headers: Bytes
 
     fn __init__(
         inout self,
@@ -329,6 +330,25 @@ struct ResponseHeader:
         self.__content_encoding = Bytes()
         self.__server = Bytes()
         self.__trailer = Bytes()
+        self.raw_headers = Bytes()
+    
+    fn __init__(
+        inout self,
+        raw_headers: Bytes,
+    ) -> None:
+        self.disable_normalization = False
+        self.no_http_1_1 = False
+        self.__connection_close = False
+        self.__status_code = 200
+        self.__status_message = Bytes()
+        self.__protocol = Bytes()
+        self.__content_length = 0
+        self.__content_length_bytes = Bytes()
+        self.__content_type = Bytes()
+        self.__content_encoding = Bytes()
+        self.__server = Bytes()
+        self.__trailer = Bytes()
+        self.raw_headers = raw_headers
 
     fn __init__(
         inout self,
@@ -348,6 +368,7 @@ struct ResponseHeader:
         self.__content_encoding = Bytes()
         self.__server = Bytes()
         self.__trailer = Bytes()
+        self.raw_headers = Bytes()
 
     fn __init__(
         inout self,
@@ -368,6 +389,7 @@ struct ResponseHeader:
         self.__content_encoding = Bytes()
         self.__server = Bytes()
         self.__trailer = Bytes()
+        self.raw_headers = Bytes()
 
     fn __init__(
         inout self,
@@ -396,6 +418,7 @@ struct ResponseHeader:
         self.__content_encoding = content_encoding
         self.__server = server
         self.__trailer = trailer
+        self.raw_headers = Bytes()
 
     fn set_status_code(inout self, code: Int) -> Self:
         self.__status_code = code
@@ -488,43 +511,38 @@ struct ResponseHeader:
     fn connection_close(self) -> Bool:
         return self.__connection_close
 
-    fn parse_headers(inout self, header_str: String) raises -> None:
-        var first_line_str = header_str
-        var next = next_line(first_line_str)
-        var line = next.first_line
-        var rest = next.rest
-        while len(line) == 0:
-            next = next_line(rest)
-            line = next.first_line
-            rest = next.rest
-        # Parse method
-        var n = line.find(" ")
+    fn parse(inout self, request_line: String) raises -> None:
+        var headers = self.raw_headers
+
+        var n = request_line.find(" ")
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
 
-        var method = line[:n]
-        line = line[n + 1 :]
+        var method = request_line[:n]
+        var rest_of_request_line = request_line[n + 1 :]
 
         # Defaults to HTTP/1.1
         var proto_str = String(strHttp11)
 
         # Parse requestURI
-        n = line.rfind(" ")
+        n = rest_of_request_line.rfind(" ")
         if n < 0:
-            n = len(line)
+            n = len(rest_of_request_line)
             proto_str = strHttp10
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
-            var proto = line[n + 1 :]
+            var proto = rest_of_request_line[n + 1 :]
             if proto != strHttp11:
                 proto_str = proto
 
-        _ = self.set_protocol(proto_str.as_bytes())
+        var request_uri = rest_of_request_line[:n]
+
+        _ = self.set_protocol(proto_str._buffer)
         _ = self.set_content_length(-2)
 
         var s = headerScanner()
-        s.b = header_str
+        s.b = headers
         s.disable_normalization = self.disable_normalization
 
         while s.next():
