@@ -127,6 +127,31 @@ Once you have Mojo set up locally,
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+### Serving static files
+
+The default welcome screen shows an example of how to serve files like images or HTML using Lightbug. Mojo has built-in `open`, `read` and `read_bytes` methods that you can use to read files from e.g. a `static` directory and serve them on a route:
+
+```mojo
+@value
+struct Welcome(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var uri = req.uri()
+
+        if uri.path() == "/":
+            var html: Bytes
+            with open("static/lightbug_welcome.html", "r") as f:
+                html = f.read_bytes()
+            return OK(html, "text/html; charset=utf-8")
+        
+        if uri.path() == "/logo.png":
+            var image: Bytes
+            with open("static/logo.png", "r") as f:
+                image = f.read_bytes()
+            return OK(image, "image/png")
+        
+        return NotFound(uri.path())
+```
+
 ### Using the client
 
 Create a file, e.g `client.mojo` with the following code:

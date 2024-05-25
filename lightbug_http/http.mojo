@@ -216,7 +216,6 @@ struct HTTPResponse(Response):
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
         ResponseHeader(
-            True,
             200,
             String("OK").as_bytes(),
             String("Content-Type: text/plain").as_bytes(),
@@ -227,10 +226,21 @@ fn OK(body: Bytes) -> HTTPResponse:
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()),
+        ResponseHeader(200, String("OK").as_bytes(), content_type.as_bytes()),
         body,
     )
 
+fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, String("OK").as_bytes(), content_type.as_bytes(), content_encoding.as_bytes()),
+        body,
+    )
+
+fn NotFound(path: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(404, String("Not Found").as_bytes(), String("text/plain").as_bytes()),
+        String("path " + path + " not found").as_bytes(),
+    )
 
 fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     var res_str = String()
@@ -303,8 +313,10 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(res.header.content_type())
     _ = builder.write_string(String("\r\n"))
 
-    # TODO: propagate charset
-    # res_str += String("; charset=utf-8")
+    if len(res.header.content_encoding()) > 0:
+        _ = builder.write_string(String("Content-Encoding: "))
+        _ = builder.write(res.header.content_encoding())
+        _ = builder.write_string(String("\r\n"))
 
     if len(res.body_raw) > 0:
         _ = builder.write_string(String("Content-Length: "))

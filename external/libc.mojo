@@ -1,3 +1,5 @@
+from lightbug_http.io.bytes import Bytes
+
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
@@ -82,6 +84,12 @@ fn to_char_ptr(s: String) -> Pointer[c_char]:
         ptr.store(i, ord(s[i]))
     return ptr
 
+
+fn to_char_ptr(s: Bytes) -> Pointer[c_char]:
+    var ptr = Pointer[c_char]().alloc(len(s))
+    for i in range(len(s)):
+        ptr.store(i, int(s[i]))
+    return ptr
 
 fn c_charptr_to_string(s: Pointer[c_char]) -> String:
     return String(s.bitcast[Int8](), strlen(s))

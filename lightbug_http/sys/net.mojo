@@ -227,9 +227,13 @@ struct SysConnection(Connection):
         buf = bytes_str._buffer
         return bytes_recv
 
-    fn write(self, buf: Bytes) raises -> Int:
-        var msg = String(buf)
+    fn write(self, msg: String) raises -> Int:
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
+            print("Failed to send response")
+        return len(msg)
+    
+    fn write(self, buf: Bytes) raises -> Int:
+        if send(self.fd, to_char_ptr(buf).bitcast[c_void](), len(buf), 0) == -1:
             print("Failed to send response")
         return len(buf)
 
