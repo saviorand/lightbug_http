@@ -206,11 +206,11 @@ struct URI:
         if path_start >= 0:
             host_and_port = remainder_uri[:path_start]
             request_uri = remainder_uri[path_start:]
+            self.__host = host_and_port[:path_start]._buffer
         else:
             host_and_port = remainder_uri
-            request_uri = strSlash  # Assume root if no path is provided
-
-        self.__host = host_and_port[:path_start]._buffer
+            request_uri = strSlash
+            self.__host = host_and_port._buffer
 
         if is_https:
             _ = self.set_scheme(https)
