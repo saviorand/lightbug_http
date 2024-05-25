@@ -239,7 +239,7 @@ struct RequestHeader:
             if proto != strHttp11:
                 proto_str = proto
 
-        var request_uri = rest_of_request_line[:n]
+        var request_uri = rest_of_request_line[:n + 1]
 
         _ = self.set_method(method)
         _ = self.set_protocol(proto_str)

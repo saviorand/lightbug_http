@@ -10,7 +10,7 @@ from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import next_line, NetworkType
 
-
+@value
 struct SysServer:
     """
     A Mojo-based server that accept incoming requests and delivers HTTP services.
@@ -19,6 +19,7 @@ struct SysServer:
     var error_handler: ErrorHandler
 
     var name: String
+    var __address: String
     var max_concurrent_connections: Int
     var max_requests_per_connection: Int
 
@@ -30,6 +31,17 @@ struct SysServer:
     fn __init__(inout self) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.max_request_body_size = 0
+        self.tcp_keep_alive = False
+        self.ln = SysListener()
+    
+    fn __init__(inout self, own_address: String) raises:
+        self.error_handler = ErrorHandler()
+        self.name = "lightbug_http"
+        self.__address = own_address
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
         self.max_request_body_size = 0
@@ -39,11 +51,19 @@ struct SysServer:
     fn __init__(inout self, error_handler: ErrorHandler) raises:
         self.error_handler = error_handler
         self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
         self.max_request_body_size = 0
         self.tcp_keep_alive = False
         self.ln = SysListener()
+    
+    fn address(self) -> String:
+        return self.__address
+    
+    fn set_address(inout self, own_address: String) -> Self:
+        self.__address = own_address
+        return self
 
     fn get_concurrency(self) -> Int:
         """
@@ -70,6 +90,7 @@ struct SysServer:
         """
         var __net = SysNet()
         var listener = __net.listen(NetworkType.tcp4.value, address)
+        _ = self.set_address(address)
         self.serve(listener, handler)
 
     fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
@@ -98,13 +119,6 @@ struct SysServer:
                 var headers_and_body = next_line(request.rest, "\n\n")
                 var request_headers = headers_and_body.first_line
                 var request_body = headers_and_body.rest
-                var uri = URI(request.first_line)
-                try:
-                    uri.parse()
-                except e:
-                    conn.close()
-                    raise Error("Failed to parse request line:" + e.__str__())
-
                 var header = RequestHeader(request_headers._buffer)
                 try:
                     header.parse(request.first_line)
@@ -112,6 +126,13 @@ struct SysServer:
                     conn.close()
                     raise Error("Failed to parse request header: " + e.__str__())
                 
+                var uri = URI(self.address() + String(header.request_uri()))
+                try:
+                    uri.parse()
+                except e:
+                    conn.close()
+                    raise Error("Failed to parse request line:" + e.__str__())
+
                 if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
                     var remaining_body = Bytes()
                     var remaining_len = header.content_length() - len(request_body + 1)

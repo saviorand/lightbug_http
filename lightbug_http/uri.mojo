@@ -197,8 +197,7 @@ struct URI:
                 is_https = True
             remainder_uri = raw_uri[proto_end + 3:]
         else:
-            raise Error("Invalid URI: Missing protocol")
-
+            remainder_uri = raw_uri
         # Parse the host and optional port
         var path_start = remainder_uri.find("/")
         var host_and_port: String
