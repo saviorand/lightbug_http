@@ -30,7 +30,7 @@ This is not production ready yet. We're aiming to keep up with new developments 
 
 Lightbug currently has the following features:
  - [x] Pure Mojo networking! No dependencies on Python by default
- - [x] Set up a server to listen on a given host/port
+ - [x] TCP-based server and client implementation
  - [x] Assign your own custom handler to a route
  - [x] Craft HTTP requests and responses with built-in primitives
  - [x] Everything is fully typed, with no `def` functions used
@@ -38,9 +38,10 @@ Lightbug currently has the following features:
 
 We're working on support for the following (contributors welcome!):
  - [ ] [SSL/HTTPS support](https://github.com/saviorand/lightbug_http/issues/20)
+ - [ ] UDP support
  - [ ] [Better error handling](https://github.com/saviorand/lightbug_http/issues/3), [improved form/multipart and JSON support](https://github.com/saviorand/lightbug_http/issues/4)
  - [ ] [Multiple simultaneous connections](https://github.com/saviorand/lightbug_http/issues/5), [parallelization and performance optimizations](https://github.com/saviorand/lightbug_http/issues/6)
- - [ ] [WebSockets](https://github.com/saviorand/lightbug_http/issues/7), [HTTP 2.0 support](https://github.com/saviorand/lightbug_http/issues/8)
+ - [ ] [WebSockets](https://github.com/saviorand/lightbug_http/issues/7), [HTTP 2.0/3.0 support](https://github.com/saviorand/lightbug_http/issues/8)
  - [ ] [ASGI spec conformance](https://github.com/saviorand/lightbug_http/issues/17)
 
 The test coverage is also something we're working on.
@@ -63,11 +64,11 @@ Once you have Mojo set up locally,
    git clone https://github.com/saviorand/lightbug_http.git
    ```
 2. Switch to the project directory:
-   ```bash
+   ```sh
    cd lightbug_http
    ```
    then run:
-   ```bash
+   ```sh
    mojo lightbug.🔥
    ```
    
@@ -125,6 +126,37 @@ Once you have Mojo set up locally,
    Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Using the client
+
+Create a file, e.g `client.mojo` with the following code:
+
+```mojo
+from lightbug_http.http import HTTPRequest
+from lightbug_http.uri import URI
+from lightbug_http.sys.client import MojoClient
+
+fn test_request(inout client: MojoClient) raises -> None:
+    var uri = URI("http://httpbin.org/")
+    var request = HTTPRequest(uri)
+    var response = client.do(request)
+
+    # print status code
+    print("Response:", response.header.status_code())
+
+    # print various parsed headers
+    print("Header", response.header.content_length())
+
+    # print body
+    print(String(response.get_body()))
+
+
+fn main() raises -> None:
+    var client = MojoClient()
+    test_request(client)
+```
+
+Pure Mojo-based client is available by default. This client is also used internally for testing the server.
 
 ## Switching between pure Mojo and Python implementations
 By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `SysServer` with the following line:

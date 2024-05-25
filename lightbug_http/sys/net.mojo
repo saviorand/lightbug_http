@@ -358,7 +358,7 @@ struct addrinfo_unix(AnAddrInfo):
         Returns:
             UInt32 - The IP address.
         """
-        var host_ptr = to_char_ptr(host)
+        var host_ptr = to_char_ptr(String(host))
         var servinfo = Pointer[Self]().alloc(1)
         servinfo.store(Self())
 
@@ -419,8 +419,6 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     if connect(sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server")
-
-    print("Connected to server at " + host + ":" + port.__str__())
 
     var laddr = TCPAddr()
     var raddr = TCPAddr(host, int(port))

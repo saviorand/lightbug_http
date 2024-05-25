@@ -232,7 +232,7 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     )
 
 
-fn encode(req: HTTPRequest) raises -> Bytes:
+fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     var res_str = String()
     var protocol = strHttp11
     var current_time = String()
@@ -241,7 +241,10 @@ fn encode(req: HTTPRequest) raises -> Bytes:
 
     _ = builder.write(req.header.method())
     _ = builder.write_string(String(" "))
-    _ = builder.write(req.header.request_uri())
+    if len(uri.request_uri()) > 1:
+        _ = builder.write_string(uri.request_uri())
+    else:
+        _ = builder.write_string("/")
     _ = builder.write_string(String(" "))
     _ = builder.write(protocol)
     _ = builder.write_string(String("\r\n"))

@@ -93,7 +93,7 @@ struct MojoClient(Client):
 
         var conn = create_connection(self.fd, host_str, port)
 
-        var req_encoded = encode(req)
+        var req_encoded = encode(req, uri)
         var bytes_sent = conn.write(req_encoded)
         if bytes_sent == -1:
             raise Error("Failed to send message")

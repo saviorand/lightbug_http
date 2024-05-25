@@ -186,54 +186,39 @@ struct URI:
 
         # Defaults to HTTP/1.1
         var proto_str = String(strHttp11)
-
-        # Parse requestURI
-        var n = raw_uri.rfind(" ")
-        if n < 0:
-            n = len(raw_uri)
-        elif n == 0:
-            raise Error("Request URI cannot be empty")
-        else:
-            var proto = raw_uri[n + 1 :]
-            if proto != strHttp11:
-                proto_str = proto
-
-        var request_uri = raw_uri[:n]
-
-        # Parse host from requestURI
-        n = request_uri.find("://")
-
         var is_https = False
 
-        if n >= 0:
-            var host_and_port = request_uri[n + 3 :]
-
-            if request_uri[:n] == https:
+        # Parse the protocol
+        var proto_end = raw_uri.find("://")
+        var remainder_uri: String
+        if proto_end >= 0:
+            proto_str = raw_uri[:proto_end]
+            if proto_str == https:
                 is_https = True
-
-            n = host_and_port.find("/")
-            if n >= 0:
-                self.__host = host_and_port[:n]._buffer
-                request_uri = request_uri[n + 3 :]
-            else:
-                self.__host = host_and_port._buffer
-                request_uri = strSlash
+            remainder_uri = raw_uri[proto_end + 3:]
         else:
-            n = request_uri.find("/")
-            if n >= 0:
-                self.__host = request_uri[:n]._buffer
-                request_uri = request_uri[n:]
-            else:
-                self.__host = request_uri._buffer
-                request_uri = strSlash
+            raise Error("Invalid URI: Missing protocol")
+
+        # Parse the host and optional port
+        var path_start = remainder_uri.find("/")
+        var host_and_port: String
+        var request_uri: String
+        if path_start >= 0:
+            host_and_port = remainder_uri[:path_start]
+            request_uri = remainder_uri[path_start:]
+            self.__host = host_and_port[:path_start]._buffer
+        else:
+            host_and_port = remainder_uri
+            request_uri = strSlash
+            self.__host = host_and_port._buffer
 
         if is_https:
             _ = self.set_scheme(https)
         else:
             _ = self.set_scheme(http)
-
+        
         # Parse path
-        n = request_uri.find("?")
+        var n = request_uri.find("?")
         if n >= 0:
             self.__path_original = request_uri[:n]._buffer
             self.__query_string = request_uri[n + 1 :]._buffer
