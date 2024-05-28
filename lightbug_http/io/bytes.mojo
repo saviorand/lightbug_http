@@ -1,6 +1,7 @@
 from python import PythonObject
+# from utils import Span
 
-alias Bytes = List[Int8]
+alias Bytes = List[UInt8]
 
 fn bytes(s: StringLiteral) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses
@@ -17,20 +18,20 @@ fn bytes(s: String) -> Bytes:
 @value
 @register_passable("trivial")
 struct UnsafeString:
-    var data: Pointer[Int8]
+    var data: Pointer[UInt8]
     var len: Int
 
     fn __init__(str: StringLiteral) -> UnsafeString:
         var l = str.__len__()
         var s = String(str)
-        var p = Pointer[Int8].alloc(l)
+        var p = Pointer[UInt8].alloc(l)
         for i in range(l):
             p.store(i, s._buffer[i])
         return UnsafeString(p, l)
 
     fn __init__(str: String) -> UnsafeString:
         var l = str.__len__()
-        var p = Pointer[Int8].alloc(l)
+        var p = Pointer[UInt8].alloc(l)
         for i in range(l):
             p.store(i, str._buffer[i])
         return UnsafeString(p, l)

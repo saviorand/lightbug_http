@@ -1,3 +1,4 @@
+from utils import StaticTuple
 from lightbug_http.io.bytes import Bytes
 
 alias IPPROTO_IPV6 = 41
@@ -922,7 +923,7 @@ fn __test_socket_client__():
         print("Failed to receive message")
     else:
         print("Received Message: ")
-        print(String(buf.bitcast[Int8](), bytes_recv))
+        print(String(buf.bitcast[UInt8](), bytes_recv))
 
     _ = shutdown(sockfd, SHUT_RDWR)
     var close_status = close(sockfd)

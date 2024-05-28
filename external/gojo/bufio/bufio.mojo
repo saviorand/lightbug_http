@@ -797,7 +797,7 @@ struct Writer[W: io.Writer](
         total_bytes_written += n
         return total_bytes_written
 
-    fn write_byte(inout self, src: Int8) -> Result[Int]:
+    fn write_byte(inout self, src: UInt8) -> Result[Int]:
         """Writes a single byte to the internal buffer.
 
         Args:

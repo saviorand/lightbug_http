@@ -48,7 +48,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
             copy.append(0)
         return String(copy)
 
-    fn get_bytes(self) -> List[Int8]:
+    fn get_bytes(self) -> List[UInt8]:
         """
         Returns a deepcopy of the byte array of the string builder.
 
@@ -80,7 +80,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         self._vector.extend(src)
         return Result(len(src), None)
 
-    fn write_byte(inout self, byte: Int8) -> Result[Int]:
+    fn write_byte(inout self, byte: UInt8) -> Result[Int]:
         """
         Appends a byte array to the builder buffer.
 
