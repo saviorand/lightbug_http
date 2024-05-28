@@ -219,7 +219,6 @@ struct SysConnection(Connection):
         var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
-            print("Failed to receive message")
             return 0
         if bytes_recv == 0:
             return 0
@@ -227,9 +226,13 @@ struct SysConnection(Connection):
         buf = bytes_str._buffer
         return bytes_recv
 
-    fn write(self, buf: Bytes) raises -> Int:
-        var msg = String(buf)
+    fn write(self, msg: String) raises -> Int:
         if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
+            print("Failed to send response")
+        return len(msg)
+    
+    fn write(self, buf: Bytes) raises -> Int:
+        if send(self.fd, to_char_ptr(buf).bitcast[c_void](), len(buf), 0) == -1:
             print("Failed to send response")
         return len(buf)
 

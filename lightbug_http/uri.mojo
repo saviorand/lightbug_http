@@ -10,7 +10,6 @@ from lightbug_http.strings import (
 )
 
 
-# TODO: this really needs refactoring
 @value
 struct URI:
     var __path_original: Bytes

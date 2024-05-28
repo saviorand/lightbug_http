@@ -2,7 +2,7 @@ from time import now
 from external.morrow import Morrow
 from external.gojo.strings import StringBuilder
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
@@ -173,11 +173,10 @@ struct HTTPResponse(Response):
     var laddr: TCPAddr
 
     fn __init__(inout self, body_bytes: Bytes):
-        # TODO: infer content type from the body
         self.header = ResponseHeader(
             200,
-            String("OK").as_bytes(),
-            String("Content-Type: application/octet-stream\r\n").as_bytes(),
+            bytes("OK"),
+            bytes("Content-Type: application/octet-stream\r\n"),
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -212,25 +211,45 @@ struct HTTPResponse(Response):
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
 
+fn OK(body: StringLiteral) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+    )
+
+fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+    )
+
+fn OK(body: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+    )
+
+fn OK(body: String, content_type: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+    )
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(
-            True,
-            200,
-            String("OK").as_bytes(),
-            String("Content-Type: text/plain").as_bytes(),
-        ),
-        body,
+        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), body,
     )
-
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(True, 200, String("OK").as_bytes(), content_type.as_bytes()),
-        body,
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), body,
     )
 
+fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(200, bytes("OK"), bytes(content_type), bytes(content_encoding)), body,
+    )
+
+fn NotFound(path: String) -> HTTPResponse:
+    return HTTPResponse(
+        ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
+    )
 
 fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     var res_str = String()
@@ -249,7 +268,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     _ = builder.write(protocol)
     _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Host: " + req.host()))
+    _ = builder.write_string(String("Host: " + String(uri.host())))
     _ = builder.write_string(String("\r\n"))
 
     if len(req.body_raw) > 0:
@@ -266,15 +285,15 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
         _ = builder.write_string(String("close"))
     else:
         _ = builder.write_string(String("keep-alive"))
+    
     _ = builder.write_string(String("\r\n"))
-
     _ = builder.write_string(String("\r\n"))
+    
     if len(req.body_raw) > 0:
         _ = builder.write_string(String("\r\n"))
         _ = builder.write(req.body_raw)
 
-    # Currently the server is expecting a null terminated string for conn.send().
-    return builder.get_null_terminated_bytes()
+    return builder.get_bytes()
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:
@@ -303,8 +322,10 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write(res.header.content_type())
     _ = builder.write_string(String("\r\n"))
 
-    # TODO: propagate charset
-    # res_str += String("; charset=utf-8")
+    if len(res.header.content_encoding()) > 0:
+        _ = builder.write_string(String("Content-Encoding: "))
+        _ = builder.write(res.header.content_encoding())
+        _ = builder.write_string(String("\r\n"))
 
     if len(res.body_raw) > 0:
         _ = builder.write_string(String("Content-Length: "))
@@ -326,5 +347,4 @@ fn encode(res: HTTPResponse) raises -> Bytes:
         _ = builder.write_string(String("\r\n"))
         _ = builder.write(res.body_raw)
 
-    # Currently the server is expecting a null terminated string for conn.send().
-    return builder.get_null_terminated_bytes()
+    return builder.get_bytes()

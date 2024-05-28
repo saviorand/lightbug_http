@@ -127,33 +127,55 @@ Once you have Mojo set up locally,
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Using the client
+### Serving static files
 
-Create a file, e.g `client.mojo` with the following code:
+The default welcome screen shows an example of how to serve files like images or HTML using Lightbug. Mojo has built-in `open`, `read` and `read_bytes` methods that you can use to read files from e.g. a `static` directory and serve them on a route:
 
 ```mojo
-from lightbug_http.http import HTTPRequest
-from lightbug_http.uri import URI
-from lightbug_http.sys.client import MojoClient
+@value
+struct Welcome(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var uri = req.uri()
 
+        if uri.path() == "/":
+            var html: Bytes
+            with open("static/lightbug_welcome.html", "r") as f:
+                html = f.read_bytes()
+            return OK(html, "text/html; charset=utf-8")
+        
+        if uri.path() == "/logo.png":
+            var image: Bytes
+            with open("static/logo.png", "r") as f:
+                image = f.read_bytes()
+            return OK(image, "image/png")
+        
+        return NotFound(uri.path())
+```
+
+### Using the client
+
+Create a file, e.g `client.mojo` with the following code. Run `mojo client.mojo` to execute the request to a given URL.
+
+```mojo
 fn test_request(inout client: MojoClient) raises -> None:
-    var uri = URI("http://httpbin.org/")
+    var uri = URI("http://httpbin.org/status/404")
     var request = HTTPRequest(uri)
     var response = client.do(request)
 
     # print status code
     print("Response:", response.header.status_code())
 
-    # print various parsed headers
-    print("Header", response.header.content_length())
+    # print raw headers
+    # print("Headers:", response.header.headers())
+
+    # print parsed headers (only some are parsed for now)
+    print("Content-Type:", String(response.header.content_type()))
+    print("Content-Length", response.header.content_length())
+    print("Connection:", response.header.connection_close())
+    print("Server:", String(response.header.server()))
 
     # print body
     print(String(response.get_body()))
-
-
-fn main() raises -> None:
-    var client = MojoClient()
-    test_request(client)
 ```
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.

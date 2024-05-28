@@ -6,9 +6,4 @@ from lightbug_http.header import ResponseHeader
 @value
 struct ErrorHandler:
     fn Error(self) -> HTTPResponse:
-        return HTTPResponse(ResponseHeader(), String("TODO").as_bytes())
-
-
-alias errNeedMore = Error("need more data: cannot find trailing lf")
-alias errInvalidName = Error("invalid header name")
-alias errSmallBuffer = Error("small read buffer. Increase ReadBufferSize")
+        return HTTPResponse(ResponseHeader(), String("TODO")._buffer)
