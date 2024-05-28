@@ -113,7 +113,7 @@ struct SysServer:
             
             if read_len == 0:
                 conn.close()
-                break
+                continue
                 
             var request_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
             var request_first_line_headers = request_first_line_headers_and_body.first_line
