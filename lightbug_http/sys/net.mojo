@@ -219,7 +219,6 @@ struct SysConnection(Connection):
         var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
-            print("Failed to receive message")
             return 0
         if bytes_recv == 0:
             return 0

@@ -104,17 +104,23 @@ struct MojoClient(Client):
         if bytes_recv == 0:
             conn.close()
         
-        var response = next_line(new_buf)
-        var headers_and_body = next_line(new_buf, "\n\n")
-        var headers_full = next_line(headers_and_body.first_line, "\n\n")
-        var headers_with_first_line = next_line(headers_full.first_line)
-        var first_line = headers_with_first_line.first_line
-        var response_headers = headers_with_first_line.rest
-        var response_body = headers_and_body.rest
+        var response_first_line_headers_and_body = next_line(new_buf, "\r\n\r\n")
+        var response_first_line_headers = response_first_line_headers_and_body.first_line
+        var response_body = response_first_line_headers_and_body.rest
+
+        var response_first_line_and_headers = next_line(response_first_line_headers, "\r\n")
+        var response_first_line = response_first_line_and_headers.first_line
+        var response_headers = response_first_line_and_headers.rest
+
+        # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
+        var newline_in_body = response_body.find("\r\n")
+        if newline_in_body != -1:
+            response_body = response_body[:newline_in_body]
+
         var header = ResponseHeader(response_headers._buffer)
-        
+
         try:
-            header.parse(first_line)
+            header.parse(response_first_line)
         except e:
             conn.close()
             raise Error("Failed to parse response header: " + e.__str__())

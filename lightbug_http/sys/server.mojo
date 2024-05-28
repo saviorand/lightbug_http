@@ -109,48 +109,55 @@ struct SysServer:
         while True:
             var conn = self.ln.accept()
             var buf = Bytes()
+            var read_len = conn.read(buf)
             
-            while True:
-                var read_len = conn.read(buf)
-                if read_len == 0:
-                    conn.close()
-                    break
-                var request = next_line(buf)
-                var headers_and_body = next_line(request.rest, "\n\n")
-                var request_headers = headers_and_body.first_line
-                var request_body = headers_and_body.rest
-                var header = RequestHeader(request_headers._buffer)
-                try:
-                    header.parse(request.first_line)
-                except e:
-                    conn.close()
-                    raise Error("Failed to parse request header: " + e.__str__())
+            if read_len == 0:
+                conn.close()
+                break
                 
-                var uri = URI(self.address() + String(header.request_uri()))
-                try:
-                    uri.parse()
-                except e:
-                    conn.close()
-                    raise Error("Failed to parse request line:" + e.__str__())
+            var request_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
+            var request_first_line_headers = request_first_line_headers_and_body.first_line
+            var request_body = request_first_line_headers_and_body.rest
 
-                if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
-                    var remaining_body = Bytes()
-                    var remaining_len = header.content_length() - len(request_body + 1)
-                    while remaining_len > 0:
-                        var read_len = conn.read(remaining_body)
-                        buf.extend(remaining_body)
-                        remaining_len -= read_len
+            var request_first_line_headers_split = next_line(request_first_line_headers, "\r\n")
+            var request_first_line = request_first_line_headers_split.first_line
+            var request_headers = request_first_line_headers_split.rest
 
-                var res = handler.func(
-                    HTTPRequest(
-                        uri,
-                        buf,
-                        header,
-                    )
+            var header = RequestHeader(request_headers._buffer)
+
+            try:
+                header.parse(request_first_line)
+            except e:
+                conn.close()
+                raise Error("Failed to parse request header: " + e.__str__())
+                
+            var uri = URI(self.address() + String(header.request_uri()))
+            try:
+                uri.parse()
+            except e:
+                conn.close()
+                raise Error("Failed to parse request line:" + e.__str__())
+
+            if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
+                var remaining_body = Bytes()
+                var remaining_len = header.content_length() - len(request_body + 1)
+                while remaining_len > 0:
+                    var read_len = conn.read(remaining_body)
+                    buf.extend(remaining_body)
+                    remaining_len -= read_len
+
+            var res = handler.func(
+                HTTPRequest(
+                    uri,
+                    buf,
+                    header,
                 )
-                var res_encoded = encode(res)
-                _ = conn.write(res_encoded)
-                
-                if header.connection_close():
-                    conn.close()
-                    break
+            )
+            
+            # Always close the connection as long as we don't support concurrency
+            _ = res.set_connection_close(True)
+            
+            var res_encoded = encode(res)
+            _ = conn.write(res_encoded)
+
+            conn.close()

@@ -1,5 +1,5 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 
 trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -34,8 +34,6 @@ struct Welcome(HTTPService):
         
         return NotFound(uri.path())
 
-        
-
 
 @value
 struct ExampleRouter(HTTPService):
@@ -62,10 +60,8 @@ struct TechEmpowerRouter(HTTPService):
         var uri = req.uri()
 
         if uri.path() == "/plaintext":
-            return OK(String("Hello, World!").as_bytes(), "text/plain")
+            return OK("Hello, World!", "text/plain")
         elif uri.path() == "/json":
-            return OK(
-                String('{"message": "Hello, World!"}').as_bytes(), "application/json"
-            )
+            return OK('{"message": "Hello, World!"}', "application/json")
 
-        return OK(String("Hello world!").as_bytes(), "text/plain")
+        return OK("Hello world!") # text/plain is the default

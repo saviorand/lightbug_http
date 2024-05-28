@@ -2,6 +2,17 @@ from python import PythonObject
 
 alias Bytes = List[Int8]
 
+fn bytes(s: StringLiteral) -> Bytes:
+    # This is currently null-terminated, which we don't want in HTTP responses
+    var buf = String(s)._buffer
+    _ = buf.pop()
+    return buf
+
+fn bytes(s: String) -> Bytes:
+    # This is currently null-terminated, which we don't want in HTTP responses
+    var buf = s._buffer
+    _ = buf.pop()
+    return buf
 
 @value
 @register_passable("trivial")

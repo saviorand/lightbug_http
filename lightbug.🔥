@@ -1,5 +1,4 @@
 from lightbug_http import *
-from sys import is_defined
 
 fn main() raises:
     var server = SysServer()

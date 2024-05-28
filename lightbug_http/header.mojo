@@ -8,7 +8,6 @@ from lightbug_http.strings import (
     nChar,
 )
 from lightbug_http.io.bytes import Bytes, bytes_equal
-from lightbug_http.error import errNeedMore, errInvalidName
 
 alias statusOK = 200
 
@@ -105,7 +104,7 @@ struct RequestHeader:
         self.__trailer = trailer
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type.as_bytes()
+        self.__content_type = content_type._buffer
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -116,7 +115,7 @@ struct RequestHeader:
         return self.__content_type
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = host.as_bytes()
+        self.__host = host._buffer
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -127,7 +126,7 @@ struct RequestHeader:
         return self.__host
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
-        self.__user_agent = user_agent.as_bytes()
+        self.__user_agent = user_agent._buffer
         return self
 
     fn set_user_agent_bytes(inout self, user_agent: Bytes) -> Self:
@@ -138,7 +137,7 @@ struct RequestHeader:
         return self.__user_agent
 
     fn set_method(inout self, method: String) -> Self:
-        self.__method = method.as_bytes()
+        self.__method = method._buffer
         return self
 
     fn set_method_bytes(inout self, method: Bytes) -> Self:
@@ -151,8 +150,8 @@ struct RequestHeader:
         return self.__method
 
     fn set_protocol(inout self, method: String) -> Self:
-        self.no_http_1_1 = bytes_equal(method.as_bytes(), strHttp11)
-        self.proto = method.as_bytes()
+        self.no_http_1_1 = bytes_equal(method._buffer, strHttp11)
+        self.proto = method._buffer
         return self
 
     fn set_protocol_bytes(inout self, method: Bytes) -> Self:
@@ -190,7 +189,7 @@ struct RequestHeader:
         return self.__request_uri
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer.as_bytes()
+        self.__trailer = trailer._buffer
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -276,7 +275,7 @@ struct RequestHeader:
                         if self.content_length() != -1:
                             var content_length = s.value
                             _ = self.set_content_length(atol(content_length))
-                            _ = self.set_content_length_bytes(content_length.as_bytes())
+                            _ = self.set_content_length_bytes(content_length._buffer)
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
@@ -461,7 +460,7 @@ struct ResponseHeader:
         return self.__content_type
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type.as_bytes()
+        self.__content_type = content_type._buffer
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -472,7 +471,7 @@ struct ResponseHeader:
         return self.__content_encoding
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
-        self.__content_encoding = content_encoding.as_bytes()
+        self.__content_encoding = content_encoding._buffer
         return self
 
     fn set_content_encoding_bytes(inout self, content_encoding: Bytes) -> Self:
@@ -494,7 +493,7 @@ struct ResponseHeader:
         return self.__server
 
     fn set_server(inout self, server: String) -> Self:
-        self.__server = server.as_bytes()
+        self.__server = server._buffer
         return self
 
     fn set_server_bytes(inout self, server: Bytes) -> Self:
@@ -511,7 +510,7 @@ struct ResponseHeader:
         return self.__protocol
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer.as_bytes()
+        self.__trailer = trailer._buffer
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -532,34 +531,27 @@ struct ResponseHeader:
     fn connection_close(self) -> Bool:
         return self.__connection_close
 
-    fn parse(inout self, request_line: String) raises -> None:
+    fn headers(self) -> String:
+        return String(self.raw_headers)
+
+    fn parse(inout self, first_line: String) raises -> None:
         var headers = self.raw_headers
-
-        var n = request_line.find(" ")
-        if n <= 0:
-            raise Error("Cannot find HTTP request method in the request")
-
-        var method = request_line[:n]
-        var rest_of_request_line = request_line[n + 1 :]
 
         # Defaults to HTTP/1.1
         var proto_str = String(strHttp11)
 
-        # Parse requestURI
-        n = rest_of_request_line.rfind(" ")
-        if n < 0:
-            n = len(rest_of_request_line)
-            proto_str = strHttp10
-        elif n == 0:
-            raise Error("Request URI cannot be empty")
-        else:
-            var proto = rest_of_request_line[n + 1 :]
-            if proto != strHttp11:
-                proto_str = proto
+        var n = first_line.find(" ")
+        var proto = first_line[:n]
+        if proto != strHttp11:
+            proto_str = proto
 
-        var request_uri = rest_of_request_line[:n]
+        var rest_of_response_line = first_line[n + 1 :]
+        var status_code = atol(rest_of_response_line[:3])
+        var message = rest_of_response_line[4:]
 
         _ = self.set_protocol(proto_str._buffer)
+        _ = self.set_status_code(status_code)
+        _ = self.set_status_message(message._buffer)
         _ = self.set_content_length(-2)
 
         var s = headerScanner()
@@ -568,8 +560,7 @@ struct ResponseHeader:
 
         while s.next():
             if len(s.key) > 0:
-                # Spaces between the header key and colon are not allowed.
-                # See RFC 7230, Section 3.2.4.
+                # Spaces between header key and colon not allowed (RFC 7230, 3.2.4)
                 if s.key.find(" ") != -1 or s.key.find("\t") != -1:
                     raise Error("Invalid header key")
                 elif s.key[0] == "c" or s.key[0] == "C":
@@ -583,25 +574,22 @@ struct ResponseHeader:
                         if self.content_length() != -1:
                             var content_length = s.value
                             _ = self.set_content_length(atol(content_length))
-                            _ = self.set_content_length_bytes(content_length.as_bytes())
+                            _ = self.set_content_length_bytes(content_length._buffer)
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
                             _ = self.set_connection_close()
                         else:
                             _ = self.reset_connection_close()
-                            # _ = self.appendargbytes(s.key, s.value)
                         continue
                 elif s.key[0] == "s" or s.key[0] == "S":
                     if s.key.lower() == "server":
                         _ = self.set_server(s.value)
                         continue
-                    # TODO: set cookie
                 elif s.key[0] == "t" or s.key[0] == "T":
                     if s.key.lower() == "transfer-encoding":
                         if s.value != "identity":
                             _ = self.set_content_length(-1)
-                            # _ = self.setargbytes(s.key, strChunked)
                         continue
                     if s.key.lower() == "trailer":
                         _ = self.set_trailer(s.value)
@@ -633,20 +621,17 @@ struct headerScanner:
         if not self.initialized:
             self.initialized = True
 
-        if self.b.startswith('\n\n'):
+        if self.b.startswith('\r\n\r\n'):
             self.b = self.b[2:]
-            print("Error: Double newline")
             return False
 
-        if self.b.startswith('\n'):
+        if self.b.startswith('\r\n'):
             self.b = self.b[1:]
-            print("Error: Newline at start")
             return False
 
         var n = self.b.find(':')
-        var x = self.b.find('\n')
+        var x = self.b.find('\r\n')
         if x != -1 and x < n:
-            print("Error: Newline before colon")
             return False
 
         if n == -1:
@@ -656,17 +641,15 @@ struct headerScanner:
         self.key = self.b[:n].strip()
         self.b = self.b[n+1:].strip()
 
-        x = self.b.find('\n')
+        x = self.b.find('\r\n')
         if x == -1:
-            # If we don't find a newline, assume we have reached the end
             if len(self.b) == 0:
-                print("Error: No ending newline and no data after colon")
                 return False
             self.value = self.b.strip()  
             self.b = ''
         else:
             self.value = self.b[:x].strip()
             self.b = self.b[x+1:]
-
+        
         return True
     

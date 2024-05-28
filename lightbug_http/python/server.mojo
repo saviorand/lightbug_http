@@ -61,9 +61,6 @@ struct PythonServer:
     fn serve[
         T: HTTPService
     ](inout self, ln: PythonTCPListener, handler: T) raises -> None:
-        # var max_worker_count = self.get_concurrency()
-        # TODO: logic for non-blocking read and write here, see for example https://github.com/valyala/fasthttp/blob/9ba16466dfd5d83e2e6a005576ee0d8e127457e2/server.go#L1789
-
         self.ln = ln
 
         while True:

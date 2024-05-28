@@ -14,7 +14,7 @@ alias rChar = String("\r").as_bytes()
 alias nChar = String("\n").as_bytes()
 
 
-# TODO: tuples don't work with strings in Mojo currently, to be replaced with a tuple
+# This is temporary due to no string support in tuples in Mojo, to be removed
 @value
 struct TwoLines:
     var first_line: String
