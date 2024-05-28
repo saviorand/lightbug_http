@@ -1,3 +1,4 @@
+from utils import StaticTuple
 from lightbug_http.net import (
     Listener,
     ListenConfig,
@@ -222,7 +223,7 @@ struct SysConnection(Connection):
             return 0
         if bytes_recv == 0:
             return 0
-        var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
+        var bytes_str = String(new_buf.bitcast[UInt8](), bytes_recv)
         buf = bytes_str._buffer
         return bytes_recv
 

@@ -1,7 +1,7 @@
 from .list import equals
 
 
-alias Byte = Int8
+alias Byte = UInt8
 
 
 fn has_prefix(bytes: List[Byte], prefix: List[Byte]) -> Bool:

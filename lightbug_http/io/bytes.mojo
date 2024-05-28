@@ -1,6 +1,7 @@
 from python import PythonObject
+# from utils import Span
 
-alias Bytes = List[Int8]
+alias Bytes = List[UInt8]
 
 fn bytes(s: StringLiteral) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses
