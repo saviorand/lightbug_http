@@ -1,6 +1,6 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode
+from lightbug_http.http import HTTPRequest, encode, split_http_request
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
@@ -8,7 +8,7 @@ from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import next_line, NetworkType
+from lightbug_http.strings import NetworkType
 
 @value
 struct SysServer:
@@ -114,17 +114,14 @@ struct SysServer:
             if read_len == 0:
                 conn.close()
                 continue
-                
-            var request_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
-            var request_first_line_headers = request_first_line_headers_and_body.first_line
-            var request_body = request_first_line_headers_and_body.rest
-
-            var request_first_line_headers_split = next_line(request_first_line_headers, "\r\n")
-            var request_first_line = request_first_line_headers_split.first_line
-            var request_headers = request_first_line_headers_split.rest
+            
+            var request_first_line: String
+            var request_headers: String
+            var request_body: String
+            
+            request_first_line, request_headers, request_body = split_http_request(buf)
 
             var header = RequestHeader(request_headers._buffer)
-
             try:
                 header.parse(request_first_line)
             except e:

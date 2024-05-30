@@ -1,9 +1,8 @@
 from lightbug_http.client import Client
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode, split_http_response
 from lightbug_http.header import ResponseHeader
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.strings import next_line
 from external.libc import (
     c_int,
     AF_INET,
@@ -94,7 +93,7 @@ struct MojoClient(Client):
         var conn = create_connection(self.fd, host_str, port)
 
         var req_encoded = encode(req, uri)
-        
+
         var bytes_sent = conn.write(req_encoded)
         if bytes_sent == -1:
             raise Error("Failed to send message")
@@ -104,15 +103,12 @@ struct MojoClient(Client):
         var bytes_recv = conn.read(new_buf)
         if bytes_recv == 0:
             conn.close()
-        print(String(new_buf))
-        
-        var response_first_line_headers_and_body = next_line(new_buf, "\r\n\r\n")
-        var response_first_line_headers = response_first_line_headers_and_body.first_line
-        var response_body = response_first_line_headers_and_body.rest
 
-        var response_first_line_and_headers = next_line(response_first_line_headers, "\r\n")
-        var response_first_line = response_first_line_and_headers.first_line
-        var response_headers = response_first_line_and_headers.rest
+        var response_first_line: String
+        var response_headers: String
+        var response_body: String
+        
+        response_first_line, response_headers, response_body = split_http_response(new_buf)
 
         # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
         var newline_in_body = response_body.find("\r\n")
