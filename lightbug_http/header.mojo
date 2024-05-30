@@ -521,6 +521,9 @@ struct ResponseHeader:
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
         self.__trailer = trailer
         return self
+    
+    fn trailer(self) -> Bytes:
+        return self.__trailer
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True

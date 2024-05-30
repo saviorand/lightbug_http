@@ -11,6 +11,8 @@ def test_header():
     test_parse_response_first_line_no_message()
     test_parse_request_header()
     test_parse_request_header_empty()
+    test_parse_response_header()
+    test_parse_response_header_empty()
 
 def test_parse_request_first_line_happy_path():
     var cases = Dict[String, List[StringLiteral]]()
@@ -115,6 +117,47 @@ def test_parse_request_header_empty():
     assert_equal(header.host(), empty_string)
     assert_equal(header.user_agent(), empty_string)
     assert_equal(header.content_type(), empty_string)
+    assert_equal(header.content_length(), -2)
+    assert_equal(header.connection_close(), False)
+    assert_equal(header.trailer(), empty_string)
+
+
+def test_parse_response_header():
+    var headers_str = Bytes(String('''
+    Server: example.com\r\n
+    User-Agent: Mozilla/5.0\r\n
+    Content-Type: text/html\r\n
+    Content-Encoding: gzip\r\n
+    Content-Length: 1234\r\n
+    Connection: close\r\n
+    Trailer: end-of-message\r\n
+    ''')._buffer)
+
+    var header = ResponseHeader(headers_str)
+    header.parse("HTTP/1.1 200 OK")
+    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(header.no_http_1_1, False)
+    assert_equal(header.status_code(), 200)
+    assert_equal(header.status_message(), "OK")
+    assert_equal(header.server(), "example.com")
+    assert_equal(header.content_type(), "text/html")
+    assert_equal(header.content_encoding(), "gzip")
+    assert_equal(header.content_length(), 1234)
+    assert_equal(header.connection_close(), True)
+    assert_equal(header.trailer(), "end-of-message")
+
+def test_parse_response_header_empty():
+    var headers_str = Bytes()
+
+    var header = ResponseHeader(headers_str)
+    header.parse("HTTP/1.1 200 OK")
+    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(header.no_http_1_1, False)
+    assert_equal(header.status_code(), 200)
+    assert_equal(header.status_message(), "OK")
+    assert_equal(header.server(), empty_string)
+    assert_equal(header.content_type(), empty_string)
+    assert_equal(header.content_encoding(), empty_string)
     assert_equal(header.content_length(), -2)
     assert_equal(header.connection_close(), False)
     assert_equal(header.trailer(), empty_string)
