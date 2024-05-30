@@ -11,7 +11,6 @@ from lightbug_http.io.bytes import Bytes, bytes_equal
 
 alias statusOK = 200
 
-
 @value
 struct RequestHeader:
     var disable_normalization: Bool
@@ -149,14 +148,14 @@ struct RequestHeader:
             return strMethodGet
         return self.__method
 
-    fn set_protocol(inout self, method: String) -> Self:
-        self.no_http_1_1 = bytes_equal(method._buffer, strHttp11)
-        self.proto = method._buffer
+    fn set_protocol(inout self, proto: String) -> Self:
+        self.no_http_1_1 = not bytes_equal(proto._buffer, strHttp11)
+        self.proto = proto._buffer
         return self
 
-    fn set_protocol_bytes(inout self, method: Bytes) -> Self:
-        self.no_http_1_1 = bytes_equal(method, strHttp11)
-        self.proto = method
+    fn set_protocol_bytes(inout self, proto: Bytes) -> Self:
+        self.no_http_1_1 = not bytes_equal(proto, strHttp11)
+        self.proto = proto
         return self
 
     fn protocol(self) -> Bytes:
@@ -184,7 +183,7 @@ struct RequestHeader:
         return self
 
     fn request_uri(self) -> Bytes:
-        if len(self.__request_uri) == 0:
+        if len(self.__request_uri) <= 1:
             return strSlash
         return self.__request_uri
 
@@ -195,6 +194,9 @@ struct RequestHeader:
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
         self.__trailer = trailer
         return self
+    
+    fn trailer(self) -> Bytes:
+        return self.__trailer
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
@@ -230,7 +232,6 @@ struct RequestHeader:
         n = rest_of_request_line.rfind(" ")
         if n < 0:
             n = len(rest_of_request_line)
-            proto_str = strHttp10
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
@@ -239,8 +240,12 @@ struct RequestHeader:
                 proto_str = proto
 
         var request_uri = rest_of_request_line[:n + 1]
-
+        
         _ = self.set_method(method)
+
+        if len(proto_str) != 8:
+            raise Error("Invalid protocol")
+
         _ = self.set_protocol(proto_str)
         _ = self.set_request_uri(request_uri)
 
@@ -541,17 +546,21 @@ struct ResponseHeader:
         var proto_str = String(strHttp11)
 
         var n = first_line.find(" ")
+        
         var proto = first_line[:n]
         if proto != strHttp11:
             proto_str = proto
+        _ = self.set_protocol(proto_str._buffer)
 
         var rest_of_response_line = first_line[n + 1 :]
-        var status_code = atol(rest_of_response_line[:3])
-        var message = rest_of_response_line[4:]
 
-        _ = self.set_protocol(proto_str._buffer)
+        var status_code = atol(rest_of_response_line[:3])
         _ = self.set_status_code(status_code)
-        _ = self.set_status_message(message._buffer)
+
+        var message = rest_of_response_line[4:]
+        if len(message) > 1:
+            _ = self.set_status_message(message._buffer)
+        
         _ = self.set_content_length(-2)
 
         var s = headerScanner()

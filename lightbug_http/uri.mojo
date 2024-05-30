@@ -179,6 +179,9 @@ struct URI:
 
     fn host(self) -> Bytes:
         return self.__host
+    
+    fn host_str(self) -> Bytes:
+        return self.__host
 
     fn parse(inout self) raises -> None:
         var raw_uri = String(self.__full_uri)
