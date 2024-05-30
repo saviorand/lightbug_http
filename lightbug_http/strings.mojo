@@ -13,27 +13,14 @@ alias strMethodGet = String("GET").as_bytes()
 alias rChar = String("\r").as_bytes()
 alias nChar = String("\n").as_bytes()
 
-
-# This is temporary due to no string support in tuples in Mojo, to be removed
-@value
-struct TwoLines:
-    var first_line: String
-    var rest: String
-
-    fn __init__(inout self, first_line: String, rest: String) -> None:
-        self.first_line = first_line
-        self.rest = rest
-
-
 # Helper function to split a string into two lines by delimiter
-fn next_line(s: String, delimiter: String = "\n") raises -> TwoLines:
+fn next_line(s: String, delimiter: String = "\n") raises -> (String, String):
     var first_newline = s.find(delimiter)
     if first_newline == -1:
-        return TwoLines(s, String())
+        return (s, String())
     var before_newline = s[0:first_newline]
     var after_newline = s[first_newline + 1 :]
-    return TwoLines(before_newline.strip(), after_newline)
-
+    return (before_newline, after_newline)
 
 @value
 struct NetworkType:
@@ -51,7 +38,6 @@ struct NetworkType:
     alias ip6 = NetworkType("ip6")
     alias unix = NetworkType("unix")
 
-
 @value
 struct ConnType:
     var value: String
@@ -59,7 +45,6 @@ struct ConnType:
     alias empty = ConnType("")
     alias http = ConnType("http")
     alias websocket = ConnType("websocket")
-
 
 @value
 struct RequestMethod:
@@ -73,13 +58,11 @@ struct RequestMethod:
     alias patch = RequestMethod("PATCH")
     alias options = RequestMethod("OPTIONS")
 
-
 @value
 struct CharSet:
     var value: String
 
     alias utf8 = CharSet("utf-8")
-
 
 @value
 struct MediaType:
@@ -88,7 +71,6 @@ struct MediaType:
     alias empty = MediaType("")
     alias plain = MediaType("text/plain")
     alias json = MediaType("application/json")
-
 
 @value
 struct Message:

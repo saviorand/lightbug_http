@@ -349,24 +349,24 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     return builder.get_bytes()
 
-fn split_http_request(buf: Bytes) raises -> (String, String, String):
-    var request_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
-    var request_first_line_headers = request_first_line_headers_and_body.first_line
-    var request_body = request_first_line_headers_and_body.rest
-
-    var request_first_line_headers_split = next_line(request_first_line_headers, "\r\n")
-    var request_first_line = request_first_line_headers_split.first_line
-    var request_headers = request_first_line_headers_split.rest
+fn split_http_request_string(buf: Bytes) raises -> (String, String, String):
+    var request_first_line_headers: String
+    var request_body: String
+    var request_first_line: String
+    var request_headers: String
+    
+    request_first_line_headers, request_body = next_line(buf, "\r\n\r\n")
+    request_first_line, request_headers = next_line(request_first_line_headers, "\r\n")
 
     return (request_first_line, request_headers, request_body)
 
-fn split_http_response(buf: Bytes) raises -> (String, String, String):
-    var response_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
-    var response_first_line_headers = response_first_line_headers_and_body.first_line
-    var response_body = response_first_line_headers_and_body.rest
+fn split_http_response_string(buf: Bytes) raises -> (String, String, String):
+    var response_first_line_headers: String
+    var response_body: String
+    var response_first_line: String
+    var response_headers: String
 
-    var response_first_line_and_headers = next_line(response_first_line_headers, "\r\n")
-    var response_first_line = response_first_line_and_headers.first_line
-    var response_headers = response_first_line_and_headers.rest
+    response_first_line_headers, response_body = next_line(buf, "\r\n\r\n")
+    response_first_line, response_headers = next_line(response_first_line_headers, "\r\n")
 
     return (response_first_line, response_headers, response_body)

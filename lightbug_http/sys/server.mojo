@@ -1,6 +1,6 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode, split_http_request
+from lightbug_http.http import HTTPRequest, encode, split_http_request_string
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
@@ -118,8 +118,8 @@ struct SysServer:
             var request_first_line: String
             var request_headers: String
             var request_body: String
-            
-            request_first_line, request_headers, request_body = split_http_request(buf)
+
+            request_first_line, request_headers, request_body = split_http_request_string(buf)
 
             var header = RequestHeader(request_headers._buffer)
             try:
