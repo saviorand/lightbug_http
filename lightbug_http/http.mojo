@@ -8,7 +8,6 @@ from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
 from lightbug_http.strings import next_line, strHttp11, strHttp
 
-
 trait Request:
     fn __init__(inout self, uri: URI):
         ...
@@ -349,24 +348,14 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     return builder.get_bytes()
 
-fn split_http_request_string(buf: Bytes) raises -> (String, String, String):
-    var request_first_line_headers: String
-    var request_body: String
-    var request_first_line: String
-    var request_headers: String
+fn split_http_string(buf: Bytes) raises -> (String, List[String], String):
+    var request = String(buf)
     
-    request_first_line_headers, request_body = next_line(buf, "\r\n\r\n")
-    request_first_line, request_headers = next_line(request_first_line_headers, "\r\n")
+    var request_first_line_headers_body = request.split("\r\n\r\n")
+    var request_first_line_headers = request_first_line_headers_body[0]
+    var request_body = request_first_line_headers_body[1]
+    var request_first_line_headers_list = request_first_line_headers.split("\r\n")
+    var request_first_line = request_first_line_headers_list[0]
+    var request_headers = request_first_line_headers_list[1:]
 
     return (request_first_line, request_headers, request_body)
-
-fn split_http_response_string(buf: Bytes) raises -> (String, String, String):
-    var response_first_line_headers: String
-    var response_body: String
-    var response_first_line: String
-    var response_headers: String
-
-    response_first_line_headers, response_body = next_line(buf, "\r\n\r\n")
-    response_first_line, response_headers = next_line(response_first_line_headers, "\r\n")
-
-    return (response_first_line, response_headers, response_body)
