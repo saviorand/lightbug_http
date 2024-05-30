@@ -94,6 +94,7 @@ struct MojoClient(Client):
         var conn = create_connection(self.fd, host_str, port)
 
         var req_encoded = encode(req, uri)
+        
         var bytes_sent = conn.write(req_encoded)
         if bytes_sent == -1:
             raise Error("Failed to send message")
@@ -103,6 +104,7 @@ struct MojoClient(Client):
         var bytes_recv = conn.read(new_buf)
         if bytes_recv == 0:
             conn.close()
+        print(String(new_buf))
         
         var response_first_line_headers_and_body = next_line(new_buf, "\r\n\r\n")
         var response_first_line_headers = response_first_line_headers_and_body.first_line

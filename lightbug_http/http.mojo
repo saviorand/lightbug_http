@@ -292,7 +292,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     if len(req.body_raw) > 0:
         _ = builder.write_string(String("\r\n"))
         _ = builder.write(req.body_raw)
-
+    
     return builder.get_bytes()
 
 
