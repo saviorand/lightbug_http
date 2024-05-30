@@ -2,12 +2,15 @@ from testing import assert_equal
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.bytes import Bytes
 
+alias empty_string = Bytes(String("").as_bytes())
+
 def test_header():
     test_parse_request_first_line_happy_path()
     test_parse_request_first_line_error()
     test_parse_response_first_line_happy_path()
     test_parse_response_first_line_no_message()
     test_parse_request_header()
+    test_parse_request_header_empty()
 
 def test_parse_request_first_line_happy_path():
     var cases = Dict[String, List[StringLiteral]]()
@@ -41,7 +44,7 @@ def test_parse_response_first_line_happy_path():
     cases["HTTP/1.1 200 OK "] = List("HTTP/1.1", "200", "OK ")
 
     for c in cases.items():
-        var header = ResponseHeader(String("")._buffer)
+        var header = ResponseHeader(empty_string)
         header.parse(c[].key)
         assert_equal(header.protocol(), c[].value[0])
         assert_equal(header.status_code(), c[].value[1])
@@ -79,7 +82,7 @@ def test_parse_request_first_line_error():
             assert_equal(e, c[].value)
 
 def test_parse_request_header():
-    var case_1_well_formed_headers = Bytes(String('''
+    var headers_str = Bytes(String('''
     Host: example.com\r\n
     User-Agent: Mozilla/5.0\r\n
     Content-Type: text/html\r\n
@@ -88,7 +91,7 @@ def test_parse_request_header():
     Trailer: end-of-message\r\n
     ''')._buffer)
 
-    var header = RequestHeader(case_1_well_formed_headers)
+    var header = RequestHeader(headers_str)
     header.parse("GET /index.html HTTP/1.1")
     assert_equal(header.method(), "GET")
     assert_equal(header.request_uri(), "/index.html")
@@ -100,3 +103,18 @@ def test_parse_request_header():
     assert_equal(header.content_length(), 1234)
     assert_equal(header.connection_close(), True)
     assert_equal(header.trailer(), "end-of-message")
+
+def test_parse_request_header_empty():
+    var headers_str = Bytes()
+    var header = RequestHeader(headers_str)
+    header.parse("GET /index.html HTTP/1.1")
+    assert_equal(header.method(), "GET")
+    assert_equal(header.request_uri(), "/index.html")
+    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(header.no_http_1_1, False)
+    assert_equal(header.host(), empty_string)
+    assert_equal(header.user_agent(), empty_string)
+    assert_equal(header.content_type(), empty_string)
+    assert_equal(header.content_length(), -2)
+    assert_equal(header.connection_close(), False)
+    assert_equal(header.trailer(), empty_string)

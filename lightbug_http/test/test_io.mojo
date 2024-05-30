@@ -1,6 +1,8 @@
 import testing
 from lightbug_http.io.bytes import Bytes, bytes_equal
 
+def test_io():
+    test_bytes_equal()
 
 fn test_bytes_equal() raises:
     var test1 = String("test")._buffer

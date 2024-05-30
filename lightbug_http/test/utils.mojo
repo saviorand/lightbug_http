@@ -24,7 +24,6 @@ alias defaultExpectedGetResponse = String(
     " world!"
 )
 
-
 @parameter
 fn new_httpx_client() -> PythonObject:
     try:
@@ -34,10 +33,8 @@ fn new_httpx_client() -> PythonObject:
         print("Could not set up httpx client: " + e.__str__())
         return None
 
-
 fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
     return FakeListener(request_count, request)
-
 
 struct ReqInfo:
     var full_uri: URI
@@ -48,7 +45,6 @@ struct ReqInfo:
         self.full_uri = full_uri
         self.host = host
         self.is_tls = is_tls
-
 
 struct FakeClient(Client):
     """FakeClient doesn't actually send any requests, but it extracts useful information from the input.
@@ -101,7 +97,6 @@ struct FakeClient(Client):
 
         return ReqInfo(full_uri, host, is_tls)
 
-
 struct FakeServer(ServerTrait):
     var __listener: FakeListener
     var __handler: FakeResponder
@@ -132,7 +127,6 @@ struct FakeServer(ServerTrait):
     fn serve(self, ln: Listener, handler: HTTPService) raises -> None:
         ...
 
-
 @value
 struct FakeResponder(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -140,7 +134,6 @@ struct FakeResponder(HTTPService):
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
         return OK(String("Hello, world!")._buffer)
-
 
 @value
 struct FakeConnection(Connection):
@@ -164,7 +157,6 @@ struct FakeConnection(Connection):
 
     fn remote_addr(self) raises -> TCPAddr:
         return TCPAddr()
-
 
 @value
 struct FakeListener:
@@ -197,7 +189,6 @@ struct FakeListener:
     fn addr(self) -> TCPAddr:
         return TCPAddr()
 
-
 @value
 struct TestStruct:
     var a: String
@@ -219,7 +210,6 @@ struct TestStruct:
 
     fn set_a_copy(self, a: String) -> Self:
         return Self(a, self.b)
-
 
 @value
 struct TestStructNested:
