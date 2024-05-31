@@ -59,13 +59,13 @@ def test_split_http_string():
         
         assert_equal(request_body, expected_body[c[].key])
 
-# def test_encode_http_request():
-#     var req = HTTPRequest(
-#                     # uri,
-#                     # buf,
-#                     # header,
-#                 )
-#     ...
+def test_encode_http_request():
+    var req = HTTPRequest(
+                    # uri,
+                    # buf,
+                    # header,
+                )
+    ...
 
 # def test_encode_http_response():
 #     ...

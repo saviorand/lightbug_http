@@ -1,6 +1,6 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode, split_http_request_string
+from lightbug_http.http import HTTPRequest, encode, split_http_string
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet

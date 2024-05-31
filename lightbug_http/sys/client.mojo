@@ -1,5 +1,5 @@
 from lightbug_http.client import Client
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode, split_http_response_string
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode, split_http_string
 from lightbug_http.header import ResponseHeader
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes
@@ -105,10 +105,10 @@ struct MojoClient(Client):
             conn.close()
 
         var response_first_line: String
-        var response_headers: String
+        var response_headers: List[String]
         var response_body: String
         
-        response_first_line, response_headers, response_body = split_http_response_string(new_buf)
+        response_first_line, response_headers, response_body = split_http_string(new_buf)
 
         # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
         var newline_in_body = response_body.find("\r\n")
