@@ -13,6 +13,8 @@ alias strMethodGet = String("GET").as_bytes()
 alias rChar = String("\r").as_bytes()
 alias nChar = String("\n").as_bytes()
 
+alias empty_string = Bytes(String("").as_bytes())
+
 # Helper function to split a string into two lines by delimiter
 fn next_line(s: String, delimiter: String = "\n") raises -> (String, String):
     var first_newline = s.find(delimiter)

@@ -24,9 +24,32 @@ def test_split_http_string():
         "Trailer: end-of-message"
     )
     expected_body["with_headers"] = "Hello, World!"
+
+    cases["no_headers"] = "GET /index.html HTTP/1.1\r\n\r\nHello, World!"
+    expected_first_line["no_headers"] = "GET /index.html HTTP/1.1"
+    expected_headers["no_headers"] = List[StringLiteral]()
+    expected_body["no_headers"] = "Hello, World!"
+
+    cases["no_body"] = "GET /index.html HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"
+    expected_first_line["no_body"] = "GET /index.html HTTP/1.1"
+    expected_headers["no_body"] = List(
+        "Host: www.example.com",
+        "User-Agent: Mozilla/5.0",
+        "Content-Type: text/html",
+        "Content-Length: 1234",
+        "Connection: close",
+        "Trailer: end-of-message"
+    )
+    expected_body["no_body"] = ""
     
+    cases["no_headers_no_body"] = "GET /index.html HTTP/1.1\r\n\r\n"
+    expected_first_line["no_headers_no_body"] = "GET /index.html HTTP/1.1"
+    expected_headers["no_headers_no_body"] = List[StringLiteral]()
+    expected_body["no_headers_no_body"] = ""
+
+
     for c in cases.items():
-        var buf = Bytes(String(c[].key)._buffer)
+        var buf = Bytes(String(c[].value)._buffer)
         request_first_line, request_headers, request_body = split_http_string(buf)
         
         assert_equal(request_first_line, expected_first_line[c[].key])

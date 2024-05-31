@@ -1,8 +1,7 @@
 from testing import assert_equal
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.bytes import Bytes
-
-alias empty_string = Bytes(String("").as_bytes())
+from lightbug_http.strings import empty_string
 
 def test_header():
     test_parse_request_first_line_happy_path()

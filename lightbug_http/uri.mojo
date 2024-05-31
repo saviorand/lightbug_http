@@ -38,7 +38,7 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = String("127.0.0.1")._buffer
-        self.__http_version = Bytes()
+        self.__http_version = strHttp11
         self.disable_path_normalization = False
         self.__full_uri = full_uri._buffer
         self.__request_uri = Bytes()
@@ -57,7 +57,7 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = host._buffer
-        self.__http_version = Bytes()
+        self.__http_version = strHttp11
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
         self.__request_uri = Bytes()
@@ -149,6 +149,9 @@ struct URI:
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
         self.__request_uri = request_uri
         return self
+    
+    fn request_uri(self) -> Bytes:
+        return self.__request_uri
 
     fn set_query_string(inout self, query_string: String) -> Self:
         self.__query_string = query_string._buffer
@@ -157,6 +160,9 @@ struct URI:
     fn set_query_string_bytes(inout self, query_string: Bytes) -> Self:
         self.__query_string = query_string
         return self
+    
+    fn query_string(self) -> Bytes:
+        return self.__query_string
 
     fn set_hash(inout self, hash: String) -> Self:
         self.__hash = hash._buffer
@@ -180,8 +186,33 @@ struct URI:
     fn host(self) -> Bytes:
         return self.__host
     
-    fn host_str(self) -> Bytes:
+    fn host_str(self) -> String:
         return self.__host
+
+    fn full_uri(self) -> Bytes:
+        return self.__full_uri
+
+    fn set_username(inout self, username: String) -> Self:
+        self.__username = username._buffer
+        return self
+
+    fn set_username_bytes(inout self, username: Bytes) -> Self:
+        self.__username = username
+        return self
+    
+    fn username(self) -> Bytes:
+        return self.__username
+
+    fn set_password(inout self, password: String) -> Self:
+        self.__password = password._buffer
+        return self
+
+    fn set_password_bytes(inout self, password: Bytes) -> Self:
+        self.__password = password
+        return self
+    
+    fn password(self) -> Bytes:
+        return self.__password
 
     fn parse(inout self) raises -> None:
         var raw_uri = String(self.__full_uri)
@@ -200,6 +231,7 @@ struct URI:
             remainder_uri = raw_uri[proto_end + 3:]
         else:
             remainder_uri = raw_uri
+
         # Parse the host and optional port
         var path_start = remainder_uri.find("/")
         var host_and_port: String
@@ -230,25 +262,6 @@ struct URI:
         self.__path = normalise_path(self.__path_original, self.__path_original)
 
         _ = self.set_request_uri(request_uri)
-
-    fn request_uri(self) -> Bytes:
-        return self.__request_uri
-
-    fn set_username(inout self, username: String) -> Self:
-        self.__username = username._buffer
-        return self
-
-    fn set_username_bytes(inout self, username: Bytes) -> Self:
-        self.__username = username
-        return self
-
-    fn set_password(inout self, password: String) -> Self:
-        self.__password = password._buffer
-        return self
-
-    fn set_password_bytes(inout self, password: Bytes) -> Self:
-        self.__password = password
-        return self
 
 
 fn normalise_path(path: Bytes, path_original: Bytes) -> Bytes:
