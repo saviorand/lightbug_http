@@ -1,14 +1,15 @@
 import testing
+from external.morrow import Morrow
+from tests.utils import (
+    default_server_conn_string,
+    getRequest,
+)
 from lightbug_http.python.client import PythonClient
 from lightbug_http.sys.client import MojoClient
 from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
-from external.morrow import Morrow
-from lightbug_http.test.utils import (
-    default_server_conn_string,
-    getRequest,
-)
+
 
 def test_client():
     var mojo_client = MojoClient()
