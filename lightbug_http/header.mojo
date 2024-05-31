@@ -143,10 +143,10 @@ struct RequestHeader:
         self.__method = method
         return self
 
-    fn method(self) -> BytesView:
+    fn method(self) -> Bytes:
         if len(self.__method) == 0:
-            return Span(strMethodGet)
-        return Span(self.__method)
+            return strMethodGet
+        return self.__method
 
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = not bytes_equal(proto._buffer, strHttp11)
