@@ -1,6 +1,6 @@
 from time import now
 from external.morrow import Morrow
-from external.gojo.strings import StringBuilder
+from external.gojo.strings.builder import NewStringBuilder
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -251,102 +251,102 @@ fn NotFound(path: String) -> HTTPResponse:
     )
 
 fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
-    var res_str = String()
     var protocol = strHttp11
-    var current_time = String()
 
-    var builder = StringBuilder()
+    var builder = NewStringBuilder()
 
-    _ = builder.write(req.header.method())
-    _ = builder.write_string(String(" "))
-    if len(uri.request_uri()) > 1:
-        _ = builder.write_string(uri.request_uri())
-    else:
-        _ = builder.write_string("/")
-    _ = builder.write_string(String(" "))
-    _ = builder.write(protocol)
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write(req.header.method()) 
+    # _ = builder.write_string(String(" "))
+    # if len(uri.request_uri()) > 1:
+    #     _ = builder.write_string(uri.request_uri())
+    # else:
+    #     _ = builder.write_string("/")
+    # _ = builder.write_string(String(" "))
+    # _ = builder.write(protocol)
+    # _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Host: " + String(uri.host())))
-    _ = builder.write_string(String("\r\n"))
+    # _ = builder.write_string(String("Host: " + String(uri.host())))
+    # _ = builder.write_string(String("\r\n"))
 
-    if len(req.body_raw) > 0:
-        _ = builder.write_string(String("Content-Type: "))
-        _ = builder.write(req.header.content_type())
-        _ = builder.write_string(String("\r\n"))
+    # if len(req.body_raw) > 0:
+    #     _ = builder.write_string(String("Content-Type: "))
+    #     _ = builder.write(req.header.content_type())
+    #     _ = builder.write_string(String("\r\n"))
 
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(req.body_raw)))
-        _ = builder.write_string(String("\r\n"))
+    #     _ = builder.write_string(String("Content-Length: "))
+    #     _ = builder.write_string(String(len(req.body_raw)))
+    #     _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Connection: "))
-    if req.connection_close():
-        _ = builder.write_string(String("close"))
-    else:
-        _ = builder.write_string(String("keep-alive"))
+    # _ = builder.write_string(String("Connection: "))
+    # if req.connection_close():
+    #     _ = builder.write_string(String("close"))
+    # else:
+    #     _ = builder.write_string(String("keep-alive"))
     
-    _ = builder.write_string(String("\r\n"))
-    _ = builder.write_string(String("\r\n"))
+    # _ = builder.write_string(String("\r\n"))
+    # _ = builder.write_string(String("\r\n"))
     
-    if len(req.body_raw) > 0:
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write(req.body_raw)
+    # if len(req.body_raw) > 0:
+    #     _ = builder.write_string(String("\r\n"))
+    #     _ = builder.write(req.body_raw)
     
-    return builder.get_bytes()
+    # return builder.get_bytes()
+    print(builder.__str__())
+    return builder.__str__()._buffer
 
 
-fn encode(res: HTTPResponse) raises -> Bytes:
-    var res_str = String()
-    var protocol = strHttp11
-    var current_time = String()
-    try:
-        current_time = Morrow.utcnow().__str__()
-    except e:
-        print("Error getting current time: " + str(e))
-        current_time = str(now())
+# fn encode(res: HTTPResponse) raises -> Bytes:
+#     var res_str = String()
+#     var protocol = strHttp11
+#     var current_time = String()
+#     try:
+#         current_time = Morrow.utcnow().__str__()
+#     except e:
+#         print("Error getting current time: " + str(e))
+#         current_time = str(now())
 
-    var builder = StringBuilder()
+#     var builder = StringBuilder()
 
-    _ = builder.write(protocol)
-    _ = builder.write_string(String(" "))
-    _ = builder.write_string(String(res.header.status_code()))
-    _ = builder.write_string(String(" "))
-    _ = builder.write(res.header.status_message())
-    _ = builder.write_string(String("\r\n"))
+#     _ = builder.write(protocol)
+#     _ = builder.write_string(String(" "))
+#     _ = builder.write_string(String(res.header.status_code()))
+#     _ = builder.write_string(String(" "))
+#     _ = builder.write(res.header.status_message())
+#     _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Server: lightbug_http"))
-    _ = builder.write_string(String("\r\n"))
+#     _ = builder.write_string(String("Server: lightbug_http"))
+#     _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Content-Type: "))
-    _ = builder.write(res.header.content_type())
-    _ = builder.write_string(String("\r\n"))
+#     _ = builder.write_string(String("Content-Type: "))
+#     _ = builder.write(res.header.content_type())
+#     _ = builder.write_string(String("\r\n"))
 
-    if len(res.header.content_encoding()) > 0:
-        _ = builder.write_string(String("Content-Encoding: "))
-        _ = builder.write(res.header.content_encoding())
-        _ = builder.write_string(String("\r\n"))
+#     if len(res.header.content_encoding()) > 0:
+#         _ = builder.write_string(String("Content-Encoding: "))
+#         _ = builder.write(res.header.content_encoding())
+#         _ = builder.write_string(String("\r\n"))
 
-    if len(res.body_raw) > 0:
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(res.body_raw)))
-        _ = builder.write_string(String("\r\n"))
+#     if len(res.body_raw) > 0:
+#         _ = builder.write_string(String("Content-Length: "))
+#         _ = builder.write_string(String(len(res.body_raw)))
+#         _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Connection: "))
-    if res.connection_close():
-        _ = builder.write_string(String("close"))
-    else:
-        _ = builder.write_string(String("keep-alive"))
-    _ = builder.write_string(String("\r\n"))
+#     _ = builder.write_string(String("Connection: "))
+#     if res.connection_close():
+#         _ = builder.write_string(String("close"))
+#     else:
+#         _ = builder.write_string(String("keep-alive"))
+#     _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Date: "))
-    _ = builder.write_string(String(current_time))
+#     _ = builder.write_string(String("Date: "))
+#     _ = builder.write_string(String(current_time))
 
-    if len(res.body_raw) > 0:
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write(res.body_raw)
+#     if len(res.body_raw) > 0:
+#         _ = builder.write_string(String("\r\n"))
+#         _ = builder.write_string(String("\r\n"))
+#         _ = builder.write(res.body_raw)
 
-    return builder.get_bytes()
+#     return builder.get_bytes()
 
 fn split_http_string(buf: Bytes) raises -> (String, List[String], String):
     var request = String(buf)

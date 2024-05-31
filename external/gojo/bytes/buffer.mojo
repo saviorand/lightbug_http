@@ -1,4 +1,3 @@
-from collections.optional import Optional
 from ..io import (
     Reader,
     Writer,
@@ -10,7 +9,7 @@ from ..io import (
     ReaderFrom,
     BUFFER_SIZE,
 )
-from ..builtins import cap, copy, Byte, Result, WrappedError, panic, index_byte
+from ..builtins import cap, copy, Byte, panic, index_byte
 
 
 alias Rune = Int32
@@ -217,7 +216,7 @@ struct Buffer(
         var m = self.grow(n)
         self.buf = self.buf[:m]
 
-    fn write(inout self, src: List[Byte]) -> Result[Int]:
+    fn write(inout self, src: List[Byte]) -> (Int, Error):
         """Appends the contents of p to the buffer, growing the buffer as
         needed. The return value n is the length of p; err is always nil. If the
         buffer becomes too large, write will panic with [ERR_TOO_LARGE].
@@ -236,9 +235,9 @@ struct Buffer(
             write_at = self.grow(len(src))
 
         var bytes_written = copy(self.buf, src, write_at)
-        return Result(bytes_written, None)
+        return bytes_written, Error()
 
-    fn write_string(inout self, src: String) -> Result[Int]:
+    fn write_string(inout self, src: String) -> (Int, Error):
         """Appends the contents of s to the buffer, growing the buffer as
         needed. The return value n is the length of s; err is always nil. If the
         buffer becomes too large, write_string will panic with [ERR_TOO_LARGE].
@@ -258,7 +257,7 @@ struct Buffer(
         # var b = self.buf[m:]
         return self.write(src.as_bytes())
 
-    fn read_from[R: Reader](inout self, inout reader: R) -> Result[Int64]:
+    fn read_from[R: Reader](inout self, inout reader: R) -> (Int64, Error):
         """Reads data from r until EOF and appends it to the buffer, growing
         the buffer as needed. The return value n is the number of bytes read. Any
         error except io.EOF encountered during the read is also returned. If the
@@ -275,19 +274,20 @@ struct Buffer(
         while True:
             _ = self.grow(MIN_READ)
 
-            var result = reader.read(self.buf)
-            var bytes_read = result.value
+            var bytes_read: Int
+            var err: Error
+            bytes_read, err = reader.read(self.buf)
             if bytes_read < 0:
                 panic(ERR_NEGATIVE_READ)
 
             total_bytes_read += bytes_read
 
-            if result.has_error():
-                var error = result.get_error()
-                if String(error.value()) == io.EOF:
-                    return Result(total_bytes_read, None)
+            var err_message = str(err)
+            if err_message != "":
+                if err_message == io.EOF:
+                    return total_bytes_read, Error()
 
-                return Result(total_bytes_read, error)
+                return total_bytes_read, err
 
     fn grow_slice(self, inout b: List[Byte], n: Int) -> List[Byte]:
         """Grows b by n, preserving the original content of self.
@@ -318,7 +318,7 @@ struct Buffer(
         # b._vector.reserve(c)
         return resized_buffer[: b.capacity]
 
-    fn write_to[W: Writer](inout self, inout writer: W) -> Result[Int64]:
+    fn write_to[W: Writer](inout self, inout writer: W) -> (Int64, Error):
         """Writes data to w until the buffer is drained or an error occurs.
         The return value n is the number of bytes written; it always fits into an
         Int, but it is int64 to match the io.WriterTo trait. Any error
@@ -337,27 +337,28 @@ struct Buffer(
         if bytes_to_write > 0:
             # TODO: Replace usage of this intermeidate slice when normal slicing, once slice references work.
             var sl = self.buf[self.off : bytes_to_write]
-            var result = writer.write(sl)
-            var bytes_written = result.value
+            var bytes_written: Int
+            var err: Error
+            bytes_written, err = writer.write(sl)
             if bytes_written > bytes_to_write:
                 panic("bytes.Buffer.write_to: invalid write count")
 
             self.off += bytes_written
             total_bytes_written = Int64(bytes_written)
 
-            if result.has_error():
-                var error = result.get_error()
-                return Result(total_bytes_written, error)
+            var err_message = str(err)
+            if err_message != "":
+                return total_bytes_written, err
 
             # all bytes should have been written, by definition of write method in io.Writer
             if bytes_written != bytes_to_write:
-                return Result(total_bytes_written, WrappedError(ERR_SHORT_WRITE))
+                return total_bytes_written, Error(ERR_SHORT_WRITE)
 
         # Buffer is now empty; reset.
         self.reset()
-        return Result(total_bytes_written, None)
+        return total_bytes_written, Error()
 
-    fn write_byte(inout self, byte: Byte) -> Result[Int]:
+    fn write_byte(inout self, byte: Byte) -> (Int, Error):
         """Appends the byte c to the buffer, growing the buffer as needed.
         The returned error is always nil, but is included to match [bufio.Writer]'s
         write_byte. If the buffer becomes too large, write_byte will panic with
@@ -377,7 +378,7 @@ struct Buffer(
             write_at = self.grow(1)
 
         _ = copy(self.buf, List[Byte](byte), write_at)
-        return Result(write_at, None)
+        return write_at, Error()
 
     # fn write_rune(inout self, r: Rune) -> Int:
     #     """Appends the UTF-8 encoding of Unicode code point r to the
@@ -400,7 +401,7 @@ struct Buffer(
     #     self.buf = utf8.AppendRune(self.buf[:write_at], r)
     #     return len(self.buf) - write_at
 
-    fn read(inout self, inout dest: List[Byte]) -> Result[Int]:
+    fn read(inout self, inout dest: List[Byte]) -> (Int, Error):
         """Reads the next len(dest) bytes from the buffer or until the buffer
         is drained. The return value n is the number of bytes read. If the
         buffer has no data to return, err is io.EOF (unless len(dest) is zero);
@@ -417,15 +418,15 @@ struct Buffer(
             # Buffer is empty, reset to recover space.
             self.reset()
             if dest.capacity == 0:
-                return Result(0, None)
-            return Result(0, WrappedError(io.EOF))
+                return 0, Error()
+            return 0, Error(io.EOF)
 
         var bytes_read = copy(dest, self.buf[self.off : len(self.buf)])
         self.off += bytes_read
         if bytes_read > 0:
             self.last_read = OP_READ
 
-        return Result(bytes_read, None)
+        return bytes_read, Error()
 
     fn next(inout self, number_of_bytes: Int) raises -> List[Byte]:
         """Returns a slice containing the next n bytes from the buffer,
@@ -452,20 +453,20 @@ struct Buffer(
 
         return data
 
-    fn read_byte(inout self) -> Result[Byte]:
+    fn read_byte(inout self) -> (Byte, Error):
         """Reads and returns the next byte from the buffer.
         If no byte is available, it returns error io.EOF.
         """
         if self.empty():
             # Buffer is empty, reset to recover space.
             self.reset()
-            return Result(Byte(0), WrappedError(io.EOF))
+            return Byte(0), Error(io.EOF)
 
         var byte = self.buf[self.off]
         self.off += 1
         self.last_read = OP_READ
 
-        return byte
+        return byte, Error()
 
     # read_rune reads and returns the next UTF-8-encoded
     # Unicode code point from the buffer.
@@ -507,25 +508,22 @@ struct Buffer(
 
     # var err_unread_byte = errors.New("buffer.Buffer: unread_byte: previous operation was not a successful read")
 
-    fn unread_byte(inout self) -> Optional[WrappedError]:
+    fn unread_byte(inout self) -> Error:
         """Unreads the last byte returned by the most recent successful
         read operation that read at least one byte. If a write has happened since
         the last read, if the last read returned an error, or if the read read zero
         bytes, unread_byte returns an error.
         """
         if self.last_read == OP_INVALID:
-            return WrappedError(
-                "buffer.Buffer: unread_byte: previous operation was not a successful"
-                " read"
-            )
+            return Error("buffer.Buffer: unread_byte: previous operation was not a successful read")
 
         self.last_read = OP_INVALID
         if self.off > 0:
             self.off -= 1
 
-        return None
+        return Error()
 
-    fn read_bytes(inout self, delim: Byte) -> Result[List[Byte]]:
+    fn read_bytes(inout self, delim: Byte) -> (List[Byte], Error):
         """Reads until the first occurrence of delim in the input,
         returning a slice containing the data up to and including the delimiter.
         If read_bytes encounters an error before finding a delimiter,
@@ -539,20 +537,19 @@ struct Buffer(
         Returns:
             A List[Byte] struct containing the data up to and including the delimiter.
         """
-        var result = self.read_slice(delim)
-        var slice = result.value
+        var slice: List[Byte]
+        var err: Error
+        slice, err = self.read_slice(delim)
 
         # return a copy of slice. The buffer's backing array may
         # be overwritten by later calls.
         var line = List[Byte](capacity=BUFFER_SIZE)
         for i in range(len(slice)):
             line.append(slice[i])
-        return line
+        return line, Error()
 
-    fn read_slice(inout self, delim: Byte) -> Result[List[Byte]]:
+    fn read_slice(inout self, delim: Byte) -> (List[Byte], Error):
         """Like read_bytes but returns a reference to internal buffer data.
-        TODO: not returning a reference yet. Also, this returns List[Byte] and Error in Go,
-        but we arent't returning Errors as values until Mojo tuple returns supports Memory Only types.
 
         Args:
             delim: The delimiter to read until.
@@ -561,7 +558,7 @@ struct Buffer(
             A List[Byte] struct containing the data up to and including the delimiter.
         """
         var at_eof = False
-        var i = index_byte(self.buf[self.off : len(self.buf)], (delim))
+        var i = index_byte(self.buf[self.off : len(self.buf)], delim)
         var end = self.off + i + 1
 
         if i < 0:
@@ -573,11 +570,11 @@ struct Buffer(
         self.last_read = OP_READ
 
         if at_eof:
-            return Result(line, WrappedError(io.EOF))
+            return line, Error(io.EOF)
 
-        return Result(line, None)
+        return line, Error()
 
-    fn read_string(inout self, delim: Byte) -> Result[String]:
+    fn read_string(inout self, delim: Byte) -> (String, Error):
         """Reads until the first occurrence of delim in the input,
         returning a string containing the data up to and including the delimiter.
         If read_string encounters an error before finding a delimiter,
@@ -591,8 +588,11 @@ struct Buffer(
         Returns:
             A string containing the data up to and including the delimiter.
         """
-        var result = self.read_slice(delim)
-        return Result(String(result.value), result.get_error())
+        var slice: List[Byte]
+        var err: Error
+        slice, err = self.read_slice(delim)
+        slice.append(0)
+        return String(slice), err
 
 
 fn new_buffer() -> Buffer:
@@ -607,7 +607,7 @@ fn new_buffer() -> Buffer:
     sufficient to initialize a [Buffer].
     """
     var b = List[Byte](capacity=BUFFER_SIZE)
-    return Buffer(b ^)
+    return Buffer(b^)
 
 
 fn new_buffer(owned buf: List[Byte]) -> Buffer:
@@ -627,7 +627,7 @@ fn new_buffer(owned buf: List[Byte]) -> Buffer:
     Returns:
         A new [Buffer] initialized with the provided bytes.
     """
-    return Buffer(buf ^)
+    return Buffer(buf^)
 
 
 fn new_buffer(owned s: String) -> Buffer:
@@ -645,4 +645,4 @@ fn new_buffer(owned s: String) -> Buffer:
         A new [Buffer] initialized with the provided string.
     """
     var bytes_buffer = List[Byte](s.as_bytes())
-    return Buffer(bytes_buffer ^)
+    return Buffer(bytes_buffer^)

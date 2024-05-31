@@ -1,11 +1,17 @@
 from testing import assert_equal
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.http import HTTPRequest, HTTPResponse, split_http_string
+from lightbug_http.http import HTTPRequest, HTTPResponse, split_http_string, encode
+from lightbug_http.header import RequestHeader
+from lightbug_http.uri import URI
+from tests.utils import (
+    default_server_conn_string,
+    getRequest,
+)
 
 def test_http():
     test_split_http_string()
-    # test_encode_http_request()
-    # test_encode_http_response()
+    test_encode_http_request()
+    test_encode_http_response()
 
 def test_split_http_string():
     var cases = Dict[StringLiteral, StringLiteral]()
@@ -60,12 +66,15 @@ def test_split_http_string():
         assert_equal(request_body, expected_body[c[].key])
 
 def test_encode_http_request():
+    var uri = URI(default_server_conn_string)
     var req = HTTPRequest(
-                    # uri,
-                    # buf,
-                    # header,
-                )
-    ...
+            uri,
+            String("Hello world!")._buffer,
+            RequestHeader(getRequest),
+        )
 
-# def test_encode_http_response():
-#     ...
+    var req_encoded = encode(req, uri)
+    print(String(req_encoded))
+
+def test_encode_http_response():
+    ...

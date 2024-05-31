@@ -1,6 +1,4 @@
-fn copy[
-    T: CollectionElement
-](inout target: List[T], source: List[T], start: Int = 0) -> Int:
+fn copy[T: CollectionElement](inout target: List[T], source: List[T], start: Int = 0) -> Int:
     """Copies the contents of source into target at the same index. Returns the number of bytes copied.
     Added a start parameter to specify the index to start copying into.
 

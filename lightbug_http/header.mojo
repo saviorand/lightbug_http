@@ -7,7 +7,7 @@ from lightbug_http.strings import (
     rChar,
     nChar,
 )
-from lightbug_http.io.bytes import Bytes, bytes_equal
+from lightbug_http.io.bytes import Bytes, BytesView, BytesViewMutable, bytes_equal
 
 alias statusOK = 200
 
@@ -143,10 +143,10 @@ struct RequestHeader:
         self.__method = method
         return self
 
-    fn method(self) -> Bytes:
+    fn method(self) -> BytesView:
         if len(self.__method) == 0:
-            return strMethodGet
-        return self.__method
+            return Span(strMethodGet)
+        return Span(self.__method)
 
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = not bytes_equal(proto._buffer, strHttp11)
