@@ -8,7 +8,7 @@ alias https = String("https")
 alias strHttp11 = String("HTTP/1.1")._buffer
 alias strHttp10 = String("HTTP/1.0")._buffer
 
-alias strMethodGet = String("GET")._buffer
+alias strMethodGet = "GET"
 
 alias rChar = String("\r").as_bytes()
 alias nChar = String("\n").as_bytes()

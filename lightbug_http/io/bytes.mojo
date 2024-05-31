@@ -1,9 +1,9 @@
 from python import PythonObject
 
 
-alias Bytes = List[UInt8]
-alias BytesView = Span[UInt8, True, MutableStaticLifetime]
-alias BytesViewMutable = Span[UInt8, False, MutableStaticLifetime]
+alias Byte = UInt8
+alias Bytes = List[Byte]
+alias BytesView = Span[Byte, False, ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses

@@ -1,6 +1,6 @@
 from time import now
 from external.morrow import Morrow
-from external.gojo.strings.builder import StringBuilder
+from external.gojo.strings.builder import NewStringBuilder
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -253,8 +253,9 @@ fn NotFound(path: String) -> HTTPResponse:
 fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     var protocol = strHttp11
 
-    var builder = StringBuilder()
+    var builder = NewStringBuilder()
 
+    _ = builder.write(req.header.method())
     _ = builder.write_string(String(req.header.method()))
     _ = builder.write_string(String(" "))
     if len(uri.request_uri()) > 1:
@@ -290,7 +291,9 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     if len(req.body_raw) > 0:
         _ = builder.write(req.body_raw)
     
-    return builder.get_bytes()
+    print(builder.render())
+    
+    return builder.__str__()._buffer
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:

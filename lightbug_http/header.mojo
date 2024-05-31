@@ -7,7 +7,7 @@ from lightbug_http.strings import (
     rChar,
     nChar,
 )
-from lightbug_http.io.bytes import Bytes, BytesView, BytesViewMutable, bytes_equal
+from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal
 
 alias statusOK = 200
 
@@ -143,11 +143,14 @@ struct RequestHeader:
         self.__method = method
         return self
 
-    fn method(self) -> Bytes:
-        if len(self.__method) == 0:
-            return strMethodGet
-        return self.__method
-
+    fn method(self: Reference[Self]) -> BytesView:
+        if len(self[].__method) == 0:
+            return strMethodGet.as_bytes_slice()
+        return BytesView(unsafe_ptr=self[].__method.unsafe_ptr(), len=self[].__method.size)
+    
+    # fn render(self: Reference[Self]) -> StringSlice[self.is_mutable, self.lifetime]:
+        # return StringSlice[self.is_mutable, self.lifetime](unsafe_from_utf8_ptr=StringRef(self[].data, self[].size).unsafe_ptr(), len=self[].size)
+        
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = not bytes_equal(proto._buffer, strHttp11)
         self.proto = proto._buffer
