@@ -116,14 +116,14 @@ struct SysServer:
                 continue
             
             var request_first_line: String
-            var request_headers: String
+            var request_headers: List[String]
             var request_body: String
 
-            request_first_line, request_headers, request_body = split_http_request_string(buf)
+            request_first_line, request_headers, request_body = split_http_string(buf)
 
-            var header = RequestHeader(request_headers._buffer)
+            var header = RequestHeader()
             try:
-                header.parse(request_first_line)
+                header.parse_from_list(request_headers, request_first_line)
             except e:
                 conn.close()
                 raise Error("Failed to parse request header: " + e.__str__())
@@ -137,7 +137,7 @@ struct SysServer:
 
             if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
                 var remaining_body = Bytes()
-                var remaining_len = header.content_length() - len(request_body + 1)
+                var remaining_len = header.content_length() - len(request_body)
                 while remaining_len > 0:
                     var read_len = conn.read(remaining_body)
                     buf.extend(remaining_body)

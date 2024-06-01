@@ -221,10 +221,8 @@ struct RequestHeader:
 
     fn headers(self) -> String:
         return String(self.raw_headers)
-
-    fn parse(inout self, request_line: String) raises -> None:
-        var headers = self.raw_headers
-
+    
+    fn parse_first_line(inout self, request_line: String) raises -> None:
         var n = request_line.find(" ")
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
@@ -249,55 +247,73 @@ struct RequestHeader:
         # Now process the rest of the headers
         _ = self.set_content_length(-2)
 
+    fn parse_from_list(inout self, headers: List[String], request_line: String) raises -> None:
+        _ = self.parse_first_line(request_line)
+
+        for header in headers:
+            var header_str = header.__getitem__()
+            var separator = header_str.find(":")
+            if separator == -1:
+                raise Error("Invalid header")
+            
+            var key = String(header_str)[:separator]
+            var value = String(header_str)[separator + 1 :]
+
+            if len(key) > 0:
+                self.parse_header(key, value)
+
+    fn parse_raw(inout self, request_line: String) raises -> None:
+        var headers = self.raw_headers
+        _ = self.parse_first_line(request_line)
         var s = headerScanner()
         s.b = headers
         s.disable_normalization = self.disable_normalization
 
         while s.next():
-            # The below is based on the code from Golang's FastHTTP library
             if len(s.key) > 0:
-                # Spaces between the header key and colon are not allowed.
-                # See RFC 7230, Section 3.2.4.
-                if s.key.find(" ") != -1 or s.key.find("\t") != -1:
-                    raise Error("Invalid header key")
-
-                if s.key[0] == "h" or s.key[0] == "H":
-                    if s.key.lower() == "host":
-                        _ = self.set_host(s.value)
-                        continue
-                elif s.key[0] == "u" or s.key[0] == "U":
-                    if s.key.lower() == "user-agent":
-                        _ = self.set_user_agent(s.value)
-                        continue
-                elif s.key[0] == "c" or s.key[0] == "C":
-                    if s.key.lower() == "content-type":
-                        _ = self.set_content_type(s.value)
-                        continue
-                    if s.key.lower() == "content-length":
-                        if self.content_length() != -1:
-                            var content_length = s.value
-                            _ = self.set_content_length(atol(content_length))
-                            _ = self.set_content_length_bytes(content_length.as_bytes_slice())
-                        continue
-                    if s.key.lower() == "connection":
-                        if s.value == "close":
-                            _ = self.set_connection_close()
-                        else:
-                            _ = self.reset_connection_close()
-                            # _ = self.appendargbytes(s.key, s.value)
-                        continue
-                elif s.key[0] == "t" or s.key[0] == "T":
-                    if s.key.lower() == "transfer-encoding":
-                        if s.value != "identity":
-                            _ = self.set_content_length(-1)
-                            # _ = self.setargbytes(s.key, strChunked)
-                        continue
-                    if s.key.lower() == "trailer":
-                        _ = self.set_trailer_bytes(s.value._buffer)
-
-                # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
-                # if self.no_http_1_1 and not self.__connection_close:
-                # self.__connection_close = not has_header_value(v, strKeepAlive)
+                self.parse_header(s.key, s.value)
+    
+    fn parse_header(inout self, key: String, value: String) raises -> None:
+        # The below is based on the code from Golang's FastHTTP library
+        # Spaces between the header key and colon not allowed; RFC 7230, 3.2.4.
+        if key.find(" ") != -1 or key.find("\t") != -1:
+            raise Error("Invalid header key")
+        if key[0] == "h" or key[0] == "H":
+            if key.lower() == "host":
+                _ = self.set_host(value)
+                return
+        elif key[0] == "u" or key[0] == "U":
+            if key.lower() == "user-agent":
+                _ = self.set_user_agent(value)
+                return
+        elif key[0] == "c" or key[0] == "C":
+            if key.lower() == "content-type":
+                _ = self.set_content_type(value)
+                return
+            if key.lower() == "content-length":
+                if self.content_length() != -1:
+                    var content_length = value
+                    _ = self.set_content_length(atol(content_length))
+                    _ = self.set_content_length_bytes(content_length.as_bytes_slice())
+                return
+            if key.lower() == "connection":
+                if value == "close":
+                    _ = self.set_connection_close()
+                else:
+                    _ = self.reset_connection_close()
+                    # _ = self.appendargbytes(s.key, s.value)
+                return
+        elif key[0] == "t" or key[0] == "T":
+            if key.lower() == "transfer-encoding":
+                if value != "identity":
+                    _ = self.set_content_length(-1)
+                    # _ = self.setargbytes(s.key, strChunked)
+                return
+            if key.lower() == "trailer":
+                _ = self.set_trailer_bytes(value._buffer)
+        # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
+        # if self.no_http_1_1 and not self.__connection_close:
+        # self.__connection_close = not has_header_value(v, strKeepAlive)
 
 
 @value
@@ -555,9 +571,7 @@ struct ResponseHeader:
     fn headers(self) -> String:
         return String(self.raw_headers)
 
-    fn parse(inout self, first_line: String) raises -> None:
-        var headers = self.raw_headers
-
+    fn parse_first_line(inout self, first_line: String) raises -> None:
         var n = first_line.find(" ")
         
         var proto = first_line[:n]
@@ -575,46 +589,69 @@ struct ResponseHeader:
         
         _ = self.set_content_length(-2)
 
+    fn parse_from_list(inout self, headers: List[String], first_line: String) raises -> None:
+        _ = self.parse_first_line(first_line)
+
+        for header in headers:
+            var header_str = header.__getitem__()
+            var separator = header_str.find(":")
+            if separator == -1:
+                raise Error("Invalid header")
+            
+            var key = String(header_str)[:separator]
+            var value = String(header_str)[separator + 1 :]
+
+            if len(key) > 0:
+                self.parse_header(key, value)
+
+    fn parse_raw(inout self, first_line: String) raises -> None:
+        var headers = self.raw_headers
+
+        _ = self.parse_first_line(first_line)
+
         var s = headerScanner()
         s.b = headers
         s.disable_normalization = self.disable_normalization
 
         while s.next():
             if len(s.key) > 0:
-                # Spaces between header key and colon not allowed (RFC 7230, 3.2.4)
-                if s.key.find(" ") != -1 or s.key.find("\t") != -1:
-                    raise Error("Invalid header key")
-                elif s.key[0] == "c" or s.key[0] == "C":
-                    if s.key.lower() == "content-type":
-                        _ = self.set_content_type(s.value)
-                        continue
-                    if s.key.lower() == "content-encoding":
-                        _ = self.set_content_encoding(s.value)
-                        continue
-                    if s.key.lower() == "content-length":
-                        if self.content_length() != -1:
-                            var content_length = s.value
-                            _ = self.set_content_length(atol(content_length))
-                            _ = self.set_content_length_bytes(content_length._buffer)
-                        continue
-                    if s.key.lower() == "connection":
-                        if s.value == "close":
-                            _ = self.set_connection_close()
-                        else:
-                            _ = self.reset_connection_close()
-                        continue
-                elif s.key[0] == "s" or s.key[0] == "S":
-                    if s.key.lower() == "server":
-                        _ = self.set_server(s.value)
-                        continue
-                elif s.key[0] == "t" or s.key[0] == "T":
-                    if s.key.lower() == "transfer-encoding":
-                        if s.value != "identity":
-                            _ = self.set_content_length(-1)
-                        continue
-                    if s.key.lower() == "trailer":
-                        _ = self.set_trailer(s.value)
-
+                self.parse_header(s.key, s.value)
+    
+    fn parse_header(inout self, key: String, value: String) raises -> None:
+        # The below is based on the code from Golang's FastHTTP library
+        # Spaces between header key and colon not allowed (RFC 7230, 3.2.4)
+        if key.find(" ") != -1 or key.find("\t") != -1:
+            raise Error("Invalid header key")
+        elif key[0] == "c" or key[0] == "C":
+            if key.lower() == "content-type":
+                _ = self.set_content_type(value)
+                return
+            if key.lower() == "content-encoding":
+                _ = self.set_content_encoding(value)
+                return
+            if key.lower() == "content-length":
+                if self.content_length() != -1:
+                    var content_length = value
+                    _ = self.set_content_length(atol(content_length))
+                    _ = self.set_content_length_bytes(content_length._buffer)
+                return
+            if key.lower() == "connection":
+                if value == "close":
+                    _ = self.set_connection_close()
+                else:
+                    _ = self.reset_connection_close()
+                return
+        elif key[0] == "s" or key[0] == "S":
+            if key.lower() == "server":
+                _ = self.set_server(value)
+                return
+        elif key[0] == "t" or key[0] == "T":
+            if key.lower() == "transfer-encoding":
+                if value != "identity":
+                    _ = self.set_content_length(-1)
+                return
+            if key.lower() == "trailer":
+                _ = self.set_trailer(value)
 
 struct headerScanner:
     var b: String  # string for now until we have a better way to subset Bytes

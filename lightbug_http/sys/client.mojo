@@ -115,10 +115,10 @@ struct MojoClient(Client):
         if newline_in_body != -1:
             response_body = response_body[:newline_in_body]
 
-        var header = ResponseHeader(response_headers._buffer)
+        var header = ResponseHeader()
 
         try:
-            header.parse(response_first_line)
+            header.parse_from_list(response_headers, response_first_line)
         except e:
             conn.close()
             raise Error("Failed to parse response header: " + e.__str__())

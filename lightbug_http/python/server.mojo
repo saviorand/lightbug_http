@@ -1,6 +1,6 @@
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode
+from lightbug_http.http import HTTPRequest, encode, split_http_string
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.python.net import (
@@ -70,11 +70,14 @@ struct PythonServer:
             if read_len == 0:
                 conn.close()
                 break
-            var first_line_and_headers = next_line(buf)
-            var request_line = first_line_and_headers.first_line
-            var rest_of_headers = first_line_and_headers.rest
+            
+            var request_first_line: String
+            var request_headers: String
+            var request_body: String
 
-            var uri = URI(request_line)
+            request_first_line, request_headers, request_body = split_http_string(buf)
+            
+            var uri = URI(request_first_line)
             try:
                 uri.parse()
             except:
@@ -83,7 +86,7 @@ struct PythonServer:
 
             var header = RequestHeader(buf)
             try:
-                header.parse(request_line)
+                header.parse(request_first_line)
             except:
                 conn.close()
                 raise Error("Failed to parse request header")
