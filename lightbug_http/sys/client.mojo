@@ -105,9 +105,9 @@ struct MojoClient(Client):
             conn.close()
 
         var response_first_line: String
-        var response_headers: List[String]
+        var response_headers: String
         var response_body: String
-        
+
         response_first_line, response_headers, response_body = split_http_string(new_buf)
 
         # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
@@ -115,10 +115,10 @@ struct MojoClient(Client):
         if newline_in_body != -1:
             response_body = response_body[:newline_in_body]
 
-        var header = ResponseHeader()
+        var header = ResponseHeader(response_headers.as_bytes())
 
         try:
-            header.parse_from_list(response_headers, response_first_line)
+            header.parse_raw(response_first_line)
         except e:
             conn.close()
             raise Error("Failed to parse response header: " + e.__str__())
