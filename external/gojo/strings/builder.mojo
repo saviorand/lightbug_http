@@ -110,17 +110,17 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         return len(self._vector)
 
-    fn __getitem__(self, index: Int) -> String:
-        """
-        Returns the string at the given index.
+    # fn __getitem__(self, index: Int) -> String:
+    #     """
+    #     Returns the string at the given index.
 
-        Args:
-          index: The index of the string to return.
+    #     Args:
+    #       index: The index of the string to return.
 
-        Returns:
-          The string at the given index.
-        """
-        return self._vector[index]
+    #     Returns:
+    #       The string at the given index.
+    #     """
+    #     return self._vector[index]
 
     fn __setitem__(inout self, index: Int, value: Byte):
         """

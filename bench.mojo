@@ -2,7 +2,7 @@ import benchmark
 from lightbug_http.sys.server import SysServer
 from lightbug_http.python.server import PythonServer
 from lightbug_http.service import TechEmpowerRouter
-from lightbug_http.tests.utils import (
+from tests.utils import (
     TestStruct,
     FakeResponder,
     new_fake_listener,

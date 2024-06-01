@@ -103,7 +103,12 @@ struct URI:
         self.__path = normalise_path(path, self.__path_original)
         return self
 
-    fn path(self: Reference[Self]) -> BytesView:
+    fn path(self) -> String:
+        if len(self.__path) == 0:
+            return strSlash
+        return String(self.__path)
+    
+    fn path_bytes(self: Reference[Self]) -> BytesView:
         if len(self[].__path) == 0:
             return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
         return BytesView(unsafe_ptr=self[].__path.unsafe_ptr(), len=self[].__path.size)

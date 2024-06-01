@@ -21,7 +21,7 @@ fn test_request(inout client: MojoClient) raises -> None:
     print("Server:", String(response.header.server()))
 
     # print body
-    print(String(response.get_body()))
+    print(String(response.get_body_bytes()))
 
 
 fn main() raises -> None:

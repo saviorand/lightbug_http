@@ -134,4 +134,4 @@ struct MojoClient(Client):
 
         conn.close()
 
-        return HTTPResponse(header, response_body._buffer)
+        return HTTPResponse(header, response_body.as_bytes_slice())

@@ -87,7 +87,7 @@ struct HTTPRequest(Request):
         self.disable_redirect_path_normalization = False
 
     fn __init__(inout self, uri: URI, headers: RequestHeader):
-        self.header = RequestHeader()
+        self.header = headers
         self.__uri = uri
         self.body_raw = Bytes()
         self.parsed_uri = False
@@ -134,7 +134,7 @@ struct HTTPRequest(Request):
         return self
 
     fn host(self) -> String:
-        return self.__uri.host()
+        return self.__uri.host_str()
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         _ = self.header.set_request_uri(request_uri.as_bytes())
@@ -256,10 +256,12 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     _ = builder.write(req.header.method())
     _ = builder.write_string(whitespace)
     if len(uri.request_uri()) > 1:
-        _ = builder.write(uri.request_uri())
+        # This also breaks with a couple slashes e.g. /status/404 breaks it
+        _ = builder.write_string(String(uri.request_uri()))
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
+    
     # this breaks due to dots in HTTP/1.1
     _ = builder.write_string(req.header.protocol_str())
 
@@ -267,6 +269,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     _ = builder.write_string(nChar)
 
     _ = builder.write_string("Host: ")
+    
     # host e.g. 127.0.0.1 seems to break the builder when used with BytesView
     _ = builder.write_string(uri.host_str())
 

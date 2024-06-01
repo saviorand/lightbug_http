@@ -60,8 +60,8 @@ fn getaddrinfo[
 ](
     nodename: Pointer[c_char],
     servname: Pointer[c_char],
-    hints: Pointer[T],
-    res: Pointer[Pointer[T]],
+    hints: UnsafePointer[T],
+    res: UnsafePointer[UnsafePointer[T]],
 ) -> c_int:
     """
     Overwrites the existing libc `getaddrinfo` function to use the AnAddrInfo trait.
@@ -75,8 +75,8 @@ fn getaddrinfo[
         c_int,  # FnName, RetType
         Pointer[c_char],
         Pointer[c_char],
-        Pointer[T],  # Args
-        Pointer[Pointer[T]],  # Args
+        UnsafePointer[T],  # Args
+        UnsafePointer[UnsafePointer[T]],  # Args
     ](nodename, servname, hints, res)
 
 
@@ -297,8 +297,9 @@ struct addrinfo_macos(AnAddrInfo):
             UInt32 - The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = Pointer[Self]().alloc(1)
-        servinfo.store(Self())
+        var servinfo = UnsafePointer[Self]().alloc(1)
+        # servinfo.store(Self())
+        servinfo[0] = Self()
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -308,14 +309,14 @@ struct addrinfo_macos(AnAddrInfo):
         var error = getaddrinfo[Self](
             host_ptr,
             Pointer[UInt8](),
-            Pointer.address_of(hints),
-            Pointer.address_of(servinfo),
+            UnsafePointer.address_of(hints),
+            UnsafePointer.address_of(servinfo),
         )
         if error != 0:
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo.load()
+        var addrinfo = servinfo[0]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
@@ -363,8 +364,9 @@ struct addrinfo_unix(AnAddrInfo):
             UInt32 - The IP address.
         """
         var host_ptr = to_char_ptr(String(host))
-        var servinfo = Pointer[Self]().alloc(1)
-        servinfo.store(Self())
+        var servinfo = UnsafePointer[Self]().alloc(1)
+        # servinfo.store(Self())
+        servinfo[0] = Self()
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -374,14 +376,14 @@ struct addrinfo_unix(AnAddrInfo):
         var error = getaddrinfo[Self](
             host_ptr,
             Pointer[UInt8](),
-            Pointer.address_of(hints),
-            Pointer.address_of(servinfo),
+            UnsafePointer.address_of(hints),
+            UnsafePointer.address_of(servinfo),
         )
         if error != 0:
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo.load()
+        var addrinfo = servinfo[0]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
