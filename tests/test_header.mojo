@@ -38,11 +38,11 @@ def test_parse_response_first_line_happy_path():
 
     # Well-formed status (response) lines
     cases["HTTP/1.1 200 OK"] = List("HTTP/1.1", "200", "OK")
-    # cases["HTTP/1.1 404 Not Found"] = List("HTTP/1.1", "404", "Not Found")
-    # cases["HTTP/1.1 500 Internal Server Error"] = List("HTTP/1.1", "500", "Internal Server Error")
+    cases["HTTP/1.1 404 Not Found"] = List("HTTP/1.1", "404", "Not Found")
+    cases["HTTP/1.1 500 Internal Server Error"] = List("HTTP/1.1", "500", "Internal Server Error")
 
     # # Trailing whitespace in status message is allowed
-    # cases["HTTP/1.1 200 OK "] = List("HTTP/1.1", "200", "OK ")
+    cases["HTTP/1.1 200 OK "] = List("HTTP/1.1", "200", "OK ")
 
     for c in cases.items():
         var header = ResponseHeader(empty_string.as_bytes_slice())
@@ -78,10 +78,10 @@ def test_parse_request_first_line_error():
 
     for c in cases.items():
         var header = RequestHeader("")
-        # try:
-            # header.parse(c[].key)
-        # except e:
-            # assert_equal(e, c[].value)
+        try:
+            header.parse(c[].key)
+        except e:
+            assert_equal(String(e.__str__()), c[].value)
 
 def test_parse_request_header():
     var headers_str = Bytes(String('''
@@ -95,7 +95,6 @@ def test_parse_request_header():
 
     var header = RequestHeader(headers_str)
     header.parse("GET /index.html HTTP/1.1")
-    # assert_equal(header.method(), "GET")
     assert_equal(String(header.request_uri()), "/index.html")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
@@ -110,7 +109,6 @@ def test_parse_request_header_empty():
     var headers_str = Bytes()
     var header = RequestHeader(headers_str)
     header.parse("GET /index.html HTTP/1.1")
-    # assert_equal(header.method(), "GET")
     assert_equal(String(header.request_uri()), "/index.html")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
