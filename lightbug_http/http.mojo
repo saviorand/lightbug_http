@@ -260,7 +260,8 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
-    _ = builder.write(req.header.protocol())
+    # this breaks due to dots in HTTP/1.1
+    _ = builder.write_string(req.header.protocol_str())
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)

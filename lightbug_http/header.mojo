@@ -157,6 +157,11 @@ struct RequestHeader:
         self.proto = proto
         return self
 
+    fn protocol_str(self) -> String:
+        if len(self.proto) == 0:
+            return strHttp11
+        return String(self.proto)
+
     fn protocol(self: Reference[Self]) -> BytesView:
         if len(self[].proto) == 0:
             return strHttp11.as_bytes_slice()
@@ -174,7 +179,7 @@ struct RequestHeader:
         return self
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.__request_uri = request_uri.as_bytes()
+        self.__request_uri = request_uri.as_bytes_slice()
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
@@ -182,8 +187,8 @@ struct RequestHeader:
         return self
 
     fn request_uri(self: Reference[Self]) -> BytesView:
-        if len(self[].__request_uri) == 0:
-            return strSlash.as_bytes_slice()
+        if len(self[].__request_uri) <= 1:
+            return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
         return BytesView(unsafe_ptr=self[].__request_uri.unsafe_ptr(), len=self[].__request_uri.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:
@@ -196,6 +201,9 @@ struct RequestHeader:
     
     fn trailer(self: Reference[Self]) -> BytesView:
         return BytesView(unsafe_ptr=self[].__trailer.unsafe_ptr(), len=self[].__trailer.size)
+    
+    fn trailer_str(self) -> String:
+        return String(self.trailer())
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
@@ -222,30 +230,20 @@ struct RequestHeader:
             raise Error("Cannot find HTTP request method in the request")
 
         var method = request_line[:n]
+        _ = self.set_method(method)
+
         var rest_of_request_line = request_line[n + 1 :]
 
-        # Defaults to HTTP/1.1
-        var proto_str = String(strHttp11)
-
-        # Parse requestURI
         n = rest_of_request_line.rfind(" ")
         if n < 0:
             n = len(rest_of_request_line)
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
-            var proto = rest_of_request_line[n + 1 :]
-            if proto != strHttp11:
-                proto_str = proto
+            _ = self.set_protocol(rest_of_request_line[n + 1 :])
 
         var request_uri = rest_of_request_line[:n + 1]
         
-        _ = self.set_method(method)
-
-        if len(proto_str) != 8:
-            raise Error("Invalid protocol")
-
-        _ = self.set_protocol(proto_str)
         _ = self.set_request_uri(request_uri)
 
         # Now process the rest of the headers
@@ -279,7 +277,7 @@ struct RequestHeader:
                         if self.content_length() != -1:
                             var content_length = s.value
                             _ = self.set_content_length(atol(content_length))
-                            _ = self.set_content_length_bytes(content_length._buffer)
+                            _ = self.set_content_length_bytes(content_length.as_bytes_slice())
                         continue
                     if s.key.lower() == "connection":
                         if s.value == "close":
@@ -295,7 +293,7 @@ struct RequestHeader:
                             # _ = self.setargbytes(s.key, strChunked)
                         continue
                     if s.key.lower() == "trailer":
-                        _ = self.set_trailer(s.value)
+                        _ = self.set_trailer_bytes(s.value._buffer)
 
                 # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
                 # if self.no_http_1_1 and not self.__connection_close:
@@ -456,9 +454,12 @@ struct ResponseHeader:
     fn set_status_message(inout self, message: Bytes) -> Self:
         self.__status_message = message
         return self
-
+    
     fn status_message(self: Reference[Self]) -> BytesView:
         return BytesView(unsafe_ptr=self[].__status_message.unsafe_ptr(), len=self[].__status_message.size)
+    
+    fn status_message_str(self) -> String:
+        return String(self.status_message())
 
     fn content_type(self: Reference[Self]) -> BytesView:
         return BytesView(unsafe_ptr=self[].__content_type.unsafe_ptr(), len=self[].__content_type.size)
@@ -504,10 +505,20 @@ struct ResponseHeader:
         self.__server = server
         return self
 
-    fn set_protocol(inout self, protocol: Bytes) -> Self:
+    fn set_protocol(inout self, proto: String) -> Self:
+        self.no_http_1_1 = not proto.__eq__(strHttp11)
+        self.__protocol = proto._buffer
+        return self
+    
+    fn set_protocol_bytes(inout self, protocol: Bytes) -> Self:
         self.__protocol = protocol
         return self
 
+    fn protocol_str(self) -> String:
+        if len(self.__protocol) == 0:
+            return strHttp11
+        return String(self.__protocol)
+    
     fn protocol(self: Reference[Self]) -> BytesView:
         if len(self[].__protocol) == 0:
             return strHttp11.as_bytes_slice()
@@ -524,6 +535,9 @@ struct ResponseHeader:
     fn trailer(self: Reference[Self]) -> BytesView:
         return BytesView(unsafe_ptr=self[].__trailer.unsafe_ptr(), len=self[].__trailer.size)
 
+    fn trailer_str(self) -> String:
+        return String(self.trailer())
+    
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
         return self
@@ -544,15 +558,11 @@ struct ResponseHeader:
     fn parse(inout self, first_line: String) raises -> None:
         var headers = self.raw_headers
 
-        # Defaults to HTTP/1.1
-        var proto_str = String(strHttp11)
-
         var n = first_line.find(" ")
         
         var proto = first_line[:n]
-        if proto != strHttp11:
-            proto_str = proto
-        _ = self.set_protocol(proto_str._buffer)
+            
+        _ = self.set_protocol(proto)
 
         var rest_of_response_line = first_line[n + 1 :]
 

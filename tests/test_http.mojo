@@ -69,12 +69,12 @@ def test_encode_http_request():
     var uri = URI(default_server_conn_string)
     var req = HTTPRequest(
             uri,
-            String("Hello world!")._buffer,
+            String("Hello world!").as_bytes(),
             RequestHeader(getRequest),
         )
 
     var req_encoded = encode(req, uri)
-    assert_equal(req_encoded, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 13\r\nConnection: keep-alive\r\n\r\nHello world!")
+    assert_equal(req_encoded, "GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Length: 12\r\nConnection: keep-alive\r\n\r\nHello world!")
 
 def test_encode_http_response():
     ...
