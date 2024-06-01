@@ -116,14 +116,14 @@ struct SysServer:
                 continue
             
             var request_first_line: String
-            var request_headers: List[String]
+            var request_headers: String
             var request_body: String
 
             request_first_line, request_headers, request_body = split_http_string(buf)
 
-            var header = RequestHeader()
+            var header = RequestHeader(request_headers.as_bytes())
             try:
-                header.parse_from_list(request_headers, request_first_line)
+                header.parse_raw(request_first_line)
             except e:
                 conn.close()
                 raise Error("Failed to parse request header: " + e.__str__())
