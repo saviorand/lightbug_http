@@ -1,5 +1,4 @@
 from lightbug_http.strings import (
-    next_line,
     strHttp11,
     strHttp10,
     strSlash,
@@ -110,8 +109,8 @@ struct RequestHeader:
         self.__content_type = content_type
         return self
 
-    fn content_type(self) -> Bytes:
-        return self.__content_type
+    fn content_type(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__content_type.unsafe_ptr(), len=self[].__content_type.size)
 
     fn set_host(inout self, host: String) -> Self:
         self.__host = host._buffer
@@ -121,8 +120,8 @@ struct RequestHeader:
         self.__host = host
         return self
 
-    fn host(self) -> Bytes:
-        return self.__host
+    fn host(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__host.unsafe_ptr(), len=self[].__host.size)
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
         self.__user_agent = user_agent._buffer
@@ -132,8 +131,8 @@ struct RequestHeader:
         self.__user_agent = user_agent
         return self
 
-    fn user_agent(self) -> Bytes:
-        return self.__user_agent
+    fn user_agent(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__user_agent.unsafe_ptr(), len=self[].__user_agent.size)
 
     fn set_method(inout self, method: String) -> Self:
         self.__method = method._buffer
@@ -148,23 +147,20 @@ struct RequestHeader:
             return strMethodGet.as_bytes_slice()
         return BytesView(unsafe_ptr=self[].__method.unsafe_ptr(), len=self[].__method.size)
     
-    # fn render(self: Reference[Self]) -> StringSlice[self.is_mutable, self.lifetime]:
-        # return StringSlice[self.is_mutable, self.lifetime](unsafe_from_utf8_ptr=StringRef(self[].data, self[].size).unsafe_ptr(), len=self[].size)
-        
     fn set_protocol(inout self, proto: String) -> Self:
-        self.no_http_1_1 = not bytes_equal(proto._buffer, strHttp11)
+        self.no_http_1_1 = not proto.__eq__(strHttp11)
         self.proto = proto._buffer
         return self
 
     fn set_protocol_bytes(inout self, proto: Bytes) -> Self:
-        self.no_http_1_1 = not bytes_equal(proto, strHttp11)
+        self.no_http_1_1 = not bytes_equal(proto, strHttp11.as_bytes_slice())
         self.proto = proto
         return self
 
-    fn protocol(self) -> Bytes:
-        if len(self.proto) == 0:
-            return strHttp11
-        return self.proto
+    fn protocol(self: Reference[Self]) -> BytesView:
+        if len(self[].proto) == 0:
+            return strHttp11.as_bytes_slice()
+        return BytesView(unsafe_ptr=self[].proto.unsafe_ptr(), len=self[].proto.size)
     
     fn content_length(self) -> Int:
         return self.__content_length
@@ -185,10 +181,10 @@ struct RequestHeader:
         self.__request_uri = request_uri
         return self
 
-    fn request_uri(self) -> Bytes:
-        if len(self.__request_uri) <= 1:
-            return strSlash
-        return self.__request_uri
+    fn request_uri(self: Reference[Self]) -> BytesView:
+        if len(self[].__request_uri) == 0:
+            return strSlash.as_bytes_slice()
+        return BytesView(unsafe_ptr=self[].__request_uri.unsafe_ptr(), len=self[].__request_uri.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:
         self.__trailer = trailer._buffer
@@ -198,8 +194,8 @@ struct RequestHeader:
         self.__trailer = trailer
         return self
     
-    fn trailer(self) -> Bytes:
-        return self.__trailer
+    fn trailer(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__trailer.unsafe_ptr(), len=self[].__trailer.size)
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
@@ -461,11 +457,11 @@ struct ResponseHeader:
         self.__status_message = message
         return self
 
-    fn status_message(self) -> Bytes:
-        return self.__status_message
+    fn status_message(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__status_message.unsafe_ptr(), len=self[].__status_message.size)
 
-    fn content_type(self) -> Bytes:
-        return self.__content_type
+    fn content_type(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__content_type.unsafe_ptr(), len=self[].__content_type.size)
 
     fn set_content_type(inout self, content_type: String) -> Self:
         self.__content_type = content_type._buffer
@@ -475,8 +471,8 @@ struct ResponseHeader:
         self.__content_type = content_type
         return self
 
-    fn content_encoding(self) -> Bytes:
-        return self.__content_encoding
+    fn content_encoding(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__content_encoding.unsafe_ptr(), len=self[].__content_encoding.size)
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
         self.__content_encoding = content_encoding._buffer
@@ -497,8 +493,8 @@ struct ResponseHeader:
         self.__content_length_bytes = content_length
         return self
 
-    fn server(self) -> Bytes:
-        return self.__server
+    fn server(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__server.unsafe_ptr(), len=self[].__server.size)
 
     fn set_server(inout self, server: String) -> Self:
         self.__server = server._buffer
@@ -512,10 +508,10 @@ struct ResponseHeader:
         self.__protocol = protocol
         return self
 
-    fn protocol(self) -> Bytes:
-        if len(self.__protocol) == 0:
-            return strHttp11
-        return self.__protocol
+    fn protocol(self: Reference[Self]) -> BytesView:
+        if len(self[].__protocol) == 0:
+            return strHttp11.as_bytes_slice()
+        return BytesView(unsafe_ptr=self[].__protocol.unsafe_ptr(), len=self[].__protocol.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:
         self.__trailer = trailer._buffer
@@ -525,8 +521,8 @@ struct ResponseHeader:
         self.__trailer = trailer
         return self
     
-    fn trailer(self) -> Bytes:
-        return self.__trailer
+    fn trailer(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].__trailer.unsafe_ptr(), len=self[].__trailer.size)
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True

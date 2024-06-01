@@ -13,7 +13,7 @@ from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import next_line, NetworkType
+from lightbug_http.strings import NetworkType
 
 
 struct PythonServer:

@@ -238,6 +238,16 @@ struct NewStringBuilder[growth_factor: Float32 = 2](Stringable, Sized):
           src: The string to append.
         """
         return self.write(src.as_bytes_slice())
+      
+    @always_inline
+    fn write_string(inout self, src: StringLiteral) -> (Int, Error):
+        """
+        Appends a string to the builder buffer.
+
+        Args:
+          src: The string to append.
+        """
+        return self.write(src.as_bytes_slice())
 
     @always_inline
     fn __len__(self) -> Int:

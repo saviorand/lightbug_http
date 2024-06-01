@@ -6,7 +6,7 @@ from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import next_line, strHttp11, strHttp
+from lightbug_http.strings import strHttp11, strHttp, whitespace
 
 trait Request:
     fn __init__(inout self, uri: URI):
@@ -256,8 +256,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     var builder = NewStringBuilder()
 
     _ = builder.write(req.header.method())
-    _ = builder.write_string(String(req.header.method()))
-    _ = builder.write_string(String(" "))
+    _ = builder.write_string(whitespace)
     if len(uri.request_uri()) > 1:
         _ = builder.write(uri.request_uri())
     else:

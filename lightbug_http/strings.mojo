@@ -1,28 +1,20 @@
 from lightbug_http.io.bytes import Bytes
 
-alias strSlash = String("/")._buffer
-alias strHttp = String("http")._buffer
-alias http = String("http")
-alias strHttps = String("https")._buffer
-alias https = String("https")
-alias strHttp11 = String("HTTP/1.1")._buffer
-alias strHttp10 = String("HTTP/1.0")._buffer
+alias strSlash = "/"
+alias strHttp = "http"
+alias http = "http"
+alias strHttps = "https"
+alias https = "https"
+alias strHttp11 = "HTTP/1.1"
+alias strHttp10 = "HTTP/1.0"
 
 alias strMethodGet = "GET"
 
-alias rChar = String("\r").as_bytes()
-alias nChar = String("\n").as_bytes()
+alias rChar = "\r"
+alias nChar = "\n"
 
-alias empty_string = Bytes(String("").as_bytes())
-
-# Helper function to split a string into two lines by delimiter
-fn next_line(s: String, delimiter: String = "\n") raises -> (String, String):
-    var first_newline = s.find(delimiter)
-    if first_newline == -1:
-        return (s, String())
-    var before_newline = s[0:first_newline]
-    var after_newline = s[first_newline + 1 :]
-    return (before_newline, after_newline)
+alias empty_string = ""
+alias whitespace = " "
 
 @value
 struct NetworkType:
