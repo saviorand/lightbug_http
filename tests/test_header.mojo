@@ -28,7 +28,7 @@ def test_parse_request_first_line_happy_path():
 
     for c in cases.items():
         var header = RequestHeader("".as_bytes_slice())
-        header.parse(c[].key)
+        header.parse_raw(c[].key)
         assert_equal(String(header.method()), c[].value[0])
         assert_equal(String(header.request_uri()), c[].value[1])
         assert_equal(header.protocol_str(), c[].value[2])
@@ -46,7 +46,7 @@ def test_parse_response_first_line_happy_path():
 
     for c in cases.items():
         var header = ResponseHeader(empty_string.as_bytes_slice())
-        header.parse(c[].key)
+        header.parse_raw(c[].key)
         assert_equal(header.protocol_str(), c[].value[0])
         assert_equal(header.status_code().__str__(), c[].value[1])
         # also behaving weirdly with "OK" with byte slice, had to switch to string for now
@@ -65,7 +65,7 @@ def test_parse_response_first_line_no_message():
 
     for c in cases.items():
         var header = ResponseHeader(String("")._buffer)
-        header.parse(c[].key)
+        header.parse_raw(c[].key)
         assert_equal(String(header.status_message()), Bytes(String("").as_bytes())) # Empty string
 
 def test_parse_request_first_line_error():
@@ -79,7 +79,7 @@ def test_parse_request_first_line_error():
     for c in cases.items():
         var header = RequestHeader("")
         try:
-            header.parse(c[].key)
+            header.parse_raw(c[].key)
         except e:
             assert_equal(String(e.__str__()), c[].value)
 
@@ -94,7 +94,7 @@ def test_parse_request_header():
     ''')._buffer)
 
     var header = RequestHeader(headers_str)
-    header.parse("GET /index.html HTTP/1.1")
+    header.parse_raw("GET /index.html HTTP/1.1")
     assert_equal(String(header.request_uri()), "/index.html")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
@@ -108,7 +108,7 @@ def test_parse_request_header():
 def test_parse_request_header_empty():
     var headers_str = Bytes()
     var header = RequestHeader(headers_str)
-    header.parse("GET /index.html HTTP/1.1")
+    header.parse_raw("GET /index.html HTTP/1.1")
     assert_equal(String(header.request_uri()), "/index.html")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
@@ -132,7 +132,7 @@ def test_parse_response_header():
     ''')._buffer)
 
     var header = ResponseHeader(headers_str)
-    header.parse("HTTP/1.1 200 OK")
+    header.parse_raw("HTTP/1.1 200 OK")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
     assert_equal(header.status_code(), 200)
@@ -148,7 +148,7 @@ def test_parse_response_header_empty():
     var headers_str = Bytes()
 
     var header = ResponseHeader(headers_str)
-    header.parse("HTTP/1.1 200 OK")
+    header.parse_raw("HTTP/1.1 200 OK")
     assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
     assert_equal(header.status_code(), 200)
