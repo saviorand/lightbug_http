@@ -72,7 +72,7 @@ struct PythonServer:
                 break
             
             var request_first_line: String
-            var request_headers: String
+            var request_headers: List[String]
             var request_body: String
 
             request_first_line, request_headers, request_body = split_http_string(buf)
@@ -86,7 +86,7 @@ struct PythonServer:
 
             var header = RequestHeader(buf)
             try:
-                header.parse(request_first_line)
+                header.parse_from_list(request_headers, request_first_line)
             except:
                 conn.close()
                 raise Error("Failed to parse request header")
@@ -99,5 +99,5 @@ struct PythonServer:
                 )
             )
             var res_encoded = encode(res)
-            _ = conn.write(res_encoded)
+            _ = conn.write(res_encoded.as_bytes_slice())
             conn.close()

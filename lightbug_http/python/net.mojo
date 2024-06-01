@@ -98,8 +98,8 @@ struct PythonConnection(Connection):
 
     fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
         self.conn = None
-        self.raddr = PythonObject(raddr.ip + ":" + raddr.port)
-        self.laddr = PythonObject(laddr.ip + ":" + laddr.port)
+        self.raddr = PythonObject(raddr.ip + ":" + raddr.port.__str__())
+        self.laddr = PythonObject(laddr.ip + ":" + laddr.port.__str__())
         self.pymodules = Modules().builtins
 
     fn __init__(inout self, pymodules: PythonObject, py_conn_addr: PythonObject) raises:

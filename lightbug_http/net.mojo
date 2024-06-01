@@ -262,7 +262,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
-        port=convert_binary_port_to_int(addr_in.sin_port),
+        port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
     )
 
 
@@ -283,5 +283,5 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
-        port=convert_binary_port_to_int(addr_in.sin_port),
+        port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
     )
