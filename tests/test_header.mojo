@@ -30,8 +30,8 @@ def test_parse_request_first_line_happy_path():
         var header = RequestHeader(String("")._buffer)
         header.parse(c[].key)
         # assert_equal(header.method(), c[].value[0])
-        assert_equal(header.request_uri(), c[].value[1])
-        assert_equal(header.protocol(), c[].value[2])
+        assert_equal(String(header.request_uri()), c[].value[1])
+        assert_equal(String(header.protocol()), c[].value[2])
 
 def test_parse_response_first_line_happy_path():
     var cases = Dict[String, List[StringLiteral]]()
@@ -45,11 +45,11 @@ def test_parse_response_first_line_happy_path():
     cases["HTTP/1.1 200 OK "] = List("HTTP/1.1", "200", "OK ")
 
     for c in cases.items():
-        var header = ResponseHeader(empty_string)
+        var header = ResponseHeader(empty_string.as_bytes_slice())
         header.parse(c[].key)
-        assert_equal(header.protocol(), c[].value[0])
+        assert_equal(String(header.protocol()), c[].value[0])
         # assert_equal(header.status_code(), c[].value[1])
-        assert_equal(header.status_message(), c[].value[2])
+        assert_equal(String(header.status_message()), c[].value[2])
 
 
 # Status lines without a message are perfectly valid
@@ -65,7 +65,7 @@ def test_parse_response_first_line_no_message():
     for c in cases.items():
         var header = ResponseHeader(String("")._buffer)
         header.parse(c[].key)
-        assert_equal(header.status_message(), Bytes(String("").as_bytes())) # Empty string
+        assert_equal(String(header.status_message()), Bytes(String("").as_bytes())) # Empty string
 
 def test_parse_request_first_line_error():
     var cases = Dict[String, String]()
@@ -95,30 +95,30 @@ def test_parse_request_header():
     var header = RequestHeader(headers_str)
     header.parse("GET /index.html HTTP/1.1")
     # assert_equal(header.method(), "GET")
-    assert_equal(header.request_uri(), "/index.html")
-    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(String(header.request_uri()), "/index.html")
+    assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
-    assert_equal(header.host(), "example.com")
-    assert_equal(header.user_agent(), "Mozilla/5.0")
-    assert_equal(header.content_type(), "text/html")
+    assert_equal(String(header.host()), "example.com")
+    assert_equal(String(header.user_agent()), "Mozilla/5.0")
+    assert_equal(String(header.content_type()), "text/html")
     assert_equal(header.content_length(), 1234)
     assert_equal(header.connection_close(), True)
-    assert_equal(header.trailer(), "end-of-message")
+    assert_equal(String(header.trailer()), "end-of-message")
 
 def test_parse_request_header_empty():
     var headers_str = Bytes()
     var header = RequestHeader(headers_str)
     header.parse("GET /index.html HTTP/1.1")
     # assert_equal(header.method(), "GET")
-    assert_equal(header.request_uri(), "/index.html")
-    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(String(header.request_uri()), "/index.html")
+    assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
-    assert_equal(header.host(), empty_string)
-    assert_equal(header.user_agent(), empty_string)
-    assert_equal(header.content_type(), empty_string)
+    assert_equal(String(header.host()), empty_string)
+    assert_equal(String(header.user_agent()), empty_string)
+    assert_equal(String(header.content_type()), empty_string)
     assert_equal(header.content_length(), -2)
     assert_equal(header.connection_close(), False)
-    assert_equal(header.trailer(), empty_string)
+    assert_equal(String(header.trailer()), empty_string)
 
 
 def test_parse_response_header():
@@ -134,29 +134,29 @@ def test_parse_response_header():
 
     var header = ResponseHeader(headers_str)
     header.parse("HTTP/1.1 200 OK")
-    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
     assert_equal(header.status_code(), 200)
-    assert_equal(header.status_message(), "OK")
-    assert_equal(header.server(), "example.com")
-    assert_equal(header.content_type(), "text/html")
-    assert_equal(header.content_encoding(), "gzip")
+    assert_equal(String(header.status_message()), "OK")
+    assert_equal(String(header.server()), "example.com")
+    assert_equal(String(header.content_type()), "text/html")
+    assert_equal(String(header.content_encoding()), "gzip")
     assert_equal(header.content_length(), 1234)
     assert_equal(header.connection_close(), True)
-    assert_equal(header.trailer(), "end-of-message")
+    assert_equal(String(header.trailer()), "end-of-message")
 
 def test_parse_response_header_empty():
     var headers_str = Bytes()
 
     var header = ResponseHeader(headers_str)
     header.parse("HTTP/1.1 200 OK")
-    assert_equal(header.protocol(), "HTTP/1.1")
+    assert_equal(String(header.protocol()), "HTTP/1.1")
     assert_equal(header.no_http_1_1, False)
     assert_equal(header.status_code(), 200)
-    assert_equal(header.status_message(), "OK")
-    assert_equal(header.server(), empty_string)
-    assert_equal(header.content_type(), empty_string)
-    assert_equal(header.content_encoding(), empty_string)
+    assert_equal(String(header.status_message()), "OK")
+    assert_equal(String(header.server()), empty_string)
+    assert_equal(String(header.content_type()), empty_string)
+    assert_equal(String(header.content_encoding()), empty_string)
     assert_equal(header.content_length(), -2)
     assert_equal(header.connection_close(), False)
-    assert_equal(header.trailer(), empty_string)
+    assert_equal(String(header.trailer()), empty_string)

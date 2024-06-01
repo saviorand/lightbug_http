@@ -2,11 +2,11 @@ from time import now
 from external.morrow import Morrow
 from external.gojo.strings.builder import NewStringBuilder
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import strHttp11, strHttp, whitespace
+from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar
 
 trait Request:
     fn __init__(inout self, uri: URI):
@@ -122,8 +122,8 @@ struct HTTPRequest(Request):
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    fn get_body(self) -> Bytes:
-        return self.body_raw
+    fn get_body_bytes(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].body_raw.unsafe_ptr(), len=self[].body_raw.size)
 
     fn set_host(inout self, host: String) -> Self:
         _ = self.__uri.set_host(host)
@@ -192,9 +192,9 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-
-    fn get_body(self) -> Bytes:
-        return self.body_raw
+    
+    fn get_body_bytes(self: Reference[Self]) -> BytesView:
+        return BytesView(unsafe_ptr=self[].body_raw.unsafe_ptr(), len=self[].body_raw.size)
 
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
@@ -250,9 +250,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
-    var protocol = strHttp11
-
+fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStaticLifetime]:
     var builder = NewStringBuilder()
 
     _ = builder.write(req.header.method())
@@ -260,44 +258,50 @@ fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
     if len(uri.request_uri()) > 1:
         _ = builder.write(uri.request_uri())
     else:
-        _ = builder.write_string(String("/"))
-    _ = builder.write_string(String(" "))
-    _ = builder.write_string(protocol)
-    _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string(strSlash)
+    _ = builder.write_string(whitespace)
+    _ = builder.write(req.header.protocol())
 
-    _ = builder.write_string(String("Host: " + String(uri.host())))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+
+    _ = builder.write_string("Host: ")
+    # host e.g. 127.0.0.1 seems to break the builder when used with BytesView
+    _ = builder.write_string(uri.host_str())
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
     if len(req.body_raw) > 0:
         if len(req.header.content_type()) > 0:
-            _ = builder.write_string(String("Content-Type: "))
+            _ = builder.write_string("Content-Type: ")
             _ = builder.write(req.header.content_type())
-            _ = builder.write_string(String("\r\n"))
+            _ = builder.write_string(rChar)
+            _ = builder.write_string(nChar)
 
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(req.body_raw)))
-        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string("Content-Length: ")
+        _ = builder.write_string(len(req.body_raw).__str__())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Connection: "))
+    _ = builder.write_string("Connection: ")
     if req.connection_close():
-        _ = builder.write_string(String("close"))
+        _ = builder.write_string("close")
     else:
-        _ = builder.write_string(String("keep-alive"))
+        _ = builder.write_string("keep-alive")
     
-    _ = builder.write_string(String("\r\n"))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
     
     if len(req.body_raw) > 0:
-        _ = builder.write(req.body_raw)
+        _ = builder.write(req.get_body_bytes())
     
-    print(builder.render())
-    
-    return builder.__str__()._buffer
+    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
-fn encode(res: HTTPResponse) raises -> Bytes:
-    var res_str = String()
-    var protocol = strHttp11
+fn encode(res: HTTPResponse) raises -> StringSlice[False, ImmutableStaticLifetime]:
     var current_time = String()
     try:
         current_time = Morrow.utcnow().__str__()
@@ -305,48 +309,59 @@ fn encode(res: HTTPResponse) raises -> Bytes:
         print("Error getting current time: " + str(e))
         current_time = str(now())
 
-    var builder = StringBuilder()
+    var builder = NewStringBuilder()
 
-    _ = builder.write(protocol)
-    _ = builder.write_string(String(" "))
-    _ = builder.write_string(String(res.header.status_code()))
-    _ = builder.write_string(String(" "))
+    _ = builder.write(res.header.protocol())
+    _ = builder.write_string(" ")
+    _ = builder.write_string(res.header.status_code().__str__())
+    _ = builder.write_string(" ")
     _ = builder.write(res.header.status_message())
-    _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Server: lightbug_http"))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Content-Type: "))
+    _ = builder.write_string("Server: lightbug_http")
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+
+    _ = builder.write_string("Content-Type: ")
     _ = builder.write(res.header.content_type())
-    _ = builder.write_string(String("\r\n"))
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
     if len(res.header.content_encoding()) > 0:
-        _ = builder.write_string(String("Content-Encoding: "))
+        _ = builder.write_string("Content-Encoding: ")
         _ = builder.write(res.header.content_encoding())
-        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
     if len(res.body_raw) > 0:
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(res.body_raw)))
-        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string("Content-Length: ")
+        _ = builder.write_string(len(res.body_raw).__str__())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Connection: "))
+    _ = builder.write_string("Connection: ")
     if res.connection_close():
-        _ = builder.write_string(String("close"))
+        _ = builder.write_string("close")
     else:
-        _ = builder.write_string(String("keep-alive"))
-    _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string("keep-alive")
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Date: "))
-    _ = builder.write_string(String(current_time))
+    _ = builder.write_string("Date: ")
+    _ = builder.write_string(current_time)
 
     if len(res.body_raw) > 0:
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write(res.body_raw)
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
+        _ = builder.write(res.get_body_bytes())
 
-    return builder.get_bytes()
+    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, List[String], String):
     var request = String(buf)

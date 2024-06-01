@@ -119,8 +119,8 @@ struct TCPAddr(Addr):
 
     fn string(self) -> String:
         if self.zone != "":
-            return join_host_port(String(self.ip) + "%" + self.zone, self.port)
-        return join_host_port(self.ip, self.port)
+            return join_host_port(self.ip + "%" + self.zone, self.port.__str__())
+        return join_host_port(self.ip, self.port.__str__())
 
 
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
