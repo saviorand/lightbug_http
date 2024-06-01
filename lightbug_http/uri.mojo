@@ -38,7 +38,7 @@ struct URI:
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = String("127.0.0.1")._buffer
-        self.__http_version = strHttp11.as_bytes_slice()
+        self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = full_uri._buffer
         self.__request_uri = Bytes()
@@ -52,12 +52,12 @@ struct URI:
         path: String,
     ) -> None:
         self.__path_original = path._buffer
-        self.__scheme = scheme._buffer
+        self.__scheme = scheme.as_bytes()
         self.__path = normalise_path(path._buffer, self.__path_original)
         self.__query_string = Bytes()
         self.__hash = Bytes()
         self.__host = host._buffer
-        self.__http_version = strHttp11.as_bytes_slice()
+        self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
         self.__request_uri = Bytes()
@@ -105,7 +105,7 @@ struct URI:
 
     fn path(self: Reference[Self]) -> BytesView:
         if len(self[].__path) == 0:
-            return strSlash.as_bytes_slice()
+            return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
         return BytesView(unsafe_ptr=self[].__path.unsafe_ptr(), len=self[].__path.size)
 
     fn set_scheme(inout self, scheme: String) -> Self:
@@ -118,27 +118,36 @@ struct URI:
 
     fn scheme(self: Reference[Self]) -> BytesView:
         if len(self[].__scheme) == 0:
-            return strHttp.as_bytes_slice()
+            return BytesView(unsafe_ptr=strHttp.as_bytes_slice().unsafe_ptr(), len=5)
         return BytesView(unsafe_ptr=self[].__scheme.unsafe_ptr(), len=self[].__scheme.size)
 
     fn http_version(self: Reference[Self]) -> BytesView:
+        if len(self[].__http_version) == 0:
+            return BytesView(unsafe_ptr=strHttp11.as_bytes_slice().unsafe_ptr(), len=9)
         return BytesView(unsafe_ptr=self[].__http_version.unsafe_ptr(), len=self[].__http_version.size)
+
+    fn http_version_str(self) -> String:
+        return self.__http_version
 
     fn set_http_version(inout self, http_version: String) -> Self:
         self.__http_version = http_version._buffer
         return self
+    
+    fn set_http_version_bytes(inout self, http_version: Bytes) -> Self:
+        self.__http_version = http_version
+        return self
 
     fn is_http_1_1(self) -> Bool:
-        return bytes_equal(self.__http_version, strHttp11.as_bytes_slice())
+        return bytes_equal(self.http_version(), String(strHttp11)._buffer)
 
     fn is_http_1_0(self) -> Bool:
-        return bytes_equal(self.__http_version, strHttp10.as_bytes_slice())
+        return bytes_equal(self.http_version(), String(strHttp10)._buffer)
 
     fn is_https(self) -> Bool:
-        return bytes_equal(self.__scheme, https.as_bytes_slice())
+        return bytes_equal(self.__scheme, String(https)._buffer)
 
     fn is_http(self) -> Bool:
-        return bytes_equal(self.__scheme, http.as_bytes_slice()) or len(self.__scheme) == 0
+        return bytes_equal(self.__scheme, String(http)._buffer) or len(self.__scheme) == 0
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         self.__request_uri = request_uri._buffer
@@ -215,11 +224,9 @@ struct URI:
     fn parse(inout self) raises -> None:
         var raw_uri = String(self.__full_uri)
 
-        # Defaults to HTTP/1.1
         var proto_str = String(strHttp11)
         var is_https = False
 
-        # Parse the protocol
         var proto_end = raw_uri.find("://")
         var remainder_uri: String
         if proto_end >= 0:
@@ -230,7 +237,8 @@ struct URI:
         else:
             remainder_uri = raw_uri
 
-        # Parse the host and optional port
+        _ = self.set_scheme_bytes(proto_str.as_bytes_slice())
+        
         var path_start = remainder_uri.find("/")
         var host_and_port: String
         var request_uri: String
@@ -248,7 +256,6 @@ struct URI:
         else:
             _ = self.set_scheme(http)
         
-        # Parse path
         var n = request_uri.find("?")
         if n >= 0:
             self.__path_original = request_uri[:n]._buffer

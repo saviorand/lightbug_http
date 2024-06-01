@@ -104,7 +104,6 @@ def test_parse_request_header():
     assert_equal(String(header.content_type()), "text/html")
     assert_equal(header.content_length(), 1234)
     assert_equal(header.connection_close(), True)
-    print(String(header.trailer()))
     assert_equal(header.trailer_str(), "end-of-message")
 
 def test_parse_request_header_empty():

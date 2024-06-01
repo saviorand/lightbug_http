@@ -35,7 +35,7 @@ def test_uri_parse_http_with_port():
     assert_equal(uri.is_http_1_1(), True)
     assert_equal(uri.is_https(), False)
     assert_equal(uri.is_http(), True)
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_https_with_port():
     var uri = URI("https://example.com:8080/index.html")
@@ -47,7 +47,7 @@ def test_uri_parse_https_with_port():
     assert_equal(String(uri.request_uri()), "/index.html")
     assert_equal(uri.is_https(), True)
     assert_equal(uri.is_http(), False)
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_http_with_path():
     uri = URI("http://example.com/index.html")
@@ -59,7 +59,7 @@ def test_uri_parse_http_with_path():
     assert_equal(String(uri.request_uri()), "/index.html")
     assert_equal(uri.is_https(), False)
     assert_equal(uri.is_http(), True)
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_https_with_path():
     uri = URI("https://example.com/index.html")
@@ -71,7 +71,7 @@ def test_uri_parse_https_with_path():
     assert_equal(String(uri.request_uri()), "/index.html")
     assert_equal(uri.is_https(), True)
     assert_equal(uri.is_http(), False)
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_http_basic():
     uri = URI("http://example.com")
@@ -82,7 +82,7 @@ def test_uri_parse_http_basic():
     assert_equal(String(uri.path_original()), "/")
     assert_equal(String(uri.http_version()), "HTTP/1.1")
     assert_equal(String(uri.request_uri()), "/")
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_http_basic_www():
     uri = URI("http://www.example.com")
@@ -93,7 +93,7 @@ def test_uri_parse_http_basic_www():
     assert_equal(String(uri.path_original()), "/")
     assert_equal(String(uri.request_uri()), "/")
     assert_equal(String(uri.http_version()), "HTTP/1.1")
-    assert_equal(String(uri.query_string()), empty_string)
+    assert_equal(String(uri.query_string()), String(empty_string.as_bytes_slice()))
 
 def test_uri_parse_http_with_query_string():
     ...
