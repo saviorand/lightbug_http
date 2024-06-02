@@ -38,6 +38,16 @@ struct SysServer:
         self.tcp_keep_alive = False
         self.ln = SysListener()
     
+    fn __init__(inout self, tcp_keep_alive: Bool) raises:
+        self.error_handler = ErrorHandler()
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.max_request_body_size = 0
+        self.tcp_keep_alive = tcp_keep_alive
+        self.ln = SysListener()
+    
     fn __init__(inout self, own_address: String) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
@@ -108,53 +118,56 @@ struct SysServer:
 
         while True:
             var conn = self.ln.accept()
-            var buf = Bytes()
-            var read_len = conn.read(buf)
-            
-            if read_len == 0:
-                conn.close()
-                continue
-            
-            var request_first_line: String
-            var request_headers: String
-            var request_body: String
-
-            request_first_line, request_headers, request_body = split_http_string(buf)
-
-            var header = RequestHeader(request_headers.as_bytes())
-            try:
-                header.parse_raw(request_first_line)
-            except e:
-                conn.close()
-                raise Error("Failed to parse request header: " + e.__str__())
+            while True:
+                var buf = Bytes()
+                var read_len = conn.read(buf)
                 
-            var uri = URI(self.address() + String(header.request_uri()))
-            try:
-                uri.parse()
-            except e:
-                conn.close()
-                raise Error("Failed to parse request line:" + e.__str__())
+                if read_len == 0:
+                    conn.close()
+                    break
+                
+                var request_first_line: String
+                var request_headers: String
+                var request_body: String
 
-            if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
-                var remaining_body = Bytes()
-                var remaining_len = header.content_length() - len(request_body)
-                while remaining_len > 0:
-                    var read_len = conn.read(remaining_body)
-                    buf.extend(remaining_body)
-                    remaining_len -= read_len
+                request_first_line, request_headers, request_body = split_http_string(buf)
 
-            var res = handler.func(
-                HTTPRequest(
-                    uri,
-                    buf,
-                    header,
+                var header = RequestHeader(request_headers.as_bytes())
+                try:
+                    header.parse_raw(request_first_line)
+                except e:
+                    conn.close()
+                    raise Error("Failed to parse request header: " + e.__str__())
+                    
+                var uri = URI(self.address() + String(header.request_uri()))
+                try:
+                    uri.parse()
+                except e:
+                    conn.close()
+                    raise Error("Failed to parse request line:" + e.__str__())
+
+                if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
+                    var remaining_body = Bytes()
+                    var remaining_len = header.content_length() - len(request_body)
+                    while remaining_len > 0:
+                        var read_len = conn.read(remaining_body)
+                        buf.extend(remaining_body)
+                        remaining_len -= read_len
+
+                var res = handler.func(
+                    HTTPRequest(
+                        uri,
+                        buf,
+                        header,
+                    )
                 )
-            )
-            
-            # Always close the connection as long as we don't support concurrency
-            _ = res.set_connection_close(True)
-            
-            var res_encoded = encode(res)
-            _ = conn.write(res_encoded)
+                
+                if not self.tcp_keep_alive:
+                    _ = res.set_connection_close()
+                
+                var res_encoded = encode(res)
+                _ = conn.write(res_encoded)
 
-            conn.close()
+                if not self.tcp_keep_alive:
+                    conn.close()
+                    break

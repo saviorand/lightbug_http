@@ -142,7 +142,6 @@ struct SysListenConfig(ListenConfig):
             ip_buf_size = 16
 
         var ip_buf = Pointer[c_void].alloc(ip_buf_size)
-        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
         var raw_ip = ip_buf.bitcast[c_uint]().load()
 
         var bin_port = htons(UInt16(addr.port))
@@ -298,7 +297,6 @@ struct addrinfo_macos(AnAddrInfo):
         """
         var host_ptr = to_char_ptr(host)
         var servinfo = UnsafePointer[Self]().alloc(1)
-        # servinfo.store(Self())
         servinfo[0] = Self()
 
         var hints = Self()
@@ -365,7 +363,6 @@ struct addrinfo_unix(AnAddrInfo):
         """
         var host_ptr = to_char_ptr(String(host))
         var servinfo = UnsafePointer[Self]().alloc(1)
-        # servinfo.store(Self())
         servinfo[0] = Self()
 
         var hints = Self()

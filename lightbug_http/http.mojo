@@ -42,7 +42,7 @@ trait Request:
     fn request_uri(inout self) -> String:
         ...
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         ...
 
     fn connection_close(self) -> Bool:
@@ -59,7 +59,7 @@ trait Response:
     fn status_code(self) -> Int:
         ...
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         ...
 
     fn connection_close(self) -> Bool:
@@ -153,7 +153,7 @@ struct HTTPRequest(Request):
     fn uri(self) -> URI:
         return self.__uri
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         _ = self.header.set_connection_close()
         return self
 
@@ -203,7 +203,7 @@ struct HTTPResponse(Response):
     fn status_code(self) -> Int:
         return self.header.status_code()
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         _ = self.header.set_connection_close()
         return self
 

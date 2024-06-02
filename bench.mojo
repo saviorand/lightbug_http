@@ -54,9 +54,9 @@ fn run_fake_server():
 
 fn init_test_and_set_a_copy() -> None:
     var test = TestStruct("a", "b")
-    var newtest = test.set_a_copy("c")
+    _ = test.set_a_copy("c")
 
 
 fn init_test_and_set_a_direct() -> None:
     var test = TestStruct("a", "b")
-    var newtest = test.set_a_direct("c")
+    _ = test.set_a_direct("c")
