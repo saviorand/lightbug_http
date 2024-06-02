@@ -1,4 +1,4 @@
-from lightbug_http.io.bytes import Bytes, BytesView, bytes_equal
+from lightbug_http.io.bytes import Bytes, BytesView, bytes_equal, bytes
 from lightbug_http.strings import (
     strSlash,
     strHttp11,
@@ -37,10 +37,10 @@ struct URI:
         self.__path = Bytes()
         self.__query_string = Bytes()
         self.__hash = Bytes()
-        self.__host = String("127.0.0.1")._buffer
+        self.__host = bytes("127.0.0.1")
         self.__http_version = Bytes()
         self.disable_path_normalization = False
-        self.__full_uri = full_uri._buffer
+        self.__full_uri = bytes(full_uri)
         self.__request_uri = Bytes()
         self.__username = Bytes()
         self.__password = Bytes()
@@ -51,12 +51,12 @@ struct URI:
         host: String,
         path: String,
     ) -> None:
-        self.__path_original = path._buffer
+        self.__path_original = bytes(path)
         self.__scheme = scheme.as_bytes()
-        self.__path = normalise_path(path._buffer, self.__path_original)
+        self.__path = normalise_path(bytes(path), self.__path_original)
         self.__query_string = Bytes()
         self.__hash = Bytes()
-        self.__host = host._buffer
+        self.__host = bytes(host)
         self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = Bytes()
@@ -96,7 +96,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__path_original.unsafe_ptr(), len=self[].__path_original.size)
 
     fn set_path(inout self, path: String) -> Self:
-        self.__path = normalise_path(path._buffer, self.__path_original)
+        self.__path = normalise_path(bytes(path), self.__path_original)
         return self
 
     fn set_path_sbytes(inout self, path: Bytes) -> Self:
@@ -114,7 +114,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__path.unsafe_ptr(), len=self[].__path.size)
 
     fn set_scheme(inout self, scheme: String) -> Self:
-        self.__scheme = scheme._buffer
+        self.__scheme = bytes(scheme)
         return self
 
     fn set_scheme_bytes(inout self, scheme: Bytes) -> Self:
@@ -135,7 +135,7 @@ struct URI:
         return self.__http_version
 
     fn set_http_version(inout self, http_version: String) -> Self:
-        self.__http_version = http_version._buffer
+        self.__http_version = bytes(http_version)
         return self
     
     fn set_http_version_bytes(inout self, http_version: Bytes) -> Self:
@@ -143,19 +143,19 @@ struct URI:
         return self
 
     fn is_http_1_1(self) -> Bool:
-        return bytes_equal(self.http_version(), String(strHttp11)._buffer)
+        return bytes_equal(self.http_version(), bytes(strHttp11))
 
     fn is_http_1_0(self) -> Bool:
-        return bytes_equal(self.http_version(), String(strHttp10)._buffer)
+        return bytes_equal(self.http_version(), bytes(strHttp10))
 
     fn is_https(self) -> Bool:
-        return bytes_equal(self.__scheme, String(https)._buffer)
+        return bytes_equal(self.__scheme, bytes(https))
 
     fn is_http(self) -> Bool:
-        return bytes_equal(self.__scheme, String(http)._buffer) or len(self.__scheme) == 0
+        return bytes_equal(self.__scheme, bytes(http)) or len(self.__scheme) == 0
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.__request_uri = request_uri._buffer
+        self.__request_uri = bytes(request_uri)
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
@@ -166,7 +166,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__request_uri.unsafe_ptr(), len=self[].__request_uri.size)
 
     fn set_query_string(inout self, query_string: String) -> Self:
-        self.__query_string = query_string._buffer
+        self.__query_string = bytes(query_string)
         return self
 
     fn set_query_string_bytes(inout self, query_string: Bytes) -> Self:
@@ -177,7 +177,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__query_string.unsafe_ptr(), len=self[].__query_string.size)
 
     fn set_hash(inout self, hash: String) -> Self:
-        self.__hash = hash._buffer
+        self.__hash = bytes(hash)
         return self
 
     fn set_hash_bytes(inout self, hash: Bytes) -> Self:
@@ -188,7 +188,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__hash.unsafe_ptr(), len=self[].__hash.size)
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = host._buffer
+        self.__host = bytes(host)
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -205,7 +205,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__full_uri.unsafe_ptr(), len=self[].__full_uri.size)
 
     fn set_username(inout self, username: String) -> Self:
-        self.__username = username._buffer
+        self.__username = bytes(username)
         return self
 
     fn set_username_bytes(inout self, username: Bytes) -> Self:
@@ -216,7 +216,7 @@ struct URI:
         return BytesView(unsafe_ptr=self[].__username.unsafe_ptr(), len=self[].__username.size)
 
     fn set_password(inout self, password: String) -> Self:
-        self.__password = password._buffer
+        self.__password = bytes(password)
         return self
 
     fn set_password_bytes(inout self, password: Bytes) -> Self:
@@ -250,11 +250,11 @@ struct URI:
         if path_start >= 0:
             host_and_port = remainder_uri[:path_start]
             request_uri = remainder_uri[path_start:]
-            self.__host = host_and_port[:path_start]._buffer
+            self.__host = bytes(host_and_port[:path_start])
         else:
             host_and_port = remainder_uri
             request_uri = strSlash
-            self.__host = host_and_port._buffer
+            self.__host = bytes(host_and_port)
 
         if is_https:
             _ = self.set_scheme(https)
@@ -263,10 +263,10 @@ struct URI:
         
         var n = request_uri.find("?")
         if n >= 0:
-            self.__path_original = request_uri[:n]._buffer
-            self.__query_string = request_uri[n + 1 :]._buffer
+            self.__path_original = bytes(request_uri[:n])
+            self.__query_string = bytes(request_uri[n + 1 :])
         else:
-            self.__path_original = request_uri._buffer
+            self.__path_original = bytes(request_uri)
             self.__query_string = Bytes()
 
         self.__path = normalise_path(self.__path_original, self.__path_original)

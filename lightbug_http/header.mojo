@@ -6,7 +6,7 @@ from lightbug_http.strings import (
     rChar,
     nChar,
 )
-from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal
+from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal, bytes
 
 alias statusOK = 200
 
@@ -50,7 +50,7 @@ struct RequestHeader:
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
-        self.__host = host._buffer
+        self.__host = bytes(host)
         self.__content_type = Bytes()
         self.__user_agent = Bytes()
         self.raw_headers = Bytes()
@@ -102,7 +102,7 @@ struct RequestHeader:
         self.__trailer = trailer
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type._buffer
+        self.__content_type = bytes(content_type)
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -113,7 +113,7 @@ struct RequestHeader:
         return BytesView(unsafe_ptr=self[].__content_type.unsafe_ptr(), len=self[].__content_type.size)
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = host._buffer
+        self.__host = bytes(host)
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -124,7 +124,7 @@ struct RequestHeader:
         return BytesView(unsafe_ptr=self[].__host.unsafe_ptr(), len=self[].__host.size)
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
-        self.__user_agent = user_agent._buffer
+        self.__user_agent = bytes(user_agent)
         return self
 
     fn set_user_agent_bytes(inout self, user_agent: Bytes) -> Self:
@@ -135,7 +135,7 @@ struct RequestHeader:
         return BytesView(unsafe_ptr=self[].__user_agent.unsafe_ptr(), len=self[].__user_agent.size)
 
     fn set_method(inout self, method: String) -> Self:
-        self.__method = method._buffer
+        self.__method = bytes(method)
         return self
 
     fn set_method_bytes(inout self, method: Bytes) -> Self:
@@ -148,12 +148,12 @@ struct RequestHeader:
         return BytesView(unsafe_ptr=self[].__method.unsafe_ptr(), len=self[].__method.size)
     
     fn set_protocol(inout self, proto: String) -> Self:
-        self.no_http_1_1 = not proto.__eq__(strHttp11)
-        self.proto = proto._buffer
+        self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
+        self.proto = bytes(proto)
         return self
 
     fn set_protocol_bytes(inout self, proto: Bytes) -> Self:
-        self.no_http_1_1 = not bytes_equal(proto, strHttp11.as_bytes_slice())
+        self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
         self.proto = proto
         return self
 
@@ -192,7 +192,7 @@ struct RequestHeader:
         return BytesView(unsafe_ptr=self[].__request_uri.unsafe_ptr(), len=self[].__request_uri.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer._buffer
+        self.__trailer = bytes(trailer)
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -227,7 +227,7 @@ struct RequestHeader:
         if n <= 0:
             raise Error("Cannot find HTTP request method in the request")
 
-        var method = request_line[:n]
+        var method = request_line[:n + 1]
         _ = self.set_method(method)
 
         var rest_of_request_line = request_line[n + 1 :]
@@ -238,7 +238,8 @@ struct RequestHeader:
         elif n == 0:
             raise Error("Request URI cannot be empty")
         else:
-            _ = self.set_protocol(rest_of_request_line[n + 1 :])
+            var proto = rest_of_request_line[n + 1 :]
+            _ = self.set_protocol_bytes(bytes(proto, pop=False))
 
         var request_uri = rest_of_request_line[:n + 1]
         
@@ -280,15 +281,15 @@ struct RequestHeader:
             raise Error("Invalid header key")
         if key[0] == "h" or key[0] == "H":
             if key.lower() == "host":
-                _ = self.set_host(value)
+                _ = self.set_host_bytes(bytes(value, pop=False))
                 return
         elif key[0] == "u" or key[0] == "U":
             if key.lower() == "user-agent":
-                _ = self.set_user_agent(value)
+                _ = self.set_user_agent_bytes(bytes(value, pop=False))
                 return
         elif key[0] == "c" or key[0] == "C":
             if key.lower() == "content-type":
-                _ = self.set_content_type(value)
+                _ = self.set_content_type_bytes(bytes(value, pop=False))
                 return
             if key.lower() == "content-length":
                 if self.content_length() != -1:
@@ -310,7 +311,7 @@ struct RequestHeader:
                     # _ = self.setargbytes(s.key, strChunked)
                 return
             if key.lower() == "trailer":
-                _ = self.set_trailer_bytes(value._buffer)
+                _ = self.set_trailer_bytes(bytes(value, pop=False))
         # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
         # if self.no_http_1_1 and not self.__connection_close:
         # self.__connection_close = not has_header_value(v, strKeepAlive)
@@ -481,7 +482,7 @@ struct ResponseHeader:
         return BytesView(unsafe_ptr=self[].__content_type.unsafe_ptr(), len=self[].__content_type.size)
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = content_type._buffer
+        self.__content_type = bytes(content_type)
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -492,7 +493,7 @@ struct ResponseHeader:
         return BytesView(unsafe_ptr=self[].__content_encoding.unsafe_ptr(), len=self[].__content_encoding.size)
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
-        self.__content_encoding = content_encoding._buffer
+        self.__content_encoding = bytes(content_encoding)
         return self
 
     fn set_content_encoding_bytes(inout self, content_encoding: Bytes) -> Self:
@@ -514,7 +515,7 @@ struct ResponseHeader:
         return BytesView(unsafe_ptr=self[].__server.unsafe_ptr(), len=self[].__server.size)
 
     fn set_server(inout self, server: String) -> Self:
-        self.__server = server._buffer
+        self.__server = bytes(server)
         return self
 
     fn set_server_bytes(inout self, server: Bytes) -> Self:
@@ -522,11 +523,12 @@ struct ResponseHeader:
         return self
 
     fn set_protocol(inout self, proto: String) -> Self:
-        self.no_http_1_1 = not proto.__eq__(strHttp11)
-        self.__protocol = proto._buffer
+        self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
+        self.__protocol = bytes(proto)
         return self
     
     fn set_protocol_bytes(inout self, protocol: Bytes) -> Self:
+        self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
         self.__protocol = protocol
         return self
 
@@ -541,7 +543,7 @@ struct ResponseHeader:
         return BytesView(unsafe_ptr=self[].__protocol.unsafe_ptr(), len=self[].__protocol.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = trailer._buffer
+        self.__trailer = bytes(trailer)
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -574,7 +576,7 @@ struct ResponseHeader:
     fn parse_first_line(inout self, first_line: String) raises -> None:
         var n = first_line.find(" ")
         
-        var proto = first_line[:n]
+        var proto = first_line[:n + 1]
             
         _ = self.set_protocol(proto)
 
@@ -585,7 +587,7 @@ struct ResponseHeader:
 
         var message = rest_of_response_line[4:]
         if len(message) > 1:
-            _ = self.set_status_message(message._buffer)
+            _ = self.set_status_message(bytes((message), pop=False))
         
         _ = self.set_content_length(-2)
 
@@ -606,7 +608,7 @@ struct ResponseHeader:
 
     fn parse_raw(inout self, first_line: String) raises -> None:
         var headers = self.raw_headers
-
+        
         _ = self.parse_first_line(first_line)
 
         var s = headerScanner()
@@ -624,16 +626,16 @@ struct ResponseHeader:
             raise Error("Invalid header key")
         elif key[0] == "c" or key[0] == "C":
             if key.lower() == "content-type":
-                _ = self.set_content_type(value)
+                _ = self.set_content_type_bytes(bytes(value, pop=False))
                 return
             if key.lower() == "content-encoding":
-                _ = self.set_content_encoding(value)
+                _ = self.set_content_encoding_bytes(bytes(value, pop=False))
                 return
             if key.lower() == "content-length":
                 if self.content_length() != -1:
                     var content_length = value
                     _ = self.set_content_length(atol(content_length))
-                    _ = self.set_content_length_bytes(content_length._buffer)
+                    _ = self.set_content_length_bytes(bytes(content_length))
                 return
             if key.lower() == "connection":
                 if value == "close":
@@ -643,7 +645,7 @@ struct ResponseHeader:
                 return
         elif key[0] == "s" or key[0] == "S":
             if key.lower() == "server":
-                _ = self.set_server(value)
+                _ = self.set_server_bytes(bytes(value, pop=False))
                 return
         elif key[0] == "t" or key[0] == "T":
             if key.lower() == "transfer-encoding":
@@ -651,7 +653,7 @@ struct ResponseHeader:
                     _ = self.set_content_length(-1)
                 return
             if key.lower() == "trailer":
-                _ = self.set_trailer(value)
+                _ = self.set_trailer_bytes(bytes(value, pop=False))
 
 struct headerScanner:
     var b: String  # string for now until we have a better way to subset Bytes

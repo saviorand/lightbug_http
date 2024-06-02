@@ -7,18 +7,18 @@ from lightbug_http.net import Listener, Addr, Connection, TCPAddr
 from lightbug_http.service import HTTPService, OK
 from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
-
+from lightbug_http.io.bytes import bytes
 
 alias default_server_conn_string = "http://localhost:8080"
 
-alias getRequest = String(
+alias getRequest = bytes(
     "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
     " Firefox Chrome MSIE Opera\r\n"
     + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
     " aa=aakslsdweriwereowriewroire\r\n\r\n"
-)._buffer
+)
 
-alias defaultExpectedGetResponse = String(
+alias defaultExpectedGetResponse = bytes(
     "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
     " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: \r\n\r\nHello"
     " world!"
@@ -74,7 +74,7 @@ struct FakeClient(Client):
         self.req_is_tls = False
 
     fn do(self, req: HTTPRequest) raises -> HTTPResponse:
-        return OK(String(defaultExpectedGetResponse)._buffer)
+        return OK(String(defaultExpectedGetResponse))
 
     fn extract(inout self, req: HTTPRequest) raises -> ReqInfo:
         var full_uri = req.uri()
@@ -133,7 +133,7 @@ struct FakeResponder(HTTPService):
         var method = String(req.header.method())
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
-        return OK(String("Hello, world!")._buffer)
+        return OK(bytes("Hello, world!"))
 
 @value
 struct FakeConnection(Connection):
@@ -200,7 +200,7 @@ struct TestStruct:
     fn __init__(inout self, a: String, b: String) -> None:
         self.a = a
         self.b = b
-        self.c = String("c")._buffer
+        self.c = bytes("c")
         self.d = 1
         self.e = TestStructNested("a", 1)
 

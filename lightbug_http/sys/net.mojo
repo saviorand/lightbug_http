@@ -11,7 +11,7 @@ from lightbug_http.net import (
     get_peer_name,
 )
 from lightbug_http.strings import NetworkType
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
 from external.libc import (
     c_void,
@@ -223,7 +223,7 @@ struct SysConnection(Connection):
         if bytes_recv == 0:
             return 0
         var bytes_str = String(new_buf.bitcast[UInt8](), bytes_recv)
-        buf = bytes_str._buffer
+        buf = bytes(bytes_str)
         return bytes_recv
 
     fn write(self, msg: String) raises -> Int:

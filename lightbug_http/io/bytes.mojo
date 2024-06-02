@@ -5,16 +5,17 @@ alias Byte = UInt8
 alias Bytes = List[Byte]
 alias BytesView = Span[Byte, False, ImmutableStaticLifetime]
 
-fn bytes(s: StringLiteral) -> Bytes:
+fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses
     var buf = String(s)._buffer
     _ = buf.pop()
     return buf
 
-fn bytes(s: String) -> Bytes:
+fn bytes(s: String, pop: Bool = True) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses
     var buf = s._buffer
-    _ = buf.pop()
+    if pop:
+        _ = buf.pop()
     return buf
 
 @value

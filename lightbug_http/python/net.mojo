@@ -1,5 +1,5 @@
 from lightbug_http.python import Modules
-from lightbug_http.io.bytes import Bytes, UnsafeString
+from lightbug_http.io.bytes import Bytes, UnsafeString, bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import (
     Net,
@@ -110,9 +110,9 @@ struct PythonConnection(Connection):
 
     fn read(self, inout buf: Bytes) raises -> Int:
         var data = self.conn.recv(default_buffer_size)
-        buf = String(
+        buf = bytes(
             self.pymodules.bytes.decode(data, CharSet.utf8.value).__str__()
-        )._buffer
+        )
         return len(buf)
 
     fn write(self, buf: Bytes) raises -> Int:

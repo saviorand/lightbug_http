@@ -1,7 +1,7 @@
 from lightbug_http.client import Client
 from lightbug_http.http import HTTPRequest, HTTPResponse
 from lightbug_http.python import Modules
-from lightbug_http.io.bytes import Bytes, UnsafeString
+from lightbug_http.io.bytes import Bytes, UnsafeString, bytes
 from lightbug_http.strings import CharSet
 
 
@@ -57,4 +57,4 @@ struct PythonClient(Client):
         var res = self.socket.recv(1024).decode()
         _ = self.socket.close()
 
-        return HTTPResponse(res.__str__()._buffer)
+        return HTTPResponse(bytes(res))

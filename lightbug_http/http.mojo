@@ -78,7 +78,7 @@ struct HTTPRequest(Request):
     var disable_redirect_path_normalization: Bool
 
     fn __init__(inout self, uri: URI):
-        self.header = RequestHeader(String("127.0.0.1"))
+        self.header = RequestHeader("127.0.0.1")
         self.__uri = uri
         self.body_raw = Bytes()
         self.parsed_uri = False
@@ -256,22 +256,18 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     _ = builder.write(req.header.method())
     _ = builder.write_string(whitespace)
     if len(uri.request_uri()) > 1:
-        # This also breaks with a couple slashes e.g. /status/404 breaks it
-        _ = builder.write_string(String(uri.request_uri()))
+        _ = builder.write(uri.request_uri())
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
     
-    # this breaks due to dots in HTTP/1.1
-    _ = builder.write_string(req.header.protocol_str())
+    _ = builder.write(req.header.protocol())
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
     _ = builder.write_string("Host: ")
-    
-    # host e.g. 127.0.0.1 seems to break the builder when used with BytesView
-    _ = builder.write_string(uri.host_str())
+    _ = builder.write(uri.host())
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
@@ -371,26 +367,29 @@ fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)
     
     var request_first_line_headers_body = request.split("\r\n\r\n")
-    var request_first_line_headers = request_first_line_headers_body[0]
-    var request_body = String()
-    if len(request_first_line_headers_body) > 1:
-        request_body = request_first_line_headers_body[1]
-    var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
-    var request_first_line = request_first_line_headers_list[0]
-    var request_headers = request_first_line_headers_list[1]
-
-    return (request_first_line, request_headers, request_body)
-
-fn split_http_string_list_headers(buf: Bytes) raises -> (String, List[String], String):
-    var request = String(buf)
     
-    var request_first_line_headers_body = request.split("\r\n\r\n")
+    if len(request_first_line_headers_body) == 0:
+        raise Error("Invalid HTTP string, did not find a double newline")
+    
     var request_first_line_headers = request_first_line_headers_body[0]
+    
     var request_body = String()
+
     if len(request_first_line_headers_body) > 1:
         request_body = request_first_line_headers_body[1]
-    var request_first_line_headers_list = request_first_line_headers.split("\r\n")
-    var request_first_line = request_first_line_headers_list[0]
-    var request_headers = request_first_line_headers_list[1:]
+    
+    var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
+
+    var request_first_line = String()
+    var request_headers = String()
+
+    if len(request_first_line_headers_list) == 0:
+        raise Error("Invalid HTTP string, did not find a newline in the first line")
+    
+    if len(request_first_line_headers_list) == 1:
+        request_first_line = request_first_line_headers_list[0]
+    else:
+        request_first_line = request_first_line_headers_list[0]
+        request_headers = request_first_line_headers_list[1]
 
     return (request_first_line, request_headers, request_body)
