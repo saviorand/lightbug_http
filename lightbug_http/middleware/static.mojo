@@ -9,7 +9,7 @@ struct StaticMiddleware(Middleware):
     fn set_next(self, next: Middleware):
         self.next = next
 
-    fn __init__(self, path: String):
+    fn __init__(inout self, path: String):
         self.path = path
 
     fn call(self, context: Context) -> HTTPResponse:
@@ -19,7 +19,7 @@ struct StaticMiddleware(Middleware):
 
       try:
           var html: String
-          with open(file, "r") as f:
+          with open(path, "r") as f:
               html = f.read()
 
           return Success(html, "text/html")

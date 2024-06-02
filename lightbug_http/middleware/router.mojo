@@ -17,7 +17,7 @@ struct RouterMiddleware[HTTPHandlerType: HTTPHandler](Middleware):
     fn set_next(self, next: Middleware):
         self.next = next
 
-    fn add(self, method: String, route: String, handler: HTTPHandler):
+    fn add(self, method: String, route: String, handler: HTTPHandlerType):
         self.routes[method + ":" + route] = handler
 
     fn call(self, context: Context) -> HTTPResponse:

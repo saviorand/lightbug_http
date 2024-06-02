@@ -10,7 +10,7 @@ struct BasicAuthMiddleware(Middleware):
     fn set_next(self, next: Middleware):
         self.next = next
 
-    fn __init__(self, username: String, password: String):
+    fn __init__(inout self, username: String, password: String):
         self.username = username
         self.password = password
 

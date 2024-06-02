@@ -9,7 +9,7 @@ struct CorsMiddleware(Middleware):
     fn set_next(self, next: Middleware):
         self.next = next
 
-    fn __init__(self, allow_origin: String):
+    fn __init__(inout self, allow_origin: String):
         self.allow_origin = allow_origin
 
     fn call(self, context: Context) -> HTTPResponse:
