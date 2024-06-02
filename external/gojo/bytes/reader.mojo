@@ -9,7 +9,7 @@ struct Reader(
     Sized,
     io.Reader,
     io.ReaderAt,
-    io.WriterTo,
+    # io.WriterTo,
     io.Seeker,
     io.ByteReader,
     io.ByteScanner,
@@ -161,29 +161,29 @@ struct Reader(
         self.index = position
         return position, Error()
 
-    fn write_to[W: io.Writer](inout self, inout writer: W) -> (Int64, Error):
-        """Writes data to w until the buffer is drained or an error occurs.
-        implements the [io.WriterTo] Interface.
+    # fn write_to[W: io.Writer](inout self, inout writer: W) -> (Int64, Error):
+    #     """Writes data to w until the buffer is drained or an error occurs.
+    #     implements the [io.WriterTo] Interface.
 
-        Args:
-            writer: The writer to write to.
-        """
-        self.prev_rune = -1
-        if self.index >= len(self.buffer):
-            return Int64(0), Error()
+    #     Args:
+    #         writer: The writer to write to.
+    #     """
+    #     self.prev_rune = -1
+    #     if self.index >= len(self.buffer):
+    #         return Int64(0), Error()
 
-        var bytes = self.buffer[int(self.index) : len(self.buffer)]
-        var write_count: Int
-        var err: Error
-        write_count, err = writer.write(bytes)
-        if write_count > len(bytes):
-            panic("bytes.Reader.write_to: invalid Write count")
+    #     var bytes = Span(self.buffer[int(self.index) : len(self.buffer)])
+    #     var write_count: Int
+    #     var err: Error
+    #     write_count, err = writer.write(bytes)
+    #     if write_count > len(bytes):
+    #         panic("bytes.Reader.write_to: invalid Write count")
 
-        self.index += write_count
-        if write_count != len(bytes):
-            return Int64(write_count), Error(io.ERR_SHORT_WRITE)
+    #     self.index += write_count
+    #     if write_count != len(bytes):
+    #         return Int64(write_count), Error(io.ERR_SHORT_WRITE)
 
-        return Int64(write_count), Error()
+    #     return Int64(write_count), Error()
 
     fn reset(inout self, buffer: List[Byte]):
         """Resets the [Reader.Reader] to be reading from b.

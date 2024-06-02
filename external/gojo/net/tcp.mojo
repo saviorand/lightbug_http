@@ -26,7 +26,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         if address != "":
             var host_port = split_host_port(address)
             host = host_port.host
-            port = host_port.port
+            port = str(host_port.port)
             portnum = atol(port.__str__())
     elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":
@@ -50,7 +50,7 @@ struct ListenConfig(CollectionElement):
         socket.bind(tcp_addr.ip, tcp_addr.port)
         socket.set_socket_option(SO_REUSEADDR, 1)
         socket.listen()
-        print(String("Listening on ") + socket.local_address)
+        print(str("Listening on ") + str(socket.local_address))
         return TCPListener(socket^, self, network, address)
 
 

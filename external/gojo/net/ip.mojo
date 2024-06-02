@@ -1,4 +1,5 @@
 from utils.variant import Variant
+from utils.static_tuple import StaticTuple
 from sys.info import os_is_linux, os_is_macos
 from ..syscall.types import (
     c_int,
@@ -102,15 +103,15 @@ fn get_ip_address(host: String) raises -> String:
     var address_family: Int32 = 0
     var address_length: UInt32 = 0
     if result.isa[addrinfo]():
-        var addrinfo = result.get[addrinfo]()
-        ai_addr = addrinfo[].ai_addr
-        address_family = addrinfo[].ai_family
-        address_length = addrinfo[].ai_addrlen
+        var addrinfo = result[addrinfo]
+        ai_addr = addrinfo.ai_addr
+        address_family = addrinfo.ai_family
+        address_length = addrinfo.ai_addrlen
     else:
-        var addrinfo = result.get[addrinfo_unix]()
-        ai_addr = addrinfo[].ai_addr
-        address_family = addrinfo[].ai_family
-        address_length = addrinfo[].ai_addrlen
+        var addrinfo = result[addrinfo_unix]
+        ai_addr = addrinfo.ai_addr
+        address_family = addrinfo.ai_family
+        address_length = addrinfo.ai_addrlen
 
     if not ai_addr:
         print("ai_addr is null")

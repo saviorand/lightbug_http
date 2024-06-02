@@ -355,7 +355,7 @@ struct Socket(FileDescriptorBase):
         # Try to send all the data in the buffer. If it did not send all the data, keep trying but start from the offset of the last successful send.
         while total_bytes_sent < len(src):
             if attempts > max_attempts:
-                raise Error("Failed to send message after " + String(max_attempts) + " attempts.")
+                raise Error("Failed to send message after " + str(max_attempts) + " attempts.")
 
             var bytes_sent = send(
                 self.sockfd.fd,

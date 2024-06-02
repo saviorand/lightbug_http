@@ -11,7 +11,6 @@ struct Dialer:
         var tcp_addr = resolve_internet_addr(network, address)
         var socket = Socket(local_address=self.local_address)
         socket.connect(tcp_addr.ip, tcp_addr.port)
-        print(String("Connected to ") + socket.remote_address)
         return TCPConnection(socket^)
 
 

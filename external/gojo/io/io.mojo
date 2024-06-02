@@ -17,7 +17,7 @@ fn write_string[W: Writer](inout writer: W, string: String) -> (Int, Error):
     Returns:
         The number of bytes written and an error, if any.
     """
-    return writer.write(string.as_bytes())
+    return writer.write(string.as_bytes_slice())
 
 
 fn write_string[W: StringWriter](inout writer: W, string: String) -> (Int, Error):
@@ -132,7 +132,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # }
 
 
-# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: List[Byte]) raises -> Int64:
+# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Span[Byte]) raises -> Int64:
 #     """Actual implementation of copy and CopyBuffer.
 #     if buf is nil, one is allocated.
 #     """
@@ -152,11 +152,11 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 #     return written
 
 
-# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return src.write_to(dst)
 
 
-# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return dst.read_from(src)
 
 # # LimitReader returns a Reader that reads from r

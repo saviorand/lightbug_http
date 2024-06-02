@@ -124,19 +124,19 @@ fn format_bytes(format: String, arg: List[Byte]) -> String:
 
 fn format_integer(format: String, arg: Int) -> String:
     var verb = find_first_verb(format, List[String]("%x", "%X", "%d", "%q"))
-    var arg_to_place = String(arg)
+    var arg_to_place = str(arg)
     if verb == "%x":
-        arg_to_place = String(convert_base10_to_base16(arg)).lower()
+        arg_to_place = str(convert_base10_to_base16(arg)).lower()
     elif verb == "%X":
-        arg_to_place = String(convert_base10_to_base16(arg)).upper()
+        arg_to_place = str(convert_base10_to_base16(arg)).upper()
     elif verb == "%q":
-        arg_to_place = "'" + String(arg) + "'"
+        arg_to_place = "'" + str(arg) + "'"
 
     return replace_first(format, verb, arg_to_place)
 
 
 fn format_float(format: String, arg: Float64) -> String:
-    return replace_first(format, String("%f"), arg)
+    return replace_first(format, str("%f"), str(arg))
 
 
 fn format_boolean(format: String, arg: Bool) -> String:
@@ -214,6 +214,6 @@ fn printf(formatting: String, *args: Args) raises:
         elif argument.isa[Bool]():
             text = format_boolean(text, argument[Bool])
         else:
-            raise Error("Unknown for argument #" + String(i))
+            raise Error("Unknown for argument #" + str(i))
 
     print(text)

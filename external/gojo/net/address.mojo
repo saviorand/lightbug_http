@@ -47,8 +47,8 @@ struct TCPAddr(Addr):
 
     fn __str__(self) -> String:
         if self.zone != "":
-            return join_host_port(String(self.ip) + "%" + self.zone, self.port)
-        return join_host_port(self.ip, self.port)
+            return join_host_port(str(self.ip) + "%" + self.zone, str(self.port))
+        return join_host_port(self.ip, str(self.port))
 
     fn network(self) -> String:
         return NetworkType.tcp.value
@@ -69,7 +69,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         if address != "":
             var host_port = split_host_port(address)
             host = host_port.host
-            port = host_port.port
+            port = str(host_port.port)
             portnum = atol(port.__str__())
     elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":

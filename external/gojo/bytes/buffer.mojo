@@ -1,14 +1,4 @@
-from ..io import (
-    Reader,
-    Writer,
-    ReadWriter,
-    ByteReader,
-    ByteWriter,
-    WriterTo,
-    StringWriter,
-    ReaderFrom,
-    BUFFER_SIZE,
-)
+import ..io
 from ..builtins import cap, copy, Byte, panic, index_byte
 
 
@@ -45,17 +35,19 @@ alias ERR_NEGATIVE_READ = "buffer.Buffer: reader returned negative count from re
 alias ERR_SHORT_WRITE = "short write"
 
 
+# TODO: Removed read_from and write_to for now. Until the span arg trait issue is resolved.
+# https://github.com/modularml/mojo/issues/2917
 @value
 struct Buffer(
     Copyable,
     Stringable,
     Sized,
-    ReadWriter,
-    StringWriter,
-    ByteReader,
-    ByteWriter,
-    WriterTo,
-    ReaderFrom,
+    io.ReadWriter,
+    io.StringWriter,
+    io.ByteReader,
+    io.ByteWriter,
+    # WriterTo,
+    # ReaderFrom,
 ):
     """A Buffer is a variable-sized buffer of bytes with [Buffer.read] and [Buffer.write] methods.
     The zero value for Buffer is an empty buffer ready to use.
@@ -216,7 +208,7 @@ struct Buffer(
         var m = self.grow(n)
         self.buf = self.buf[:m]
 
-    fn write(inout self, src: List[Byte]) -> (Int, Error):
+    fn write(inout self, src: Span[Byte]) -> (Int, Error):
         """Appends the contents of p to the buffer, growing the buffer as
         needed. The return value n is the length of p; err is always nil. If the
         buffer becomes too large, write will panic with [ERR_TOO_LARGE].
@@ -255,39 +247,40 @@ struct Buffer(
         # if not ok:
         #     m = self.grow(len(src))
         # var b = self.buf[m:]
-        return self.write(src.as_bytes())
+        return self.write(src.as_bytes_slice())
 
-    fn read_from[R: Reader](inout self, inout reader: R) -> (Int64, Error):
-        """Reads data from r until EOF and appends it to the buffer, growing
-        the buffer as needed. The return value n is the number of bytes read. Any
-        error except io.EOF encountered during the read is also returned. If the
-        buffer becomes too large, read_from will panic with [ERR_TOO_LARGE].
+    # fn read_from[R: Reader](inout self, inout reader: R) -> (Int64, Error):
+    #     """Reads data from r until EOF and appends it to the buffer, growing
+    #     the buffer as needed. The return value n is the number of bytes read. Any
+    #     error except io.EOF encountered during the read is also returned. If the
+    #     buffer becomes too large, read_from will panic with [ERR_TOO_LARGE].
 
-        Args:
-            reader: The reader to read from.
+    #     Args:
+    #         reader: The reader to read from.
 
-        Returns:
-            The number of bytes read from the reader.
-        """
-        self.last_read = OP_INVALID
-        var total_bytes_read: Int64 = 0
-        while True:
-            _ = self.grow(MIN_READ)
+    #     Returns:
+    #         The number of bytes read from the reader.
+    #     """
+    #     self.last_read = OP_INVALID
+    #     var total_bytes_read: Int64 = 0
+    #     while True:
+    #         _ = self.grow(MIN_READ)
 
-            var bytes_read: Int
-            var err: Error
-            bytes_read, err = reader.read(self.buf)
-            if bytes_read < 0:
-                panic(ERR_NEGATIVE_READ)
+    #         var span = Span(self.buf)
+    #         var bytes_read: Int
+    #         var err: Error
+    #         bytes_read, err = reader.read(span)
+    #         if bytes_read < 0:
+    #             panic(ERR_NEGATIVE_READ)
 
-            total_bytes_read += bytes_read
+    #         total_bytes_read += bytes_read
 
-            var err_message = str(err)
-            if err_message != "":
-                if err_message == io.EOF:
-                    return total_bytes_read, Error()
+    #         var err_message = str(err)
+    #         if err_message != "":
+    #             if err_message == io.EOF:
+    #                 return total_bytes_read, Error()
 
-                return total_bytes_read, err
+    #             return total_bytes_read, err
 
     fn grow_slice(self, inout b: List[Byte], n: Int) -> List[Byte]:
         """Grows b by n, preserving the original content of self.
@@ -318,45 +311,45 @@ struct Buffer(
         # b._vector.reserve(c)
         return resized_buffer[: b.capacity]
 
-    fn write_to[W: Writer](inout self, inout writer: W) -> (Int64, Error):
-        """Writes data to w until the buffer is drained or an error occurs.
-        The return value n is the number of bytes written; it always fits into an
-        Int, but it is int64 to match the io.WriterTo trait. Any error
-        encountered during the write is also returned.
+    # fn write_to[W: Writer](inout self, inout writer: W) -> (Int64, Error):
+    #     """Writes data to w until the buffer is drained or an error occurs.
+    #     The return value n is the number of bytes written; it always fits into an
+    #     Int, but it is int64 to match the io.WriterTo trait. Any error
+    #     encountered during the write is also returned.
 
-        Args:
-            writer: The writer to write to.
+    #     Args:
+    #         writer: The writer to write to.
 
-        Returns:
-            The number of bytes written to the writer.
-        """
-        self.last_read = OP_INVALID
-        var bytes_to_write = len(self.buf)
-        var total_bytes_written: Int64 = 0
+    #     Returns:
+    #         The number of bytes written to the writer.
+    #     """
+    #     self.last_read = OP_INVALID
+    #     var bytes_to_write = len(self.buf)
+    #     var total_bytes_written: Int64 = 0
 
-        if bytes_to_write > 0:
-            # TODO: Replace usage of this intermeidate slice when normal slicing, once slice references work.
-            var sl = self.buf[self.off : bytes_to_write]
-            var bytes_written: Int
-            var err: Error
-            bytes_written, err = writer.write(sl)
-            if bytes_written > bytes_to_write:
-                panic("bytes.Buffer.write_to: invalid write count")
+    #     if bytes_to_write > 0:
+    #         # TODO: Replace usage of this intermeidate slice when normal slicing, once slice references work.
+    #         var sl = Span(self.buf[self.off : bytes_to_write])
+    #         var bytes_written: Int
+    #         var err: Error
+    #         bytes_written, err = writer.write(sl)
+    #         if bytes_written > bytes_to_write:
+    #             panic("bytes.Buffer.write_to: invalid write count")
 
-            self.off += bytes_written
-            total_bytes_written = Int64(bytes_written)
+    #         self.off += bytes_written
+    #         total_bytes_written = Int64(bytes_written)
 
-            var err_message = str(err)
-            if err_message != "":
-                return total_bytes_written, err
+    #         var err_message = str(err)
+    #         if err_message != "":
+    #             return total_bytes_written, err
 
-            # all bytes should have been written, by definition of write method in io.Writer
-            if bytes_written != bytes_to_write:
-                return total_bytes_written, Error(ERR_SHORT_WRITE)
+    #         # all bytes should have been written, by definition of write method in io.Writer
+    #         if bytes_written != bytes_to_write:
+    #             return total_bytes_written, Error(ERR_SHORT_WRITE)
 
-        # Buffer is now empty; reset.
-        self.reset()
-        return total_bytes_written, Error()
+    #     # Buffer is now empty; reset.
+    #     self.reset()
+    #     return total_bytes_written, Error()
 
     fn write_byte(inout self, byte: Byte) -> (Int, Error):
         """Appends the byte c to the buffer, growing the buffer as needed.
@@ -543,7 +536,7 @@ struct Buffer(
 
         # return a copy of slice. The buffer's backing array may
         # be overwritten by later calls.
-        var line = List[Byte](capacity=BUFFER_SIZE)
+        var line = List[Byte](capacity=io.BUFFER_SIZE)
         for i in range(len(slice)):
             line.append(slice[i])
         return line, Error()
@@ -606,7 +599,7 @@ fn new_buffer() -> Buffer:
     In most cases, new([Buffer]) (or just declaring a [Buffer] variable) is
     sufficient to initialize a [Buffer].
     """
-    var b = List[Byte](capacity=BUFFER_SIZE)
+    var b = List[Byte](capacity=io.BUFFER_SIZE)
     return Buffer(b^)
 
 

@@ -30,7 +30,7 @@ struct URI:
 
     fn __init__(
         inout self,
-        full_uri: StringLiteral,
+        full_uri: String,
     ) -> None:
         self.__path_original = Bytes()
         self.__scheme = Bytes()
@@ -47,8 +47,8 @@ struct URI:
     
     fn __init__(
         inout self,
-        full_uri: StringLiteral,
-        host: StringLiteral
+        full_uri: String,
+        host: String
     ) -> None:
         self.__path_original = Bytes()
         self.__scheme = Bytes()

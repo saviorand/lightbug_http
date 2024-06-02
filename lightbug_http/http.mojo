@@ -1,6 +1,6 @@
 from time import now
 from external.morrow import Morrow
-from external.gojo.strings.builder import NewStringBuilder
+from external.gojo.strings.builder import StringBuilder
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -251,7 +251,7 @@ fn NotFound(path: String) -> HTTPResponse:
     )
 
 fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStaticLifetime]:
-    var builder = NewStringBuilder()
+    var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
     _ = builder.write_string(whitespace)
@@ -301,7 +301,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
-fn encode(res: HTTPResponse) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(res: HTTPResponse) raises -> String:
     var current_time = String()
     try:
         current_time = Morrow.utcnow().__str__()
@@ -309,7 +309,7 @@ fn encode(res: HTTPResponse) raises -> StringSlice[False, ImmutableStaticLifetim
         print("Error getting current time: " + str(e))
         current_time = str(now())
 
-    var builder = NewStringBuilder()
+    var builder = StringBuilder()
 
     _ = builder.write(res.header.protocol())
     _ = builder.write_string(" ")
