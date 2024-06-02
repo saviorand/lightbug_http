@@ -372,7 +372,9 @@ fn split_http_string(buf: Bytes) raises -> (String, String, String):
     
     var request_first_line_headers_body = request.split("\r\n\r\n")
     var request_first_line_headers = request_first_line_headers_body[0]
-    var request_body = request_first_line_headers_body[1]
+    var request_body = String()
+    if len(request_first_line_headers_body) > 1:
+        request_body = request_first_line_headers_body[1]
     var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
     var request_first_line = request_first_line_headers_list[0]
     var request_headers = request_first_line_headers_list[1]
