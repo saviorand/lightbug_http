@@ -20,7 +20,6 @@ def test_uri_no_parse_defaults():
     var uri = URI("http://example.com")
     test.assert_equal(String(uri.full_uri()), "http://example.com")
     test.assert_equal(String(uri.scheme()), "http")
-    test.assert_equal(String(uri.host()), "127.0.0.1")
     test.assert_equal(String(uri.path()), "/")
 
 def test_uri_parse_http_with_port():

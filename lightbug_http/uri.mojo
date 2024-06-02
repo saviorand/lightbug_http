@@ -30,14 +30,32 @@ struct URI:
 
     fn __init__(
         inout self,
-        full_uri: String,
+        full_uri: StringLiteral,
     ) -> None:
         self.__path_original = Bytes()
         self.__scheme = Bytes()
         self.__path = Bytes()
         self.__query_string = Bytes()
         self.__hash = Bytes()
-        self.__host = bytes("127.0.0.1")
+        self.__host = Bytes()
+        self.__http_version = Bytes()
+        self.disable_path_normalization = False
+        self.__full_uri = bytes(full_uri, pop=False)
+        self.__request_uri = Bytes()
+        self.__username = Bytes()
+        self.__password = Bytes()
+    
+    fn __init__(
+        inout self,
+        full_uri: StringLiteral,
+        host: StringLiteral
+    ) -> None:
+        self.__path_original = Bytes()
+        self.__scheme = Bytes()
+        self.__path = Bytes()
+        self.__query_string = Bytes()
+        self.__hash = Bytes()
+        self.__host = bytes(host)
         self.__http_version = Bytes()
         self.disable_path_normalization = False
         self.__full_uri = bytes(full_uri)
@@ -143,16 +161,16 @@ struct URI:
         return self
 
     fn is_http_1_1(self) -> Bool:
-        return bytes_equal(self.http_version(), bytes(strHttp11))
+        return bytes_equal(self.http_version(), bytes(strHttp11, pop=False))
 
     fn is_http_1_0(self) -> Bool:
-        return bytes_equal(self.http_version(), bytes(strHttp10))
+        return bytes_equal(self.http_version(), bytes(strHttp10, pop=False))
 
     fn is_https(self) -> Bool:
-        return bytes_equal(self.__scheme, bytes(https))
+        return bytes_equal(self.__scheme, bytes(https, pop=False))
 
     fn is_http(self) -> Bool:
-        return bytes_equal(self.__scheme, bytes(http)) or len(self.__scheme) == 0
+        return bytes_equal(self.__scheme, bytes(http, pop=False)) or len(self.__scheme) == 0
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         self.__request_uri = bytes(request_uri)
@@ -250,28 +268,28 @@ struct URI:
         if path_start >= 0:
             host_and_port = remainder_uri[:path_start]
             request_uri = remainder_uri[path_start:]
-            self.__host = bytes(host_and_port[:path_start])
+            _ = self.set_host_bytes(bytes(host_and_port[:path_start], pop=False))
         else:
             host_and_port = remainder_uri
             request_uri = strSlash
-            self.__host = bytes(host_and_port)
+            _ = self.set_host_bytes(bytes(host_and_port, pop=False))
 
         if is_https:
-            _ = self.set_scheme(https)
+            _ = self.set_scheme_bytes(bytes(https, pop=False))
         else:
-            _ = self.set_scheme(http)
+            _ = self.set_scheme_bytes(bytes(http, pop=False))
         
         var n = request_uri.find("?")
         if n >= 0:
-            self.__path_original = bytes(request_uri[:n])
-            self.__query_string = bytes(request_uri[n + 1 :])
+            self.__path_original = bytes(request_uri[:n], pop=False)
+            self.__query_string = bytes(request_uri[n + 1 :], pop=False)
         else:
-            self.__path_original = bytes(request_uri)
+            self.__path_original = bytes(request_uri, pop=False)
             self.__query_string = Bytes()
 
-        self.__path = normalise_path(self.__path_original, self.__path_original)
+        _ = self.set_path_sbytes(normalise_path(self.__path_original, self.__path_original))
 
-        _ = self.set_request_uri(request_uri)
+        _ = self.set_request_uri_bytes(bytes(request_uri, pop=False))
 
 
 fn normalise_path(path: Bytes, path_original: Bytes) -> Bytes:

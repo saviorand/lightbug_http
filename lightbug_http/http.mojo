@@ -266,11 +266,11 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
-    _ = builder.write_string("Host: ")
-    _ = builder.write(uri.host())
-
-    _ = builder.write_string(rChar)
-    _ = builder.write_string(nChar)
+    if len(req.header.host()) > 0:
+        _ = builder.write_string("Host: ")
+        _ = builder.write(req.header.host())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
     if len(req.body_raw) > 0:
         if len(req.header.content_type()) > 0:
