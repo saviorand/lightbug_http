@@ -175,7 +175,7 @@ struct HTTPResponse(Response):
         self.header = ResponseHeader(
             200,
             bytes("OK"),
-            bytes("Content-Type: application/octet-stream\r\n"),
+            bytes("application/octet-stream"),
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -378,5 +378,19 @@ fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
     var request_first_line = request_first_line_headers_list[0]
     var request_headers = request_first_line_headers_list[1]
+
+    return (request_first_line, request_headers, request_body)
+
+fn split_http_string_list_headers(buf: Bytes) raises -> (String, List[String], String):
+    var request = String(buf)
+    
+    var request_first_line_headers_body = request.split("\r\n\r\n")
+    var request_first_line_headers = request_first_line_headers_body[0]
+    var request_body = String()
+    if len(request_first_line_headers_body) > 1:
+        request_body = request_first_line_headers_body[1]
+    var request_first_line_headers_list = request_first_line_headers.split("\r\n")
+    var request_first_line = request_first_line_headers_list[0]
+    var request_headers = request_first_line_headers_list[1:]
 
     return (request_first_line, request_headers, request_body)
