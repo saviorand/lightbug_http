@@ -6,7 +6,7 @@ from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import NetworkType
 
@@ -122,7 +122,7 @@ struct SysServer:
                 var buf = Bytes()
                 var read_len = conn.read(buf)
 
-                if read_len == 0 or buf[0] == 2:
+                if read_len == 0 or buf[0] == 0:
                     conn.close()
                     break
                 
@@ -131,7 +131,7 @@ struct SysServer:
                 var request_body: String
 
                 request_first_line, request_headers, request_body = split_http_string(buf)
-
+                
                 var header = RequestHeader(request_headers.as_bytes())
                 try:
                     header.parse_raw(request_first_line)
@@ -157,7 +157,7 @@ struct SysServer:
                 var res = handler.func(
                     HTTPRequest(
                         uri,
-                        buf,
+                        bytes(request_body),
                         header,
                     )
                 )

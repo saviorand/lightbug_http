@@ -3,10 +3,8 @@ import time
 
 npacket = 1000 # nr of packets to send in for loop
 
-
-
 # URL of the server
-url = "http://0.0.0.0:8080"
+url = "http://localhost:8080"
 
 # Send the data as a POST request to the server
 # response = requests.post(url, data=data)
@@ -14,14 +12,14 @@ headers = {'Content-Type': 'application/octet-stream'}
 
 nbyte = 100 
 
-for i in range(4):
-
+for i in range(1):
     nbyte = 10*nbyte
-    data = bytes([2] * nbyte)
+    data = bytes([0x0A] * nbyte)
 
 
     tic = time.perf_counter()
     for i in range(npacket):
+        # print( f"packet {i}")
         response = requests.post(url, data=data, headers=headers)
         try:
             # Get the response body as bytes
