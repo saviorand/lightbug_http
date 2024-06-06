@@ -68,7 +68,7 @@ struct StringBuilder[growth_factor: Float32 = 2](Stringable, Sized, io.Writer, i
         return StringRef(copy, self.size)
 
     @always_inline
-    fn render(self: Reference[Self]) -> StringSlice[self.is_mutable, self.lifetime]:
+    fn render(self) -> StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime]:
         """
         Return a StringSlice view of the data owned by the builder.
         Slightly faster than __str__, 10-20% faster in limited testing.
@@ -76,7 +76,7 @@ struct StringBuilder[growth_factor: Float32 = 2](Stringable, Sized, io.Writer, i
         Returns:
           The string representation of the string builder. Returns an empty string if the string builder is empty.
         """
-        return StringSlice[self.is_mutable, self.lifetime](unsafe_from_utf8_strref=StringRef(self[].data, self[].size))
+        return StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime](unsafe_from_utf8_strref=StringRef(self.data, self.size))
 
     @always_inline
     fn _resize(inout self, capacity: Int) -> None:

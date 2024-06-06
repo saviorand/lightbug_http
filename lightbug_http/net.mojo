@@ -233,8 +233,8 @@ fn convert_binary_ip_to_string(
     """
     # It seems like the len of the buffer depends on the length of the string IP.
     # Allocating 10 works for localhost (127.0.0.1) which I suspect is 9 bytes + 1 null terminator byte. So max should be 16 (15 + 1).
-    var ip_buffer = Pointer[c_void].alloc(16)
-    var ip_address_ptr = Pointer.address_of(ip_address).bitcast[c_void]()
+    var ip_buffer = UnsafePointer[c_void].alloc(16)
+    var ip_address_ptr = UnsafePointer.address_of(ip_address).bitcast[c_void]()
     _ = inet_ntop(address_family, ip_address_ptr, ip_buffer, 16)
 
     var string_buf = ip_buffer.bitcast[Int8]()
@@ -249,16 +249,16 @@ fn convert_binary_ip_to_string(
 
 fn get_sock_name(fd: Int32) raises -> HostPort:
     """Return the address of the socket."""
-    var local_address_ptr = Pointer[sockaddr].alloc(1)
+    var local_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var local_address_ptr_size = socklen_t(sizeof[sockaddr]())
     var status = getsockname(
         fd,
         local_address_ptr,
-        Pointer[socklen_t].address_of(local_address_ptr_size),
+        UnsafePointer[socklen_t].address_of(local_address_ptr_size),
     )
     if status == -1:
         raise Error("get_sock_name: Failed to get address of local socket.")
-    var addr_in = local_address_ptr.bitcast[sockaddr_in]().load()
+    var addr_in = local_address_ptr.bitcast[sockaddr_in]().take_pointee()
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
@@ -268,18 +268,18 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
 
 fn get_peer_name(fd: Int32) raises -> HostPort:
     """Return the address of the peer connected to the socket."""
-    var remote_address_ptr = Pointer[sockaddr].alloc(1)
+    var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
     var status = getpeername(
         fd,
         remote_address_ptr,
-        Pointer[socklen_t].address_of(remote_address_ptr_size),
+        UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
     )
     if status == -1:
         raise Error("get_peer_name: Failed to get address of remote socket.")
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
-    var addr_in = remote_address_ptr.bitcast[sockaddr_in]().load()
+    var addr_in = remote_address_ptr.bitcast[sockaddr_in]().take_pointee()
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),

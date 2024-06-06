@@ -121,8 +121,8 @@ struct SysServer:
             while True:
                 var buf = Bytes()
                 var read_len = conn.read(buf)
-                
-                if read_len == 0:
+
+                if read_len == 0 or buf[0] == 2:
                     conn.close()
                     break
                 
@@ -146,9 +146,9 @@ struct SysServer:
                     conn.close()
                     raise Error("Failed to parse request line:" + e.__str__())
 
-                if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
+                if header.content_length() > 0 and header.content_length() != (len(request_body) + 1):
                     var remaining_body = Bytes()
-                    var remaining_len = header.content_length() - len(request_body)
+                    var remaining_len = header.content_length() - (len(request_body) + 1)
                     while remaining_len > 0:
                         var read_len = conn.read(remaining_body)
                         buf.extend(remaining_body)

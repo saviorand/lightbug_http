@@ -102,10 +102,10 @@ struct SysListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
-        var their_addr_ptr = Pointer[sockaddr].alloc(1)
+        var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
         var new_sockfd = accept(
-            self.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
+            self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         )
         if new_sockfd == -1:
             print("Failed to accept connection")
@@ -147,7 +147,7 @@ struct SysListenConfig(ListenConfig):
         var bin_port = htons(UInt16(addr.port))
 
         var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
-        var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
+        var ai_ptr = UnsafePointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
         var sockfd = socket(address_family, SOCK_STREAM, 0)
         if sockfd == -1:
@@ -158,7 +158,7 @@ struct SysListenConfig(ListenConfig):
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
-            Pointer[Int].address_of(yes).bitcast[c_void](),
+            UnsafePointer[Int].address_of(yes).bitcast[c_void](),
             sizeof[Int](),
         )
 
@@ -216,7 +216,7 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
+        var new_buf = UnsafePointer[UInt8]().alloc(default_buffer_size)
         var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
         if bytes_recv == -1:
             return 0

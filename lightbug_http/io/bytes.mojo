@@ -3,7 +3,7 @@ from python import PythonObject
 
 alias Byte = UInt8
 alias Bytes = List[Byte]
-alias BytesView = Span[Byte, False, ImmutableStaticLifetime]
+alias BytesView = Span[is_mutable=False, T=Byte, lifetime=ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
     # This is currently null-terminated, which we don't want in HTTP responses

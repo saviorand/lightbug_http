@@ -122,8 +122,8 @@ struct HTTPRequest(Request):
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    fn get_body_bytes(self: Reference[Self]) -> BytesView:
-        return BytesView(unsafe_ptr=self[].body_raw.unsafe_ptr(), len=self[].body_raw.size)
+    fn get_body_bytes(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
     fn set_host(inout self, host: String) -> Self:
         _ = self.__uri.set_host(host)
@@ -193,8 +193,8 @@ struct HTTPResponse(Response):
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
     
-    fn get_body_bytes(self: Reference[Self]) -> BytesView:
-        return BytesView(unsafe_ptr=self[].body_raw.unsafe_ptr(), len=self[].body_raw.size)
+    fn get_body_bytes(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
@@ -212,7 +212,7 @@ struct HTTPResponse(Response):
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
@@ -222,7 +222,7 @@ fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
@@ -232,7 +232,7 @@ fn OK(body: String, content_type: String) -> HTTPResponse:
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), body,
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), body,
     )
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
@@ -250,7 +250,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -298,7 +298,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
 fn encode(res: HTTPResponse) raises -> String:
@@ -361,7 +361,7 @@ fn encode(res: HTTPResponse) raises -> String:
         _ = builder.write_string(nChar)
         _ = builder.write(res.get_body_bytes())
 
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)
