@@ -250,7 +250,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -298,7 +298,7 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[ImmutableStaticLifet
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
 
-    return StringSlice[ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
 fn encode(res: HTTPResponse) raises -> String:
@@ -361,7 +361,7 @@ fn encode(res: HTTPResponse) raises -> String:
         _ = builder.write_string(nChar)
         _ = builder.write(res.get_body_bytes())
     print(builder.render())
-    return StringSlice[ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)
