@@ -360,7 +360,7 @@ fn encode(res: HTTPResponse) raises -> String:
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
         _ = builder.write(res.get_body_bytes())
-    print(builder.render())
+
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
@@ -376,7 +376,7 @@ fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request_body = String()
 
     if len(request_first_line_headers_body) > 1:
-        request_body = request_first_line_headers_body[1]
+        request_body = request_first_line_headers_body[1]    
     
     var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
 

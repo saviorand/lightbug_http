@@ -222,8 +222,10 @@ struct SysConnection(Connection):
             return 0
         if bytes_recv == 0:
             return 0
-        var bytes_str = String(new_buf.bitcast[UInt8](), bytes_recv)
-        buf = bytes(bytes_str)
+        var bytes_str = String(new_buf.bitcast[UInt8](), bytes_recv + 1)
+        print(bytes_str)
+        buf = bytes(bytes_str, pop=False)
+        print(String(buf))
         return bytes_recv
 
     fn write(self, msg: String) raises -> Int:

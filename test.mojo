@@ -3,7 +3,7 @@ from lightbug_http import *
 @value
 struct MyPrinter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        var body = req.body_raw
+        var body = req.get_body_bytes()
         return HTTPResponse(body)
     
 

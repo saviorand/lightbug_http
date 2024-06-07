@@ -122,7 +122,7 @@ struct SysServer:
                 var buf = Bytes()
                 var read_len = conn.read(buf)
 
-                if read_len == 0 or buf[0] == 0:
+                if read_len == 0:
                     conn.close()
                     break
                 
