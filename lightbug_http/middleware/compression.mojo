@@ -11,7 +11,9 @@ struct CompressionMiddleware(Middleware):
         response.body = self.compress(response.body)
         return response
 
-    fn compress(self, body: Bytes) -> Bytes:
+    # TODO: implement compression
+    # Should return Bytes instead of String but we don't have Bytes type yet
+    fn compress(self, body: String) -> String:
         #TODO: implement compression
         return body
 

@@ -20,7 +20,7 @@ fn NotFound(body: String, content_type: String) -> HTTPResponse:
     )
 
 fn InternalServerError(body: String) -> HTTPResponse:
-   return InternalServerErrorResponse(body, String("text/plain"))
+   return InternalServerError(body, String("text/plain"))
 
 fn InternalServerError(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
@@ -29,11 +29,12 @@ fn InternalServerError(body: String, content_type: String) -> HTTPResponse:
     )
 
 fn Unauthorized(body: String) -> HTTPResponse:
-    return UnauthorizedResponse(body, String("text/plain"))
+    return Unauthorized(body, String("text/plain"))
 
 fn Unauthorized(body: String, content_type: String) -> HTTPResponse:
     var header = ResponseHeader(True, 401, String("Unauthorized").as_bytes(), content_type.as_bytes())
-    header.headers["WWW-Authenticate"] = "Basic realm=\"Login Required\""
+    # TODO: currently no way to set headers or cookies 
+    # header.headers["WWW-Authenticate"] = "Basic realm=\"Login Required\""
 
     return HTTPResponse(
         header,

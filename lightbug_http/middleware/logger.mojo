@@ -7,6 +7,9 @@ struct LoggerMiddleware(Middleware):
         self.next = next
 
     fn call(self, context: Context) -> HTTPResponse:
-        print(f"Request: {context.request}")
-        return self.next.call(context)
-        print(f"Response: {context.response}")
+        var request = context.request
+        #TODO: request is not printable
+        # print("Request: ", request)
+        var response = self.next.call(context)
+        print("Response:",  response)
+        return response
