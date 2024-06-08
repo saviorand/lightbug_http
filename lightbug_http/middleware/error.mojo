@@ -7,9 +7,6 @@ from lightbug_http.middleware.helpers import InternalServerError
 struct ErrorMiddleware(Middleware):
     var next: Middleware
 
-    fn set_next(self, next: Middleware):
-        self.next = next
-
     fn call(inout self, context: Context) -> HTTPResponse:
         try:
             return self.next.call(context)

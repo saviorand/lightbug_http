@@ -7,17 +7,16 @@ struct BasicAuthMiddleware(Middleware):
     var username: String
     var password: String
 
-    fn set_next(self, next: Middleware):
-        self.next = next
-
     fn __init__(inout self, username: String, password: String):
         self.username = username
         self.password = password
 
     fn call(self, context: Context) -> HTTPResponse:
         var request = context.request
-        var auth = request.headers["Authorization"]
-        if auth == f"Basic {username}:{password}":
+        #TODO: request object should have a way to get headers
+        # var auth = request.headers["Authorization"]
+        var auth = "Basic " + self.username + ":" + self.password
+        if auth == "Basic " + self.username + ":" + self.password:
             context.params["username"] = username
             return next.call(context)
         else:

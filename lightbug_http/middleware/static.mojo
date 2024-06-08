@@ -6,9 +6,6 @@ struct StaticMiddleware(Middleware):
     var next: Middleware
     var path: String
 
-    fn set_next(self, next: Middleware):
-        self.next = next
-
     fn __init__(inout self, path: String):
         self.path = path
 

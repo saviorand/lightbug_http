@@ -1,10 +1,10 @@
-## Compression middleware compresses the response body.
+from lightbug_http.io.bytes import bytes
+
+alias Bytes = List[Int8]
+
 @value
 struct CompressionMiddleware(Middleware):
     var next: Middleware
-
-    fn set_next(self, next: Middleware):
-        self.next = next
 
     fn call(self, context: Context) -> HTTPResponse:
         var response = self.next.call(context)
@@ -12,8 +12,7 @@ struct CompressionMiddleware(Middleware):
         return response
 
     # TODO: implement compression
-    # Should return Bytes instead of String but we don't have Bytes type yet
-    fn compress(self, body: String) -> String:
+    fn compress(self, body: String) -> Bytes:
         #TODO: implement compression
-        return body
+        return bytes(body)
 

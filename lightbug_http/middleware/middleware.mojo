@@ -18,8 +18,6 @@ struct Context[ParamType: CollectionElement]:
 ## Middleware is an interface for processing HTTP requests.
 ## Each middleware in the chain can modify the request and response.
 trait Middleware:
-    fn set_next(self, next: Middleware):
-        ...
     fn call(self, context: Context) -> HTTPResponse:
         ...
 
@@ -36,7 +34,7 @@ struct MiddlewareChain(HTTPService):
             var current = self.root
             while current.next != nil:
                 current = current.next
-            current.set_next(middleware)
+            current.next = middleware
 
     fn func(self, request: HTTPRequest) raises -> HTTPResponse:
         var context = Context(request)

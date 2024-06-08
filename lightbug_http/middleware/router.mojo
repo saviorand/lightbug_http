@@ -14,9 +14,6 @@ struct RouterMiddleware[HTTPHandlerType: HTTPHandler](Middleware):
     fn __init__(inout self):
         self.routes = Dict[String, HTTPHandlerType]()
 
-    fn set_next(self, next: Middleware):
-        self.next = next
-
     fn add(self, method: String, route: String, handler: HTTPHandlerType):
         self.routes[method + ":" + route] = handler
 

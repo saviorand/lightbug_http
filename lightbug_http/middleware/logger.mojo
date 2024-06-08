@@ -3,9 +3,6 @@
 struct LoggerMiddleware(Middleware):
     var next: Middleware
 
-    fn set_next(self, next: Middleware):
-        self.next = next
-
     fn call(self, context: Context) -> HTTPResponse:
         var request = context.request
         #TODO: request is not printable

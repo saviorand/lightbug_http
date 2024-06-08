@@ -5,8 +5,5 @@ from lightbug_http.middleware.helpers import NotFound
 struct NotFoundMiddleware(Middleware):
     var next: Middleware
     
-    fn set_next(self, next: Middleware):
-        self.next = next
-    
     fn call(self, context: Context) -> HTTPResponse:
         return NotFound("Not Found")
