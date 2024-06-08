@@ -93,7 +93,7 @@ fn to_char_ptr(s: Bytes) -> UnsafePointer[c_char]:
     return ptr
 
 fn c_charptr_to_string(s: UnsafePointer[c_char]) -> String:
-    return String(s.bitcast[Int8](), strlen(s))
+    return String(s.bitcast[UInt8](), strlen(s))
 
 
 fn cftob(val: c_int) -> Bool:

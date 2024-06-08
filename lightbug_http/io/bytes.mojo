@@ -49,7 +49,7 @@ fn next_line(b: Bytes) raises -> (Bytes, Bytes):
     var n = n_next
     if n > 0 and (b[n-1] == bytes(rChar, pop=False)[0]):
         n -= 1
-    return (b[:n], b[n_next+1:])
+    return (b[:n+1], b[n_next+1:])
 
 @value
 @register_passable("trivial")

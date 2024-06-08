@@ -296,7 +296,7 @@ struct RequestHeader:
             raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
         
         _ = self.set_protocol_bytes(proto)
-        _ = self.set_request_uri_bytes(b[:n])
+        _ = self.set_request_uri_bytes(b[:n - 2]) # without the null terminator
         
         return len(buf) - len(b_next)
        
@@ -653,7 +653,7 @@ struct ResponseHeader:
         _ = self.parse_first_line(first_line)
 
         for header in headers:
-            var header_str = header.__getitem__()
+            var header_str = header[]
             var separator = header_str.find(":")
             if separator == -1:
                 raise Error("Invalid header")

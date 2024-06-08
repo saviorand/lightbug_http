@@ -258,7 +258,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
     )
     if status == -1:
         raise Error("get_sock_name: Failed to get address of local socket.")
-    var addr_in = local_address_ptr.bitcast[sockaddr_in]().__getitem__()
+    var addr_in = local_address_ptr.bitcast[sockaddr_in]()[]
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
@@ -279,7 +279,7 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
         raise Error("get_peer_name: Failed to get address of remote socket.")
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
-    var addr_in = remote_address_ptr.bitcast[sockaddr_in]().__getitem__()
+    var addr_in = remote_address_ptr.bitcast[sockaddr_in]()[]
 
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),

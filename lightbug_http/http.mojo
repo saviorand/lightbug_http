@@ -321,8 +321,10 @@ fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStat
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
-    
-    _ = builder.write(req.header.protocol())
+
+    # _ = builder.write(req.header.protocol())
+    # hardcoded for now
+    _ = builder.write_string("HTTP/1.1")
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
@@ -421,7 +423,7 @@ fn encode(res: HTTPResponse) raises -> String:
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
         _ = builder.write(res.get_body_bytes())
-
+    
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):

@@ -142,7 +142,8 @@ struct SysListenConfig(ListenConfig):
             ip_buf_size = 16
 
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        var raw_ip = ip_buf.bitcast[c_uint]().__getitem__()
+        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
+        var raw_ip = ip_buf.bitcast[c_uint]()[]
 
         var bin_port = htons(UInt16(addr.port))
 
@@ -154,14 +155,13 @@ struct SysListenConfig(ListenConfig):
             print("Socket creation error")
 
         var yes: Int = 1
-        var opterr = setsockopt(
+        _ = setsockopt(
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
             UnsafePointer[Int].address_of(yes).bitcast[c_void](),
             sizeof[Int](),
         )
-        print(opterr)
 
         var bind_success = False
         var bind_fail_logged = False
@@ -276,13 +276,13 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
-    var ai_canonname: Pointer[c_char]
-    var ai_addr: Pointer[sockaddr]
-    var ai_next: Pointer[c_void]
+    var ai_canonname: UnsafePointer[c_char]
+    var ai_addr: UnsafePointer[sockaddr]
+    var ai_next: UnsafePointer[c_void]
 
     fn __init__() -> Self:
         return Self(
-            0, 0, 0, 0, 0, Pointer[c_char](), Pointer[sockaddr](), Pointer[c_void]()
+            0, 0, 0, 0, 0, UnsafePointer[c_char](), UnsafePointer[sockaddr](), UnsafePointer[c_void]()
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -298,7 +298,7 @@ struct addrinfo_macos(AnAddrInfo):
         """
         var host_ptr = to_char_ptr(host)
         var servinfo = UnsafePointer[Self]().alloc(1)
-        servinfo[0] = Self()
+        initialize_pointee_move(servinfo, Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -315,7 +315,7 @@ struct addrinfo_macos(AnAddrInfo):
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo[0]
+        var addrinfo = servinfo[]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
@@ -325,7 +325,7 @@ struct addrinfo_macos(AnAddrInfo):
                 " ai_addr is null."
             )
 
-        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
 
@@ -342,13 +342,13 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
-    var ai_addr: Pointer[sockaddr]
-    var ai_canonname: Pointer[c_char]
-    var ai_next: Pointer[c_void]
+    var ai_addr: UnsafePointer[sockaddr]
+    var ai_canonname: UnsafePointer[c_char]
+    var ai_next: UnsafePointer[c_void]
 
     fn __init__() -> Self:
         return Self(
-            0, 0, 0, 0, 0, Pointer[sockaddr](), Pointer[c_char](), Pointer[c_void]()
+            0, 0, 0, 0, 0, UnsafePointer[sockaddr](), UnsafePointer[c_char](), UnsafePointer[c_void]()
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -364,7 +364,7 @@ struct addrinfo_unix(AnAddrInfo):
         """
         var host_ptr = to_char_ptr(String(host))
         var servinfo = UnsafePointer[Self]().alloc(1)
-        servinfo[0] = Self()
+        initialize_pointee_move(servinfo, Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -381,7 +381,7 @@ struct addrinfo_unix(AnAddrInfo):
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo[0]
+        var addrinfo = servinfo[]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
@@ -391,7 +391,7 @@ struct addrinfo_unix(AnAddrInfo):
                 " ai_addr is null."
             )
 
-        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
 

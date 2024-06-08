@@ -177,56 +177,56 @@ struct SysServer:
         
         var req_number = 0
         
-        while True:
-            req_number += 1
+        # while True:
+        req_number += 1
 
-            var first_byte = reader.peek(1)
-            if len(first_byte) == 0:
-                error = Error("Failed to read first byte from connection")
+        var first_byte = reader.peek(1)
+        if len(first_byte) == 0:
+            error = Error("Failed to read first byte from connection")
+        
+        var header = RequestHeader()
+        # var end_of_first_line_headers: Int
+        
+        try:
+            _ = header.parse_raw(reader)
+        except e:
+            error = Error("Failed to parse request headers: " + e.__str__())
+        
+
+        var uri = URI(self.address() + String(header.request_uri()))
+        try:
+            uri.parse()
+        except e:
+            error = Error("Failed to parse request line:" + e.__str__())
+        
+        if header.content_length() > 0:
+            if max_request_body_size > 0 and header.content_length() > max_request_body_size:
+                error = Error("Request body too large")
             
-            var header = RequestHeader()
-            # var end_of_first_line_headers: Int
-            
-            try:
-                _ = header.parse_raw(reader)
-            except e:
-                error = Error("Failed to parse request headers: " + e.__str__())
-            
+            # var remaining_body = Bytes()
+            # var remaining_len = header.content_length() - (len(request_body) + 1)
+            # while remaining_len > 0:
+            #     var read_len = conn.read(remaining_body)
+            #     buf.extend(remaining_body)
+            #     remaining_len -= read_len
 
-            var uri = URI(self.address() + String(header.request_uri()))
-            try:
-                uri.parse()
-            except e:
-                error = Error("Failed to parse request line:" + e.__str__())
-            
-            if header.content_length() > 0:
-                if max_request_body_size > 0 and header.content_length() > max_request_body_size:
-                    error = Error("Request body too large")
-                
-                # var remaining_body = Bytes()
-                # var remaining_len = header.content_length() - (len(request_body) + 1)
-                # while remaining_len > 0:
-                #     var read_len = conn.read(remaining_body)
-                #     buf.extend(remaining_body)
-                #     remaining_len -= read_len
+        var request = HTTPRequest(
+                uri,
+                Bytes(),
+                header,
+            )
 
-            var request = HTTPRequest(
-                    uri,
-                    Bytes(),
-                    header,
-                )
+        _ = request.read_body(reader, header.content_length(), max_request_body_size)
+        print(encode(request, uri))
+        var res = handler.func(request)
+        
+        # if not self.tcp_keep_alive:
+        _ = res.set_connection_close()
+        
+        var res_encoded = encode(res)
 
-            _ = request.read_body(reader, header.content_length(), max_request_body_size)
+        _ = conn.write(res_encoded)
 
-            var res = handler.func(request)
-            
-            # if not self.tcp_keep_alive:
-            _ = res.set_connection_close()
-            
-            var res_encoded = encode(res)
-
-            _ = conn.write(res_encoded)
-
-            # if not self.tcp_keep_alive:
-            conn.close()
-            # break
+        # if not self.tcp_keep_alive:
+        conn.close()
+        # break
