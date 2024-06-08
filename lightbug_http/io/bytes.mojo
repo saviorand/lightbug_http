@@ -1,5 +1,5 @@
 from python import PythonObject
-
+from lightbug_http.strings import nChar, rChar
 
 alias Byte = UInt8
 alias Bytes = List[Byte]
@@ -18,6 +18,38 @@ fn bytes(s: String, pop: Bool = True) -> Bytes:
     if pop:
         _ = buf.pop()
     return buf
+
+fn bytes_equal(a: Bytes, b: Bytes) -> Bool:
+    return String(a) == String(b)
+
+fn index_byte(buf: Bytes, c: Byte) -> Int:
+    for i in range(len(buf)):
+        if buf[i] == c:
+            return i
+    return -1
+
+fn last_index_byte(buf: Bytes, c: Byte) -> Int:
+    for i in range(len(buf)-1, -1, -1):
+        if buf[i] == c:
+            return i
+    return -1
+
+fn compare_case_insensitive(a: Bytes, b: Bytes) -> Bool:
+    if len(a) != len(b):
+        return False
+    for i in range(len(a)):
+        if a[i].__xor__(0x20) != b[i].__xor__(0x20):
+            return False
+    return True
+
+fn next_line(b: Bytes) raises -> (Bytes, Bytes):
+    var n_next = index_byte(b, bytes(nChar, pop=False)[0])
+    if n_next < 0:
+        raise Error("next_line: newline not found")
+    var n = n_next
+    if n > 0 and (b[n-1] == bytes(rChar, pop=False)[0]):
+        n -= 1
+    return (b[:n], b[n_next+1:])
 
 @value
 @register_passable("trivial")
@@ -44,6 +76,3 @@ struct UnsafeString:
         var s = String(self.data, self.len)
         return s
 
-
-fn bytes_equal(a: Bytes, b: Bytes) -> Bool:
-    return String(a) == String(b)

@@ -1,6 +1,7 @@
 from time import now
 from external.morrow import Morrow
 from external.gojo.strings.builder import StringBuilder
+from external.gojo.bufio import Reader
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -125,6 +126,10 @@ struct HTTPRequest(Request):
     fn get_body_bytes(self) -> BytesView:
         return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
+    fn set_body_bytes(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
+
     fn set_host(inout self, host: String) -> Self:
         _ = self.__uri.set_host(host)
         return self
@@ -159,6 +164,62 @@ struct HTTPRequest(Request):
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
+    
+    fn read_body(inout self, inout r: Reader, content_length: Int, max_body_size: Int) raises -> None:
+        var body_buf = self.body_raw
+        
+        if content_length == 0:
+            return
+        
+        if content_length > max_body_size:
+            raise Error("Request body too large")
+        
+        var offset = len(body_buf)
+        var dst_len = offset + content_length
+        if dst_len > max_body_size:
+            raise Error("Buffer overflow risk")
+        
+        body_buf.resize(dst_len)
+        
+        while offset < dst_len:
+            var buffer_after_offset = body_buf[offset:]
+            var read_length: Int
+            var read_error: Error
+            read_length, read_error = r.read(buffer_after_offset)
+            if read_length <= 0:
+                if read_error:
+                    raise read_error
+                break
+            offset += read_length
+        
+        _ = self.set_body_bytes(body_buf[:offset])
+
+        # var body_buf = self.body_raw
+        
+        # if content_length == 0:
+        #     return body_buf
+        
+        # if max_body_size > 0 and content_length > max_body_size:
+        #     raise Error("Request body too large")
+        
+        # if len(body_buf) > max_body_size:
+        #     raise Error("Request body too large")
+        
+        # var offset = len(body_buf)
+        # var dst_len = offset + content_length
+        # if dst_len > max_body_size:
+        #     body_buf.resize(dst_len)
+        
+        # while True:
+        #     var buffer_after_offset = body_buf[offset:]
+        #     var len: Int
+        #     len, _ = r.read(buffer_after_offset)
+        #     if len <= 0:
+        #         return body_buf[:offset]
+        #     offset += len
+        #     if offset == dst_len:
+        #         return body_buf
+        
 
 
 @value

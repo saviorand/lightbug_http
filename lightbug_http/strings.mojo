@@ -12,9 +12,11 @@ alias strMethodGet = "GET"
 
 alias rChar = "\r"
 alias nChar = "\n"
+alias colonChar = ":"
 
 alias empty_string = ""
 alias whitespace = " "
+alias tab = "\t"
 
 @value
 struct NetworkType:

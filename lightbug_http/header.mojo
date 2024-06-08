@@ -1,3 +1,4 @@
+from external.gojo.bufio import Reader
 from lightbug_http.strings import (
     strHttp11,
     strHttp10,
@@ -5,8 +6,11 @@ from lightbug_http.strings import (
     strMethodGet,
     rChar,
     nChar,
+    colonChar,
+    whitespace,
+    tab
 )
-from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal, bytes
+from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal, bytes, index_byte, compare_case_insensitive, next_line, last_index_byte
 
 alias statusOK = 200
 
@@ -23,6 +27,7 @@ struct RequestHeader:
     var __host: Bytes
     var __content_type: Bytes
     var __user_agent: Bytes
+    var __transfer_encoding: Bytes
     var raw_headers: Bytes
     var __trailer: Bytes
 
@@ -38,6 +43,7 @@ struct RequestHeader:
         self.__host = Bytes()
         self.__content_type = Bytes()
         self.__user_agent = Bytes()
+        self.__transfer_encoding = Bytes()
         self.raw_headers = Bytes()
         self.__trailer = Bytes()
 
@@ -53,6 +59,7 @@ struct RequestHeader:
         self.__host = bytes(host)
         self.__content_type = Bytes()
         self.__user_agent = Bytes()
+        self.__transfer_encoding = Bytes()
         self.raw_headers = Bytes()
         self.__trailer = Bytes()
 
@@ -68,6 +75,7 @@ struct RequestHeader:
         self.__host = Bytes()
         self.__content_type = Bytes()
         self.__user_agent = Bytes()
+        self.__transfer_encoding = Bytes()
         self.raw_headers = rawheaders
         self.__trailer = Bytes()
 
@@ -84,6 +92,7 @@ struct RequestHeader:
         host: Bytes,
         content_type: Bytes,
         user_agent: Bytes,
+        transfer_encoding: Bytes,
         raw_headers: Bytes,
         trailer: Bytes,
     ) -> None:
@@ -98,6 +107,7 @@ struct RequestHeader:
         self.__host = host
         self.__content_type = content_type
         self.__user_agent = user_agent
+        self.__transfer_encoding = transfer_encoding
         self.raw_headers = raw_headers
         self.__trailer = trailer
 
@@ -191,6 +201,17 @@ struct RequestHeader:
             return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
         return BytesView(unsafe_ptr=self.__request_uri.unsafe_ptr(), len=self.__request_uri.size)
 
+    fn set_transfer_encoding(inout self, transfer_encoding: String) -> Self:
+        self.__transfer_encoding = bytes(transfer_encoding)
+        return self
+    
+    fn set_transfer_encoding_bytes(inout self, transfer_encoding: Bytes) -> Self:
+        self.__transfer_encoding = transfer_encoding
+        return self
+    
+    fn transfer_encoding(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__transfer_encoding.unsafe_ptr(), len=self.__transfer_encoding.size)
+
     fn set_trailer(inout self, trailer: String) -> Self:
         self.__trailer = bytes(trailer)
         return self
@@ -221,100 +242,137 @@ struct RequestHeader:
 
     fn headers(self) -> String:
         return String(self.raw_headers)
-    
-    fn parse_first_line(inout self, request_line: String) raises -> None:
-        var n = request_line.find(" ")
-        if n <= 0:
-            raise Error("Cannot find HTTP request method in the request")
 
-        var method = request_line[:n + 1]
-        _ = self.set_method(method)
-
-        var rest_of_request_line = request_line[n + 1 :]
-
-        n = rest_of_request_line.rfind(" ")
-        if n < 0:
-            n = len(rest_of_request_line)
-        elif n == 0:
-            raise Error("Request URI cannot be empty")
-        else:
-            var proto = rest_of_request_line[n + 1 :]
-            _ = self.set_protocol_bytes(bytes(proto, pop=False))
-
-        var request_uri = rest_of_request_line[:n + 1]
-        
-        _ = self.set_request_uri(request_uri)
-
-        # Now process the rest of the headers
-        _ = self.set_content_length(-2)
-
-    fn parse_from_list(inout self, headers: List[String], request_line: String) raises -> None:
-        _ = self.parse_first_line(request_line)
-
-        for header in headers:
-            var header_str = header.__getitem__()
-            var separator = header_str.find(":")
-            if separator == -1:
-                raise Error("Invalid header")
+    fn parse_raw(inout self, inout r: Reader) raises -> None:
+        var n = 1
+        while True:
+            var first_byte = r.peek(n)
+            if len(first_byte) == 0:
+                raise Error("Failed to read first byte from header")
             
-            var key = String(header_str)[:separator]
-            var value = String(header_str)[separator + 1 :]
+            var buf: Bytes
+            var e: Error
+            
+            buf, e = r.peek(r.buffered())
+            if e:
+                raise Error("Failed to read header: " + e.__str__())
+            if len(buf) == 0:
+                raise Error("Failed to read header")
+            
+            var end_of_first_line = self.parse_first_line(buf)
 
-            if len(key) > 0:
-                self.parse_header(key, value)
+            _ = self.read_raw_headers(buf[end_of_first_line:])
 
-    fn parse_raw(inout self, request_line: String) raises -> None:
-        var headers = self.raw_headers
-        _ = self.parse_first_line(request_line)
+            _ = self.parse_headers(buf[end_of_first_line:])
+            
+            # var end_of_first_line_headers = end_of_first_line + end_of_headers
+
+    fn parse_first_line(inout self, buf: Bytes) raises -> Int:
+        var b_next = buf
+        var b = Bytes()
+
+        while len(b) == 0:
+            try:
+                b, b_next = next_line(b_next)
+            except e:
+                raise Error("Failed to read first line from request, " + e.__str__())
+        
+        var n = index_byte(b, bytes(whitespace, pop=False)[0])
+        if n <= 0:
+            raise Error("Could not find HTTP request method in the request: " + String(b))
+        
+        _ = self.set_method_bytes(b[:n])
+        b = b[n + 1:]
+
+        n = last_index_byte(b, bytes(whitespace, pop=False)[0])
+        if n < 0:
+            raise Error("Could not find whitespace in request line: " + String(b))
+        elif n == 0:
+            raise Error("Request URI is empty: " + String(b))
+        
+        var proto = b[n + 1 :]
+
+        if len(proto) != len(bytes(strHttp11, pop=False)):
+            raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
+        
+        _ = self.set_protocol_bytes(proto)
+        _ = self.set_request_uri_bytes(b[:n])
+        
+        return len(buf) - len(b_next)
+       
+    fn parse_headers(inout self, buf: Bytes) raises -> None:
+        _ = self.set_content_length(-2)
         var s = headerScanner()
-        s.b = headers
-        s.disable_normalization = self.disable_normalization
+        s.set_b(buf)
 
         while s.next():
-            if len(s.key) > 0:
-                self.parse_header(s.key, s.value)
+            if len(s.key()) > 0:
+                self.parse_header(s.key(), s.value())
     
-    fn parse_header(inout self, key: String, value: String) raises -> None:
-        # The below is based on the code from Golang's FastHTTP library
-        # Spaces between the header key and colon not allowed; RFC 7230, 3.2.4.
-        if key.find(" ") != -1 or key.find("\t") != -1:
-            raise Error("Invalid header key")
-        if key[0] == "h" or key[0] == "H":
-            if key.lower() == "host":
+    fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
+        if index_byte(key, bytes(colonChar, pop=False)[0]) == -1 or index_byte(key, bytes(tab, pop=False)[0]) != -1:
+            raise Error("Invalid header key: " + String(key))
+
+        var key_first = key[0].__xor__(0x20)
+
+        if key_first == bytes("h", pop=False)[0] or key_first == bytes("H", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("host", pop=False)):
                 _ = self.set_host_bytes(bytes(value, pop=False))
                 return
-        elif key[0] == "u" or key[0] == "U":
-            if key.lower() == "user-agent":
+        elif key_first == bytes("u", pop=False)[0] or key_first == bytes("U", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("user-agent", pop=False)):
                 _ = self.set_user_agent_bytes(bytes(value, pop=False))
                 return
-        elif key[0] == "c" or key[0] == "C":
-            if key.lower() == "content-type":
+        elif key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("content-type", pop=False)):
                 _ = self.set_content_type_bytes(bytes(value, pop=False))
                 return
-            if key.lower() == "content-length":
+            if compare_case_insensitive(key, bytes("content-length", pop=False)):
                 if self.content_length() != -1:
-                    var content_length = value
-                    _ = self.set_content_length(atol(content_length))
-                    _ = self.set_content_length_bytes(content_length.as_bytes_slice())
+                    _ = self.set_content_length_bytes(bytes(value))
                 return
-            if key.lower() == "connection":
-                if value == "close":
+            if compare_case_insensitive(key, bytes("connection", pop=False)):
+                if compare_case_insensitive(value, bytes("close", pop=False)):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
-                    # _ = self.appendargbytes(s.key, s.value)
                 return
-        elif key[0] == "t" or key[0] == "T":
-            if key.lower() == "transfer-encoding":
-                if value != "identity":
-                    _ = self.set_content_length(-1)
-                    # _ = self.setargbytes(s.key, strChunked)
+        elif key_first == bytes("t", pop=False)[0] or key_first == bytes("T", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("transfer-encoding", pop=False)):
+                _ = self.set_transfer_encoding_bytes(bytes(value, pop=False))
                 return
-            if key.lower() == "trailer":
+            if compare_case_insensitive(key, bytes("trailer", pop=False)):
                 _ = self.set_trailer_bytes(bytes(value, pop=False))
-        # close connection for non-http/1.1 request unless 'Connection: keep-alive' is set.
-        # if self.no_http_1_1 and not self.__connection_close:
-        # self.__connection_close = not has_header_value(v, strKeepAlive)
+                return
+        if self.content_length() < 0:
+            _ = self.set_content_length(0)
+        return
+
+    fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
+        var n = index_byte(buf, bytes(nChar, pop=False)[0]) # does this work?
+        
+        if n == -1:
+            self.raw_headers = self.raw_headers[:0]
+            raise Error("Failed to find a newline in headers")
+        
+        if n == 0 or (n == 1 and (buf[0] == bytes(rChar, pop=False)[0])):
+            # empty line -> end of headers
+            return n + 1
+        
+        n += 1
+        var b = buf
+        var m = n
+        while True:
+            b = b[m:]
+            m = index_byte(b, bytes(nChar, pop=False)[0])
+            if m == -1:
+                raise Error("Failed to find a newline in headers")
+            m += 1
+            n += m
+            if m == 2 and (b[0] == bytes(rChar, pop=False)[0]) or m == 1:
+                self.raw_headers = self.raw_headers + buf[:n]
+                return n
+
 
 
 @value
@@ -612,12 +670,12 @@ struct ResponseHeader:
         _ = self.parse_first_line(first_line)
 
         var s = headerScanner()
-        s.b = headers
+        s.set_b(headers)
         s.disable_normalization = self.disable_normalization
 
         while s.next():
-            if len(s.key) > 0:
-                self.parse_header(s.key, s.value)
+            if len(s.key()) > 0:
+                self.parse_header(s.key(), s.value())
     
     fn parse_header(inout self, key: String, value: String) raises -> None:
         # The below is based on the code from Golang's FastHTTP library
@@ -656,60 +714,147 @@ struct ResponseHeader:
                 _ = self.set_trailer_bytes(bytes(value, pop=False))
 
 struct headerScanner:
-    var b: String  # string for now until we have a better way to subset Bytes
-    var key: String
-    var value: String
-    var err: Error
-    var subslice_len: Int
+    var __b: Bytes
+    var __key: Bytes
+    var __value: Bytes
+    var __subslice_len: Int
     var disable_normalization: Bool
-    var next_colon: Int
-    var next_line: Int
-    var initialized: Bool
+    var __next_colon: Int
+    var __next_line: Int
+    var __initialized: Bool
 
     fn __init__(inout self) -> None:
-        self.b = ""
-        self.key = ""
-        self.value = ""
-        self.err = Error()
-        self.subslice_len = 0
+        self.__b = Bytes()
+        self.__key = Bytes()
+        self.__value = Bytes()
+        self.__subslice_len = 0
         self.disable_normalization = False
-        self.next_colon = 0
-        self.next_line = 0
-        self.initialized = False
+        self.__next_colon = 0
+        self.__next_line = 0
+        self.__initialized = False
+
+    fn b(self) -> Bytes:
+        return self.__b
+
+    fn set_b(inout self, b: Bytes) -> None:
+        self.__b = b    
+
+    fn key(self) -> Bytes:
+        return self.__key
     
-    fn next(inout self) -> Bool:
-        if not self.initialized:
-            self.initialized = True
+    fn set_key(inout self, key: Bytes) -> None:
+        self.__key = key
 
-        if self.b.startswith('\r\n\r\n'):
-            self.b = self.b[2:]
+    fn value(self) -> Bytes:
+        return self.__value
+    
+    fn set_value(inout self, value: Bytes) -> None:
+        self.__value = value
+    
+    fn subslice_len(self) -> Int:
+        return self.__subslice_len
+    
+    fn set_subslice_len(inout self, n: Int) -> None:
+        self.__subslice_len = n
+
+    fn next_colon(self) -> Int:
+        return self.__next_colon
+
+    fn set_next_colon(inout self, n: Int) -> None:
+        self.__next_colon = n
+    
+    fn next_line(self) -> Int:
+        return self.__next_line
+    
+    fn set_next_line(inout self, n: Int) -> None:
+        self.__next_line = n
+    
+    fn initialized(self) -> Bool:
+        return self.__initialized
+
+    fn set_initialized(inout self) -> None:
+        self.__initialized = True
+    
+    fn next(inout self) raises -> Bool:
+        if not self.initialized():
+            self.set_next_colon(-1)
+            self.set_next_line(-1)
+            self.set_initialized()
+        
+        var b_len = len(self.b())
+        if b_len >= 2 and (self.b()[0] == bytes(rChar, pop=False)[0]) and (self.b()[1] == bytes(nChar, pop=False)[0]):
+            self.set_b(self.b()[2:])
+            self.set_subslice_len(2)
             return False
-
-        if self.b.startswith('\r\n'):
-            self.b = self.b[1:]
+        
+        if b_len >= 1 and (self.b()[0] == bytes(nChar, pop=False)[0]):
+            self.set_b(self.b()[1:])
+            self.set_subslice_len(self.subslice_len() + 1)
             return False
-
-        var n = self.b.find(':')
-        var x = self.b.find('\r\n')
-        if x != -1 and x < n:
-            return False
-
-        if n == -1:
-            # If we don't find a colon, assume we have reached the end
-            return False
-
-        self.key = self.b[:n].strip()
-        self.b = self.b[n+1:].strip()
-
-        x = self.b.find('\r\n')
-        if x == -1:
-            if len(self.b) == 0:
-                return False
-            self.value = self.b.strip()  
-            self.b = ''
+        
+        var n: Int
+        if self.next_colon() >= 0:
+            n = self.next_colon()
+            self.set_next_colon(-1)
         else:
-            self.value = self.b[:x].strip()
-            self.b = self.b[x+1:]
+            n = index_byte(self.b(), bytes(colonChar, pop=False)[0])
+            var x = index_byte(self.b(), bytes(nChar, pop=False)[0])
+            if x > 0:
+                raise Error("Invalid header, did not find a newline at the end of the header")
+            if x < n:
+                raise Error("Invalid header, found a newline before the colon")
+        if n < 0:
+            raise Error("Invalid header, did not find a colon")
+        
+        self.set_key(self.b()[:n])
+        n += n
+        while len(self.b()) > n and (self.b()[n] == bytes(whitespace, pop=False)[0]):
+            n += 1
+            self.set_next_line(self.next_line() - 1)
+        
+        self.set_subslice_len(self.subslice_len() + n)
+        self.set_b(self.b()[n:])
+
+        if self.next_line() >= 0:
+            n = self.next_line()
+            self.set_next_line(-1)
+        else:
+            n = index_byte(self.b(), bytes(nChar, pop=False)[0])
+        if n < 0:
+            raise Error("Invalid header, did not find a newline")
+        
+        # var is_multi_line = False
+        # while True:
+        #     if n + 1 >= len(self.b()):
+        #         break
+        #     if (self.b()[n + 1] != bytes(whitespace, pop=False)[0]) and (self.b()[n+1] != bytes(tab, pop=False)[0]):
+        #         break
+        #     var d = index_byte(self.b()[n + 1:], bytes(nChar, pop=False)[0])
+        #     if d <= 0:
+        #         break
+        #     elif d == 1 and (self.b()[n + 1] == bytes(rChar, pop=False)[0]):
+        #         break
+        #     var e = n + d + 1
+        #     var c = index_byte(self.b()[n+1:e], bytes(colonChar, pop=False)[0])
+        #     if c >= 0:
+        #         self.set_next_colon(c)
+        #         self.set_next_line(d - c - 1)
+        #         break
+        #     is_multi_line = True
+        #     n = e
+        
+        self.set_value(self.b()[:n])
+        self.set_subslice_len(self.subslice_len() + n + 1)
+        self.set_b(self.b()[n + 1:])
+
+        if n > 0 and (self.value()[n-1] == bytes(rChar, pop=False)[0]):
+            n -= 1
+        while n > 0 and (self.value()[n-1] == bytes(whitespace, pop=False)[0]):
+            n -= 1
+        self.set_value(self.value()[:n])
+
+        # if is_multi_line:
+            # normalize multi-line header values
         
         return True
     
