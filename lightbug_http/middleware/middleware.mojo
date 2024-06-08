@@ -8,11 +8,11 @@ from lightbug_http.middleware import *
 @value
 struct Context[ParamType: CollectionElement]:
     var request: HTTPRequest
-    var params: Dict[String, ParamType]
+    var params: Dict[String, String]
 
     fn __init__(inout self, request: HTTPRequest):
         self.request = request
-        self.params = Dict[String, ParamType]()
+        self.params = Dict[String, String]()
 
 
 ## Middleware is an interface for processing HTTP requests.

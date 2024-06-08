@@ -6,8 +6,11 @@ from lightbug_http import *
 @value
 struct HelloWorld(HTTPHandler):
     fn handle(self, context: Context) -> HTTPResponse:
-        var name = context.params.get("username", "world")
-        return Success("Hello, " + name + "!")
+        var name = context.params.find("username")
+        if name:
+            return Success("Hello!")
+        else:
+            return Success("Hello, World!")
 
 fn main() raises:
     if not is_defined["TEST"]():
