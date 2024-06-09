@@ -7,7 +7,7 @@ from .socket import Socket
 
 # Time in nanoseconds
 alias Duration = Int
-alias DEFAULT_BUFFER_SIZE = 4096
+alias DEFAULT_BUFFER_SIZE = 8200
 alias DEFAULT_TCP_KEEP_ALIVE = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 

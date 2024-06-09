@@ -2,7 +2,7 @@ from collections.optional import Optional
 from ..builtins import cap, copy, Byte, panic
 from .traits import ERR_UNEXPECTED_EOF
 
-alias BUFFER_SIZE = 4096
+alias BUFFER_SIZE = 8200
 
 
 fn write_string[W: Writer](inout writer: W, string: String) -> (Int, Error):

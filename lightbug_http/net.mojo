@@ -14,7 +14,7 @@ from external.libc import (
     inet_ntop
 )
 
-alias default_buffer_size = 4096
+alias default_buffer_size = 8200
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
@@ -270,6 +270,7 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
     """Return the address of the peer connected to the socket."""
     var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
+
     var status = getpeername(
         fd,
         remote_address_ptr,

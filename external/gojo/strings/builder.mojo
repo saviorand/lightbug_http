@@ -33,7 +33,7 @@ struct StringBuilder[growth_factor: Float32 = 2](Stringable, Sized, io.Writer, i
     var capacity: Int
 
     @always_inline
-    fn __init__(inout self, *, capacity: Int = 4096):
+    fn __init__(inout self, *, capacity: Int = 8200):
         constrained[growth_factor >= 1.25]()
         self.data = DTypePointer[DType.uint8]().alloc(capacity)
         self.size = 0

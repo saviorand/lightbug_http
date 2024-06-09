@@ -4,7 +4,7 @@ from ..builtins import Byte
 from .socket import Socket
 from .address import Addr, TCPAddr
 
-alias DEFAULT_BUFFER_SIZE = 4096
+alias DEFAULT_BUFFER_SIZE = 8200
 
 
 trait Conn(io.Writer, io.Reader, io.Closer):

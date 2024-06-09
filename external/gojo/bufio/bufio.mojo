@@ -5,7 +5,7 @@ from ..strings import StringBuilder
 
 alias MIN_READ_BUFFER_SIZE = 16
 alias MAX_CONSECUTIVE_EMPTY_READS = 100
-alias DEFAULT_BUF_SIZE = 4096
+alias DEFAULT_BUF_SIZE = 8200
 
 alias ERR_INVALID_UNREAD_BYTE = "bufio: invalid use of unread_byte"
 alias ERR_INVALID_UNREAD_RUNE = "bufio: invalid use of unread_rune"
@@ -93,7 +93,7 @@ struct Reader[R: io.Reader](Sized, io.Reader, io.ByteReader, io.ByteScanner):
             self.read_pos = 0
 
         # Compares to the length of the entire List[UInt8] object, including 0 initialized positions.
-        # IE. var b = List[UInt8](capacity=4096), then trying to write at b[4096] and onwards will fail.
+        # IE. var b = List[UInt8](capacity=8200), then trying to write at b[8200] and onwards will fail.
         if self.write_pos >= self.buf.capacity:
             panic("bufio.Reader: tried to fill full buffer")
 
@@ -444,7 +444,7 @@ struct Reader[R: io.Reader](Sized, io.Reader, io.ByteReader, io.ByteScanner):
         var err = Error()
         var full_buffers = List[List[UInt8]]()
         var total_len = 0
-        var frag = List[UInt8](capacity=4096)
+        var frag = List[UInt8](capacity=8200)
         while True:
             frag, err = self.read_slice(delim)
             if not err:

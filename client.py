@@ -10,8 +10,9 @@ url = "http://localhost:8080"
 # response = requests.post(url, data=data)
 headers = {'Content-Type': 'application/octet-stream'}
 
-nbyte = 100
+nbyte = 128
 
+# for i in range(4):
 for i in range(4):
     nbyte = 10*nbyte
     data = bytes([0x0A] * nbyte)

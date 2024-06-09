@@ -357,6 +357,10 @@ fn encode(res: HTTPResponse) raises -> String:
         _ = builder.write_string(len(res.body_raw).__str__())
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
+    else:
+        _ = builder.write_string("Content-Length: 0")
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
     _ = builder.write_string("Connection: ")
     if res.connection_close():
@@ -369,11 +373,12 @@ fn encode(res: HTTPResponse) raises -> String:
     _ = builder.write_string("Date: ")
     _ = builder.write_string(current_time)
 
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    
     if len(res.body_raw) > 0:
-        _ = builder.write_string(rChar)
-        _ = builder.write_string(nChar)
-        _ = builder.write_string(rChar)
-        _ = builder.write_string(nChar)
         _ = builder.write(res.get_body_bytes())
     
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)

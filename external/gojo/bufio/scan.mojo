@@ -311,7 +311,7 @@ alias ERR_FINAL_TOKEN = Error("final token")
 # The actual maximum token size may be smaller as the buffer
 # may need to include, for instance, a newline.
 alias MAX_SCAN_TOKEN_SIZE = 64 * 1024
-alias START_BUF_SIZE = 4096  # Size of initial allocation for buffer.
+alias START_BUF_SIZE = 8200  # Size of initial allocation for buffer.
 
 
 fn new_scanner[R: io.Reader](owned reader: R) -> Scanner[R]:

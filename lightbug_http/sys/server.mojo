@@ -165,6 +165,9 @@ struct SysServer:
         """
         var b = Bytes()
         _ = conn.read(b)
+        if len(b) == 0:
+            conn.close()
+            return
 
         var buf = buffer.new_buffer(b)
         var reader = Reader(buf)
@@ -219,7 +222,6 @@ struct SysServer:
         except e:
             error = Error("Failed to read request body: " + e.__str__())
         
-        print(encode(request))
         var res = handler.func(request)
         
         # if not self.tcp_keep_alive:
