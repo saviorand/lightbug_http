@@ -185,13 +185,11 @@ struct SysServer:
             error = Error("Failed to read first byte from connection")
         
         var header = RequestHeader()
-        # var end_of_first_line_headers: Int
-        
+        var first_line_and_headers_len = 0
         try:
-            _ = header.parse_raw(reader)
+            first_line_and_headers_len = header.parse_raw(reader)
         except e:
             error = Error("Failed to parse request headers: " + e.__str__())
-        
 
         var uri = URI(self.address() + String(header.request_uri()))
         try:
@@ -209,15 +207,19 @@ struct SysServer:
             #     var read_len = conn.read(remaining_body)
             #     buf.extend(remaining_body)
             #     remaining_len -= read_len
-
+        
         var request = HTTPRequest(
                 uri,
                 Bytes(),
                 header,
             )
 
-        _ = request.read_body(reader, header.content_length(), max_request_body_size)
-        print(encode(request, uri))
+        try:
+            request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
+        except e:
+            error = Error("Failed to read request body: " + e.__str__())
+        
+        print(encode(request))
         var res = handler.func(request)
         
         # if not self.tcp_keep_alive:

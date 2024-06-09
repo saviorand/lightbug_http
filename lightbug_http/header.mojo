@@ -243,60 +243,58 @@ struct RequestHeader:
     fn headers(self) -> String:
         return String(self.raw_headers)
 
-    fn parse_raw(inout self, inout r: Reader) raises -> None:
+    fn parse_raw(inout self, inout r: Reader) raises -> Int:
         var n = 1
-        while True:
-            var first_byte = r.peek(n)
-            if len(first_byte) == 0:
-                raise Error("Failed to read first byte from header")
-            
-            var buf: Bytes
-            var e: Error
-            
-            buf, e = r.peek(r.buffered())
-            if e:
-                raise Error("Failed to read header: " + e.__str__())
-            if len(buf) == 0:
-                raise Error("Failed to read header")
-            
-            var end_of_first_line = self.parse_first_line(buf)
+        # while True:
+        var first_byte = r.peek(n)
+        if len(first_byte) == 0:
+            raise Error("Failed to read first byte from header")
+        
+        var buf: Bytes
+        var e: Error
+        
+        buf, e = r.peek(r.buffered())
+        if e:
+            raise Error("Failed to read header: " + e.__str__())
+        if len(buf) == 0:
+            raise Error("Failed to read header")
+        
+        var end_of_first_line = self.parse_first_line(buf)
 
-            _ = self.read_raw_headers(buf[end_of_first_line:])
+        var header_len = self.read_raw_headers(buf[end_of_first_line:])
 
-            _ = self.parse_headers(buf[end_of_first_line:])
-            
-            # var end_of_first_line_headers = end_of_first_line + end_of_headers
+        self.parse_headers(buf[end_of_first_line:])
+        
+        return end_of_first_line + header_len
 
     fn parse_first_line(inout self, buf: Bytes) raises -> Int:
         var b_next = buf
         var b = Bytes()
-
         while len(b) == 0:
             try:
                 b, b_next = next_line(b_next)
             except e:
                 raise Error("Failed to read first line from request, " + e.__str__())
         
-        var n = index_byte(b, bytes(whitespace, pop=False)[0])
-        if n <= 0:
+        var first_whitespace = index_byte(b, bytes(whitespace, pop=False)[0])
+        if first_whitespace <= 0:
             raise Error("Could not find HTTP request method in the request: " + String(b))
         
-        _ = self.set_method_bytes(b[:n])
-        b = b[n + 1:]
+        _ = self.set_method_bytes(b[:first_whitespace])
 
-        n = last_index_byte(b, bytes(whitespace, pop=False)[0])
-        if n < 0:
-            raise Error("Could not find whitespace in request line: " + String(b))
-        elif n == 0:
+        var last_whitespace = last_index_byte(b, bytes(whitespace, pop=False)[0]) + 1
+
+        if last_whitespace < 0:
+            raise Error("Could not find last whitespace in request line: " + String(b))
+        elif last_whitespace == 0:
             raise Error("Request URI is empty: " + String(b))
         
-        var proto = b[n + 1 :]
-
+        var proto = b[last_whitespace :]
         if len(proto) != len(bytes(strHttp11, pop=False)):
             raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
         
         _ = self.set_protocol_bytes(proto)
-        _ = self.set_request_uri_bytes(b[:n - 2]) # without the null terminator
+        _ = self.set_request_uri_bytes(b[first_whitespace+1:last_whitespace])
         
         return len(buf) - len(b_next)
        
@@ -349,7 +347,7 @@ struct RequestHeader:
         return
 
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
-        var n = index_byte(buf, bytes(nChar, pop=False)[0]) # does this work?
+        var n = index_byte(buf, bytes(nChar, pop=False)[0])
         
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
@@ -782,6 +780,7 @@ struct headerScanner:
             self.set_initialized()
         
         var b_len = len(self.b())
+
         if b_len >= 2 and (self.b()[0] == bytes(rChar, pop=False)[0]) and (self.b()[1] == bytes(nChar, pop=False)[0]):
             self.set_b(self.b()[2:])
             self.set_subslice_len(2)
@@ -792,69 +791,48 @@ struct headerScanner:
             self.set_subslice_len(self.subslice_len() + 1)
             return False
         
-        var n: Int
+        var colon: Int
         if self.next_colon() >= 0:
-            n = self.next_colon()
+            colon = self.next_colon()
             self.set_next_colon(-1)
         else:
-            n = index_byte(self.b(), bytes(colonChar, pop=False)[0])
-            var x = index_byte(self.b(), bytes(nChar, pop=False)[0])
-            if x > 0:
+            colon = index_byte(self.b(), bytes(colonChar, pop=False)[0])
+            var newline = index_byte(self.b(), bytes(nChar, pop=False)[0])
+            if newline < 0:
                 raise Error("Invalid header, did not find a newline at the end of the header")
-            if x < n:
+            if newline < colon:
                 raise Error("Invalid header, found a newline before the colon")
-        if n < 0:
+        if colon < 0:
             raise Error("Invalid header, did not find a colon")
         
-        self.set_key(self.b()[:n])
-        n += n
-        while len(self.b()) > n and (self.b()[n] == bytes(whitespace, pop=False)[0]):
-            n += 1
+        var jump_to = colon + 1
+        self.set_key(self.b()[:jump_to])
+
+        while len(self.b()) > jump_to and (self.b()[jump_to] == bytes(whitespace, pop=False)[0]):
+            jump_to += 1
             self.set_next_line(self.next_line() - 1)
         
-        self.set_subslice_len(self.subslice_len() + n)
-        self.set_b(self.b()[n:])
+        self.set_subslice_len(self.subslice_len() + jump_to)
+        self.set_b(self.b()[jump_to:])
 
         if self.next_line() >= 0:
-            n = self.next_line()
+            jump_to = self.next_line()
             self.set_next_line(-1)
         else:
-            n = index_byte(self.b(), bytes(nChar, pop=False)[0])
-        if n < 0:
+            jump_to = index_byte(self.b(), bytes(nChar, pop=False)[0])
+        if jump_to < 0:
             raise Error("Invalid header, did not find a newline")
         
-        # var is_multi_line = False
-        # while True:
-        #     if n + 1 >= len(self.b()):
-        #         break
-        #     if (self.b()[n + 1] != bytes(whitespace, pop=False)[0]) and (self.b()[n+1] != bytes(tab, pop=False)[0]):
-        #         break
-        #     var d = index_byte(self.b()[n + 1:], bytes(nChar, pop=False)[0])
-        #     if d <= 0:
-        #         break
-        #     elif d == 1 and (self.b()[n + 1] == bytes(rChar, pop=False)[0]):
-        #         break
-        #     var e = n + d + 1
-        #     var c = index_byte(self.b()[n+1:e], bytes(colonChar, pop=False)[0])
-        #     if c >= 0:
-        #         self.set_next_colon(c)
-        #         self.set_next_line(d - c - 1)
-        #         break
-        #     is_multi_line = True
-        #     n = e
-        
-        self.set_value(self.b()[:n])
-        self.set_subslice_len(self.subslice_len() + n + 1)
-        self.set_b(self.b()[n + 1:])
+        jump_to += 1
+        self.set_value(self.b()[:jump_to])
+        self.set_subslice_len(self.subslice_len() + jump_to)
+        self.set_b(self.b()[jump_to:])
 
-        if n > 0 and (self.value()[n-1] == bytes(rChar, pop=False)[0]):
-            n -= 1
-        while n > 0 and (self.value()[n-1] == bytes(whitespace, pop=False)[0]):
-            n -= 1
-        self.set_value(self.value()[:n])
-
-        # if is_multi_line:
-            # normalize multi-line header values
+        if jump_to > 0 and (self.value()[jump_to-1] == bytes(rChar, pop=False)[0]):
+            jump_to -= 1
+        while jump_to > 0 and (self.value()[jump_to-1] == bytes(whitespace, pop=False)[0]):
+            jump_to -= 1
+        self.set_value(self.value()[:jump_to])
         
         return True
     

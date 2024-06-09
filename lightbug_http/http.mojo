@@ -165,62 +165,16 @@ struct HTTPRequest(Request):
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
     
-    fn read_body(inout self, inout r: Reader, content_length: Int, max_body_size: Int) raises -> None:
-        var body_buf = self.body_raw
-        
-        if content_length == 0:
-            return
-        
+    fn read_body(inout self, inout r: Reader, content_length: Int, header_len: Int, max_body_size: Int) raises -> None:
         if content_length > max_body_size:
             raise Error("Request body too large")
-        
-        var offset = len(body_buf)
-        var dst_len = offset + content_length
-        if dst_len > max_body_size:
-            raise Error("Buffer overflow risk")
-        
-        body_buf.resize(dst_len)
-        
-        while offset < dst_len:
-            var buffer_after_offset = body_buf[offset:]
-            var read_length: Int
-            var read_error: Error
-            read_length, read_error = r.read(buffer_after_offset)
-            if read_length <= 0:
-                if read_error:
-                    raise read_error
-                break
-            offset += read_length
-        
-        _ = self.set_body_bytes(body_buf[:offset])
 
-        # var body_buf = self.body_raw
-        
-        # if content_length == 0:
-        #     return body_buf
-        
-        # if max_body_size > 0 and content_length > max_body_size:
-        #     raise Error("Request body too large")
-        
-        # if len(body_buf) > max_body_size:
-        #     raise Error("Request body too large")
-        
-        # var offset = len(body_buf)
-        # var dst_len = offset + content_length
-        # if dst_len > max_body_size:
-        #     body_buf.resize(dst_len)
-        
-        # while True:
-        #     var buffer_after_offset = body_buf[offset:]
-        #     var len: Int
-        #     len, _ = r.read(buffer_after_offset)
-        #     if len <= 0:
-        #         return body_buf[:offset]
-        #     offset += len
-        #     if offset == dst_len:
-        #         return body_buf
-        
+        _ = r.discard(header_len)
 
+        var body_buf: Bytes
+        body_buf, _ = r.peek(r.buffered())
+        
+        _ = self.set_body_bytes(bytes(body_buf))        
 
 @value
 struct HTTPResponse(Response):
@@ -311,20 +265,18 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest, uri: URI) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
     _ = builder.write_string(whitespace)
-    if len(uri.request_uri()) > 1:
-        _ = builder.write(uri.request_uri())
+    if len(req.header.request_uri()) > 1:
+        _ = builder.write(req.header.request_uri())
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
-
-    # _ = builder.write(req.header.protocol())
-    # hardcoded for now
-    _ = builder.write_string("HTTP/1.1")
+    
+    _ = builder.write(req.header.protocol())
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
