@@ -217,14 +217,14 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var new_buf = UnsafePointer[UInt8]().alloc(default_buffer_size)
-        var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
+        var bytes_recv = recv(self.fd, DTypePointer[DType.uint8](buf.unsafe_ptr()).offset(buf.size), buf.capacity - buf.size, 0)
         if bytes_recv == -1:
             return 0
+        buf.size += bytes_recv
         if bytes_recv == 0:
             return 0
-        var bytes_str = String(new_buf.bitcast[UInt8](), bytes_recv + 1)
-        buf = bytes(bytes_str, pop=False)
+        if bytes_recv < buf.capacity:
+            return bytes_recv
         return bytes_recv
 
     fn write(self, msg: String) raises -> Int:

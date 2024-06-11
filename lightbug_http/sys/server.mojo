@@ -149,7 +149,6 @@ struct SysServer:
 
         while True:
             var conn = self.ln.accept()
-            # while True:
             self.serve_connection(conn, handler)
     
     fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
@@ -163,14 +162,14 @@ struct SysServer:
         Raises:
         If there is an error while serving the connection.
         """
-        var b = Bytes()
-        _ = conn.read(b)
-        if len(b) == 0:
+        var b = Bytes(capacity=default_buffer_size)
+        var bytes_recv = conn.read(b) 
+        if bytes_recv == 0:
             conn.close()
             return
 
-        var buf = buffer.new_buffer(b)
-        var reader = Reader(buf)
+        var buf = buffer.new_buffer(b^)
+        var reader = Reader(buf^)
 
         var error = Error()
         
@@ -180,29 +179,50 @@ struct SysServer:
         
         var req_number = 0
         
-        # while True:
-        req_number += 1
+        while True:
+            req_number += 1
 
-        var first_byte = reader.peek(1)
-        if len(first_byte) == 0:
-            error = Error("Failed to read first byte from connection")
-        
-        var header = RequestHeader()
-        var first_line_and_headers_len = 0
-        try:
-            first_line_and_headers_len = header.parse_raw(reader)
-        except e:
-            error = Error("Failed to parse request headers: " + e.__str__())
+            if req_number > 1:
+                var b = Bytes(capacity=default_buffer_size)
+                var bytes_recv = conn.read(b)
+                if bytes_recv == 0:
+                    conn.close()
+                    break
+                buf = buffer.new_buffer(b^)
+                reader = Reader(buf^)
 
-        var uri = URI(self.address() + String(header.request_uri()))
-        try:
-            uri.parse()
-        except e:
-            error = Error("Failed to parse request line:" + e.__str__())
-        
-        if header.content_length() > 0:
-            if max_request_body_size > 0 and header.content_length() > max_request_body_size:
-                error = Error("Request body too large")
+
+            var first_byte = reader.peek(1)
+            if len(first_byte) == 0:
+                error = Error("Failed to read first byte from connection")
+            
+            var header = RequestHeader()
+            var first_line_and_headers_len = 0
+            try:
+                first_line_and_headers_len = header.parse_raw(reader)
+            except e:
+                error = Error("Failed to parse request headers: " + e.__str__())
+
+            var uri = URI(self.address() + String(header.request_uri()))
+            try:
+                uri.parse()
+            except e:
+                error = Error("Failed to parse request line:" + e.__str__())
+            
+            if header.content_length() > 0:
+                if max_request_body_size > 0 and header.content_length() > max_request_body_size:
+                    error = Error("Request body too large")
+            
+            var request = HTTPRequest(
+                    uri,
+                    Bytes(),
+                    header,
+                )
+
+            try:
+                request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
+            except e:
+                error = Error("Failed to read request body: " + e.__str__())
             
             # var remaining_body = Bytes()
             # var remaining_len = header.content_length() - (len(request_body) + 1)
@@ -210,27 +230,16 @@ struct SysServer:
             #     var read_len = conn.read(remaining_body)
             #     buf.extend(remaining_body)
             #     remaining_len -= read_len
-        
-        var request = HTTPRequest(
-                uri,
-                Bytes(),
-                header,
-            )
+            
+            var res = handler.func(request)
+            
+            if not self.tcp_keep_alive:
+                _ = res.set_connection_close()
+            
+            var res_encoded = encode(res)
 
-        try:
-            request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
-        except e:
-            error = Error("Failed to read request body: " + e.__str__())
-        
-        var res = handler.func(request)
-        
-        # if not self.tcp_keep_alive:
-        _ = res.set_connection_close()
-        
-        var res_encoded = encode(res)
+            _ = conn.write(res_encoded)
 
-        _ = conn.write(res_encoded)
-
-        # if not self.tcp_keep_alive:
-        conn.close()
-        # break
+        if not self.tcp_keep_alive:
+            conn.close()
+            return

@@ -14,7 +14,7 @@ from external.libc import (
     inet_ntop
 )
 
-alias default_buffer_size = 8200
+alias default_buffer_size = 4096
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 

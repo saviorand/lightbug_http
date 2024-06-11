@@ -9,6 +9,6 @@ struct MyPrinter(HTTPService):
     
 
 fn main() raises:
-    var server = SysServer()
+    var server = SysServer(tcp_keep_alive=True)
     var handler = MyPrinter()
     server.listen_and_serve("0.0.0.0:8080", handler)

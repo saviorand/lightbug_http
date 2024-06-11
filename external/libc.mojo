@@ -633,8 +633,28 @@ fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen
     ](socket, address, address_len)
 
 
+# fn recv(
+#     socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int
+# ) -> c_ssize_t:
+#     """Libc POSIX `recv` function
+#     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
+#     Fn signature: ssize_t recv(int socket, void *buffer, size_t length, int flags).
+#     """
+#     return external_call[
+#         "recv",
+#         c_ssize_t,  # FnName, RetType
+#         c_int,
+#         UnsafePointer[c_void],
+#         c_size_t,
+#         c_int,  # Args
+#     ](socket, buffer, length, flags)
+
+
 fn recv(
-    socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int
+    socket: c_int,
+    buffer: DTypePointer[DType.uint8],
+    length: c_size_t,
+    flags: c_int,
 ) -> c_ssize_t:
     """Libc POSIX `recv` function
     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
@@ -644,11 +664,10 @@ fn recv(
         "recv",
         c_ssize_t,  # FnName, RetType
         c_int,
-        UnsafePointer[c_void],
+        DTypePointer[DType.uint8],
         c_size_t,
         c_int,  # Args
     ](socket, buffer, length, flags)
-
 
 fn send(
     socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int
