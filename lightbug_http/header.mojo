@@ -244,20 +244,18 @@ struct RequestHeader:
         return String(self.raw_headers)
 
     fn parse_raw(inout self, inout r: Reader) raises -> Int:
-        var n = 1
-        # while True:
-        var first_byte = r.peek(n)
+        var first_byte = r.peek(1)
         if len(first_byte) == 0:
-            raise Error("Failed to read first byte from header")
+            raise Error("Failed to read first byte from request header")
         
         var buf: Bytes
         var e: Error
         
         buf, e = r.peek(r.buffered())
         if e:
-            raise Error("Failed to read header: " + e.__str__())
+            raise Error("Failed to read request header: " + e.__str__())
         if len(buf) == 0:
-            raise Error("Failed to read header")
+            raise Error("Failed to read request header, empty buffer")
         
         var end_of_first_line = self.parse_first_line(buf)
 
@@ -278,14 +276,14 @@ struct RequestHeader:
         
         var first_whitespace = index_byte(b, bytes(whitespace, pop=False)[0])
         if first_whitespace <= 0:
-            raise Error("Could not find HTTP request method in the request: " + String(b))
+            raise Error("Could not find HTTP request method in request line: " + String(b))
         
         _ = self.set_method_bytes(b[:first_whitespace])
 
         var last_whitespace = last_index_byte(b, bytes(whitespace, pop=False)[0]) + 1
 
         if last_whitespace < 0:
-            raise Error("Could not find last whitespace in request line: " + String(b))
+            raise Error("Could not find request target or HTTP version in request line: " + String(b))
         elif last_whitespace == 0:
             raise Error("Request URI is empty: " + String(b))
         
@@ -629,47 +627,78 @@ struct ResponseHeader:
     fn headers(self) -> String:
         return String(self.raw_headers)
 
-    fn parse_first_line(inout self, first_line: String) raises -> None:
-        var n = first_line.find(" ")
-        
-        var proto = first_line[:n + 1]
+    # fn parse_from_list(inout self, headers: List[String], first_line: String) raises -> None:
+    #     _ = self.parse_first_line(first_line)
+
+    #     for header in headers:
+    #         var header_str = header[]
+    #         var separator = header_str.find(":")
+    #         if separator == -1:
+    #             raise Error("Invalid header")
             
-        _ = self.set_protocol(proto)
+    #         var key = String(header_str)[:separator]
+    #         var value = String(header_str)[separator + 1 :]
 
-        var rest_of_response_line = first_line[n + 1 :]
+    #         if len(key) > 0:
+    #             self.parse_header(key, value)
 
-        var status_code = atol(rest_of_response_line[:3])
+    fn parse_raw(inout self, inout r: Reader) raises -> Int:
+        var first_byte = r.peek(1)
+        if len(first_byte) == 0:
+            raise Error("Failed to read first byte from response header")
+        
+        var buf: Bytes
+        var e: Error
+        
+        buf, e = r.peek(r.buffered())
+        if e:
+            raise Error("Failed to read response header: " + e.__str__())
+        if len(buf) == 0:
+            raise Error("Failed to read response header, empty buffer")
+
+        var end_of_first_line = self.parse_first_line(buf)
+
+        var header_len = self.read_raw_headers(buf[end_of_first_line:])
+
+        self.parse_headers(buf[end_of_first_line:])
+        
+        return end_of_first_line + header_len
+    
+    fn parse_first_line(inout self, buf: Bytes) raises -> Int:
+        var b_next = buf
+        var b = Bytes()
+        while len(b) == 0:
+            try:
+                b, b_next = next_line(b_next)
+            except e:
+                raise Error("Failed to read first line from response, " + e.__str__())
+        
+        var first_whitespace = index_byte(b, bytes(whitespace, pop=False)[0])
+        if first_whitespace <= 0:
+            raise Error("Could not find HTTP version in response line: " + String(b))
+            
+        _ = self.set_protocol(b[:first_whitespace])
+
+        var last_whitespace = last_index_byte(b, bytes(whitespace, pop=False)[0]) + 1
+
+        if last_whitespace < 0:
+            raise Error("Could not find status code or in response line: " + String(b))
+        elif last_whitespace == 0:
+            raise Error("Response URI is empty: " + String(b))
+
+        var status_text = b[last_whitespace :]
+        if len(status_text) > 1:
+            _ = self.set_status_message(status_text)   
+
+        var status_code = atol(b[first_whitespace+1:last_whitespace])
         _ = self.set_status_code(status_code)
 
-        var message = rest_of_response_line[4:]
-        if len(message) > 1:
-            _ = self.set_status_message(bytes((message), pop=False))
-        
+        return len(buf) - len(b_next)
+
+    fn parse_headers(inout self, buf: Bytes) raises -> None:
         _ = self.set_content_length(-2)
-
-    fn parse_from_list(inout self, headers: List[String], first_line: String) raises -> None:
-        _ = self.parse_first_line(first_line)
-
-        for header in headers:
-            var header_str = header[]
-            var separator = header_str.find(":")
-            if separator == -1:
-                raise Error("Invalid header")
-            
-            var key = String(header_str)[:separator]
-            var value = String(header_str)[separator + 1 :]
-
-            if len(key) > 0:
-                self.parse_header(key, value)
-
-    fn parse_raw(inout self, first_line: String) raises -> None:
-        var headers = self.raw_headers
-        
-        _ = self.parse_first_line(first_line)
-
         var s = headerScanner()
-        s.set_b(headers)
-        s.disable_normalization = self.disable_normalization
+        s.set_b(buf)
 
         while s.next():
             if len(s.key()) > 0:
@@ -710,6 +739,31 @@ struct ResponseHeader:
                 return
             if key.lower() == "trailer":
                 _ = self.set_trailer_bytes(bytes(value, pop=False))
+    
+    fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
+        var n = index_byte(buf, bytes(nChar, pop=False)[0])
+        
+        if n == -1:
+            self.raw_headers = self.raw_headers[:0]
+            raise Error("Failed to find a newline in headers")
+        
+        if n == 0 or (n == 1 and (buf[0] == bytes(rChar, pop=False)[0])):
+            # empty line -> end of headers
+            return n + 1
+        
+        n += 1
+        var b = buf
+        var m = n
+        while True:
+            b = b[m:]
+            m = index_byte(b, bytes(nChar, pop=False)[0])
+            if m == -1:
+                raise Error("Failed to find a newline in headers")
+            m += 1
+            n += m
+            if m == 2 and (b[0] == bytes(rChar, pop=False)[0]) or m == 1:
+                self.raw_headers = self.raw_headers + buf[:n]
+                return n
 
 struct headerScanner:
     var __b: Bytes

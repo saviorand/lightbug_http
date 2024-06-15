@@ -211,6 +211,10 @@ struct HTTPResponse(Response):
     fn get_body_bytes(self) -> BytesView:
         return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
+    fn set_body_bytes(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
+    
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
         return self
@@ -224,6 +228,14 @@ struct HTTPResponse(Response):
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
+    
+    fn read_body(inout self, inout r: Reader, header_len: Int) raises -> None:
+        _ = r.discard(header_len)
+
+        var body_buf: Bytes
+        body_buf, _ = r.peek(r.buffered())
+        
+        _ = self.set_body_bytes(bytes(body_buf)) 
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(

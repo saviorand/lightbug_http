@@ -43,7 +43,7 @@ def test_encode_http_request():
             RequestHeader(getRequest),
         )
 
-    var req_encoded = encode(req, uri)
+    var req_encoded = encode(req)
     test.assert_equal(String(req_encoded), "GET / HTTP/1.1\r\nContent-Length: 12\r\nConnection: keep-alive\r\n\r\nHello world!")
 
 def test_encode_http_response():

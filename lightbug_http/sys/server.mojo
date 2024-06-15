@@ -191,11 +191,6 @@ struct SysServer:
                 buf = buffer.new_buffer(b^)
                 reader = Reader(buf^)
 
-
-            var first_byte = reader.peek(1)
-            if len(first_byte) == 0:
-                error = Error("Failed to read first byte from connection")
-            
             var header = RequestHeader()
             var first_line_and_headers_len = 0
             try:
