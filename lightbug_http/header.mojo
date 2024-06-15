@@ -704,40 +704,41 @@ struct ResponseHeader:
             if len(s.key()) > 0:
                 self.parse_header(s.key(), s.value())
     
-    fn parse_header(inout self, key: String, value: String) raises -> None:
-        # The below is based on the code from Golang's FastHTTP library
-        # Spaces between header key and colon not allowed (RFC 7230, 3.2.4)
-        if key.find(" ") != -1 or key.find("\t") != -1:
-            raise Error("Invalid header key")
-        elif key[0] == "c" or key[0] == "C":
-            if key.lower() == "content-type":
+    fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
+        if index_byte(key, bytes(colonChar, pop=False)[0]) == -1 or index_byte(key, bytes(tab, pop=False)[0]) != -1:
+            raise Error("Invalid header key: " + String(key))
+        
+        var key_first = key[0].__xor__(0x20)
+
+        if key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("content-type", pop=False)):
                 _ = self.set_content_type_bytes(bytes(value, pop=False))
                 return
-            if key.lower() == "content-encoding":
+            if compare_case_insensitive(key, bytes("content-encoding", pop=False)):
                 _ = self.set_content_encoding_bytes(bytes(value, pop=False))
                 return
-            if key.lower() == "content-length":
+            if compare_case_insensitive(key, bytes("content-length", pop=False)):
                 if self.content_length() != -1:
                     var content_length = value
                     _ = self.set_content_length(atol(content_length))
                     _ = self.set_content_length_bytes(bytes(content_length))
                 return
-            if key.lower() == "connection":
-                if value == "close":
+            if compare_case_insensitive(key, bytes("connection", pop=False)):
+                if compare_case_insensitive(value, bytes("close", pop=False)):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
-        elif key[0] == "s" or key[0] == "S":
-            if key.lower() == "server":
+        elif key_first == bytes("s", pop=False)[0] or key_first == bytes("S", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("server", pop=False)):
                 _ = self.set_server_bytes(bytes(value, pop=False))
                 return
-        elif key[0] == "t" or key[0] == "T":
-            if key.lower() == "transfer-encoding":
-                if value != "identity":
+        elif key_first == bytes("t", pop=False)[0] or key_first == bytes("T", pop=False)[0]:
+            if compare_case_insensitive(key, bytes("transfer-encoding", pop=False)):
+                if not compare_case_insensitive(value, bytes("identity", pop=False)):
                     _ = self.set_content_length(-1)
                 return
-            if key.lower() == "trailer":
+            if compare_case_insensitive(key, bytes("trailer", pop=False)):
                 _ = self.set_trailer_bytes(bytes(value, pop=False))
     
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
