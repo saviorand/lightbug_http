@@ -282,8 +282,8 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
 
     _ = builder.write(req.header.method())
     _ = builder.write_string(whitespace)
-    if len(req.header.request_uri()) > 1:
-        _ = builder.write(req.header.request_uri())
+    if len(req.uri().path_bytes()) > 1:
+        _ = builder.write_string(req.uri().path())
     else:
         _ = builder.write_string(strSlash)
     _ = builder.write_string(whitespace)
@@ -324,7 +324,7 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
     
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
-
+    
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 

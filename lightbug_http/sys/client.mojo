@@ -65,11 +65,6 @@ struct MojoClient(Client):
             If there is a failure in sending or receiving the message.
         """
         var uri = req.uri()
-        try:
-            _ = uri.parse()
-        except e:
-            print("error parsing uri: " + e.__str__())
-
         var host = String(uri.host())
 
         if host == "":
@@ -94,7 +89,7 @@ struct MojoClient(Client):
                 port = 80
 
         var conn = create_connection(self.fd, host_str, port)
-
+        
         var req_encoded = encode(req)
 
         var bytes_sent = conn.write(req_encoded)
@@ -103,6 +98,7 @@ struct MojoClient(Client):
 
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
+        
         if bytes_recv == 0:
             conn.close()
 

@@ -117,7 +117,7 @@ struct URI:
         self.__path = normalise_path(bytes(path), self.__path_original)
         return self
 
-    fn set_path_sbytes(inout self, path: Bytes) -> Self:
+    fn set_path_bytes(inout self, path: Bytes) -> Self:
         self.__path = normalise_path(path, self.__path_original)
         return self
 
@@ -287,8 +287,7 @@ struct URI:
             self.__path_original = bytes(request_uri, pop=False)
             self.__query_string = Bytes()
 
-        _ = self.set_path_sbytes(normalise_path(self.__path_original, self.__path_original))
-
+        _ = self.set_path_bytes(normalise_path(self.__path_original, self.__path_original))
         _ = self.set_request_uri_bytes(bytes(request_uri, pop=False))
 
 

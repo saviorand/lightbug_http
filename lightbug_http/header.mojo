@@ -678,20 +678,15 @@ struct ResponseHeader:
             raise Error("Could not find HTTP version in response line: " + String(b))
             
         _ = self.set_protocol(b[:first_whitespace])
+        
+        var end_of_status_code = first_whitespace+5 # status code is always 3 digits, this calculation includes null terminator
 
-        var last_whitespace = last_index_byte(b, bytes(whitespace, pop=False)[0]) + 1
+        var status_code = atol(b[first_whitespace+1:end_of_status_code])
+        _ = self.set_status_code(status_code)
 
-        if last_whitespace < 0:
-            raise Error("Could not find status code or in response line: " + String(b))
-        elif last_whitespace == 0:
-            raise Error("Response URI is empty: " + String(b))
-
-        var status_text = b[last_whitespace :]
+        var status_text = b[end_of_status_code + 1 :]
         if len(status_text) > 1:
             _ = self.set_status_message(status_text)   
-
-        var status_code = atol(b[first_whitespace+1:last_whitespace])
-        _ = self.set_status_code(status_code)
 
         return len(buf) - len(b_next)
 

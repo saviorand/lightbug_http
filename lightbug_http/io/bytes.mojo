@@ -37,8 +37,8 @@ fn last_index_byte(buf: Bytes, c: Byte) -> Int:
 fn compare_case_insensitive(a: Bytes, b: Bytes) -> Bool:
     if len(a) != len(b):
         return False
-    for i in range(len(a)):
-        if a[i].__xor__(0x20) != b[i].__xor__(0x20):
+    for i in range(len(a) - 1):
+        if (a[i] | 0x20) != (b[i] | 0x20):
             return False
     return True
 
