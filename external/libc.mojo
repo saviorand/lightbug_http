@@ -85,7 +85,6 @@ fn to_char_ptr(s: String) -> UnsafePointer[c_char]:
         ptr[i] = ord(s[i])
     return ptr
 
-
 fn to_char_ptr(s: Bytes) -> UnsafePointer[c_char]:
     var ptr = UnsafePointer[c_char]().alloc(len(s))
     for i in range(len(s)):

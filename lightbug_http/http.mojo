@@ -211,6 +211,9 @@ struct HTTPResponse(Response):
     fn get_body_bytes(self) -> BytesView:
         return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
+    fn get_body(self) -> Bytes:
+        return self.body_raw
+
     fn set_body_bytes(inout self, body: Bytes) -> Self:
         self.body_raw = body
         return self
@@ -328,7 +331,7 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
-fn encode(res: HTTPResponse) raises -> String:
+fn encode(res: HTTPResponse) raises -> Bytes:
     var current_time = String()
     try:
         current_time = Morrow.utcnow().__str__()
@@ -392,8 +395,8 @@ fn encode(res: HTTPResponse) raises -> String:
     
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
-
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    
+    return builder.render().as_bytes_slice()
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)

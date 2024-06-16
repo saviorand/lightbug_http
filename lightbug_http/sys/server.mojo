@@ -219,13 +219,6 @@ struct SysServer:
             except e:
                 error = Error("Failed to read request body: " + e.__str__())
             
-            # var remaining_body = Bytes()
-            # var remaining_len = header.content_length() - (len(request_body) + 1)
-            # while remaining_len > 0:
-            #     var read_len = conn.read(remaining_body)
-            #     buf.extend(remaining_body)
-            #     remaining_len -= read_len
-            
             var res = handler.func(request)
             
             if not self.tcp_keep_alive:
