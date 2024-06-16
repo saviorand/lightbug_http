@@ -339,9 +339,9 @@ fn encode(res: HTTPResponse) raises -> String:
     var builder = StringBuilder()
 
     _ = builder.write(res.header.protocol())
-    _ = builder.write_string(" ")
+    _ = builder.write_string(whitespace)
     _ = builder.write_string(res.header.status_code().__str__())
-    _ = builder.write_string(" ")
+    _ = builder.write_string(whitespace)
     _ = builder.write(res.header.status_message())
 
     _ = builder.write_string(rChar)
@@ -392,7 +392,7 @@ fn encode(res: HTTPResponse) raises -> String:
     
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
-    
+
     return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):

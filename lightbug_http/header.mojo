@@ -286,11 +286,9 @@ struct RequestHeader:
             raise Error("Could not find request target or HTTP version in request line: " + String(b))
         elif last_whitespace == 0:
             raise Error("Request URI is empty: " + String(b))
-        
         var proto = b[last_whitespace :]
         if len(proto) != len(bytes(strHttp11, pop=False)):
             raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
-        
         _ = self.set_protocol_bytes(proto)
         _ = self.set_request_uri_bytes(b[first_whitespace+1:last_whitespace])
         
@@ -592,7 +590,7 @@ struct ResponseHeader:
     
     fn protocol(self) -> BytesView:
         if len(self.__protocol) == 0:
-            return strHttp11.as_bytes_slice()
+            return BytesView(unsafe_ptr=strHttp11.as_bytes_slice().unsafe_ptr(), len=8)
         return BytesView(unsafe_ptr=self.__protocol.unsafe_ptr(), len=self.__protocol.size)
 
     fn set_trailer(inout self, trailer: String) -> Self:

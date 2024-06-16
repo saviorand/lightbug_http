@@ -60,6 +60,6 @@ def test_encode_http_response():
     var expected_split = String(expected_full).split("\r\n\r\n")
     var expected_headers = expected_split[0]
     var expected_body = expected_split[1]
-    
+
     test.assert_equal(res_str[:expected_headers_len], expected_headers[:len(expected_headers) - date_header_len])
     test.assert_equal(res_str[(len(res_str) - hello_world_len):len(res_str)], expected_body)
