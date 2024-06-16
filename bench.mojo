@@ -13,7 +13,7 @@ from tests.utils import (
 
 fn main():
     try:
-        var server = SysServer()
+        var server = SysServer(tcp_keep_alive=True)
         var handler = TechEmpowerRouter()
         server.listen_and_serve("0.0.0.0:8080", handler)
     except e:
