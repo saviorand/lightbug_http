@@ -1,12 +1,11 @@
 from collections.optional import Optional
-from ..builtins import cap, copy, Byte, Result, WrappedError, panic
+from ..builtins import cap, copy, Byte, panic
 from .traits import ERR_UNEXPECTED_EOF
 
+alias BUFFER_SIZE = 8200
 
-alias BUFFER_SIZE = 4096
 
-
-fn write_string[W: Writer](inout writer: W, string: String) -> Result[Int]:
+fn write_string[W: Writer](inout writer: W, string: String) -> (Int, Error):
     """Writes the contents of the string s to w, which accepts a slice of bytes.
     If w implements [StringWriter], [StringWriter.write_string] is invoked directly.
     Otherwise, [Writer.write] is called exactly once.
@@ -18,10 +17,10 @@ fn write_string[W: Writer](inout writer: W, string: String) -> Result[Int]:
     Returns:
         The number of bytes written and an error, if any.
     """
-    return writer.write(string.as_bytes())
+    return writer.write(string.as_bytes_slice())
 
 
-fn write_string[W: StringWriter](inout writer: W, string: String) -> Result[Int]:
+fn write_string[W: StringWriter](inout writer: W, string: String) -> (Int, Error):
     """Writes the contents of the string s to w, which accepts a slice of bytes.
     If w implements [StringWriter], [StringWriter.write_string] is invoked directly.
     Otherwise, [Writer.write] is called exactly once.
@@ -35,9 +34,7 @@ fn write_string[W: StringWriter](inout writer: W, string: String) -> Result[Int]
     return writer.write_string(string)
 
 
-fn read_at_least[
-    R: Reader
-](inout reader: R, inout dest: List[Byte], min: Int) -> Result[Int]:
+fn read_at_least[R: Reader](inout reader: R, inout dest: List[Byte], min: Int) -> (Int, Error):
     """Reads from r into buf until it has read at least min bytes.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -54,26 +51,26 @@ fn read_at_least[
 
     Returns:
         The number of bytes read."""
-    var error: Optional[WrappedError] = None
+    var error = Error()
     if len(dest) < min:
-        return Result(0, WrappedError(io.ERR_SHORT_BUFFER))
+        return 0, Error(io.ERR_SHORT_BUFFER)
 
     var total_bytes_read: Int = 0
     while total_bytes_read < min and not error:
-        var result = reader.read(dest)
-        var bytes_read = result.value
-        var error = result.get_error()
+        var bytes_read: Int
+        bytes_read, error = reader.read(dest)
         total_bytes_read += bytes_read
 
     if total_bytes_read >= min:
-        error = None
-    elif total_bytes_read > 0 and str(error.value()):
-        error = WrappedError(ERR_UNEXPECTED_EOF)
+        error = Error()
 
-    return Result(total_bytes_read, None)
+    elif total_bytes_read > 0 and str(error):
+        error = Error(ERR_UNEXPECTED_EOF)
+
+    return total_bytes_read, error
 
 
-fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> Result[Int]:
+fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error):
     """Reads exactly len(buf) bytes from r into buf.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -135,7 +132,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> Result[Int]:
 # }
 
 
-# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: List[Byte]) raises -> Int64:
+# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Span[Byte]) raises -> Int64:
 #     """Actual implementation of copy and CopyBuffer.
 #     if buf is nil, one is allocated.
 #     """
@@ -155,11 +152,11 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> Result[Int]:
 #     return written
 
 
-# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return src.write_to(dst)
 
 
-# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return dst.read_from(src)
 
 # # LimitReader returns a Reader that reads from r
@@ -409,7 +406,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> Result[Int]:
 # }
 
 
-fn read_all[R: Reader](inout reader: R) -> Result[List[Byte]]:
+fn read_all[R: Reader](inout reader: R) -> (List[Byte], Error):
     """Reads from r until an error or EOF and returns the data it read.
     A successful call returns err == nil, not err == EOF. Because ReadAll is
     defined to read from src until EOF, it does not treat an EOF from Read
@@ -421,17 +418,17 @@ fn read_all[R: Reader](inout reader: R) -> Result[List[Byte]]:
     Returns:
         The data read."""
     var dest = List[Byte](capacity=BUFFER_SIZE)
-    var index: Int = 0
     var at_eof: Bool = False
 
     while True:
         var temp = List[Byte](capacity=BUFFER_SIZE)
-        var result = reader.read(temp)
-        var bytes_read = result.value
-        var err = result.get_error()
-        if err:
-            if str(err.value()) != EOF:
-                return Result(dest, err)
+        var bytes_read: Int
+        var err: Error
+        bytes_read, err = reader.read(temp)
+        var err_message = str(err)
+        if err_message != "":
+            if err_message != EOF:
+                return dest, err
 
             at_eof = True
 
@@ -442,4 +439,4 @@ fn read_all[R: Reader](inout reader: R) -> Result[List[Byte]]:
         dest.extend(temp)
 
         if at_eof:
-            return Result(dest, err.value())
+            return dest, err

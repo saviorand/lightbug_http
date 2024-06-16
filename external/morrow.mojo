@@ -293,7 +293,7 @@ def normalize_timestamp(timestamp: Float64) -> Float64:
             timestamp /= 1_000_000
         else:
             raise Error(
-                "The specified timestamp " + String(timestamp) + "is too large."
+                "The specified timestamp " + timestamp.__str__() + "is too large."
             )
     return timestamp
 
@@ -311,4 +311,4 @@ fn rjust(string: String, width: Int, fillchar: String = " ") -> String:
 
 
 fn rjust(string: Int, width: Int, fillchar: String = " ") -> String:
-    return rjust(String(string), width, fillchar)
+    return rjust(string.__str__(), width, fillchar)

@@ -1,9 +1,5 @@
-from lightbug_http.client import Client
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode
-from lightbug_http.header import ResponseHeader
-from lightbug_http.sys.net import create_connection
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.strings import next_line
+from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
+from external.gojo.bytes import buffer
 from external.libc import (
     c_int,
     AF_INET,
@@ -14,6 +10,12 @@ from external.libc import (
     recv,
     close,
 )
+from lightbug_http.client import Client
+from lightbug_http.net import default_buffer_size
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode, split_http_string
+from lightbug_http.header import ResponseHeader
+from lightbug_http.sys.net import create_connection
+from lightbug_http.io.bytes import Bytes
 
 
 struct MojoClient(Client):
@@ -63,11 +65,6 @@ struct MojoClient(Client):
             If there is a failure in sending or receiving the message.
         """
         var uri = req.uri()
-        try:
-            _ = uri.parse()
-        except e:
-            print("error parsing uri: " + e.__str__())
-
         var host = String(uri.host())
 
         if host == "":
@@ -92,48 +89,51 @@ struct MojoClient(Client):
                 port = 80
 
         var conn = create_connection(self.fd, host_str, port)
+        
+        var req_encoded = encode(req)
 
-        var req_encoded = encode(req, uri)
         var bytes_sent = conn.write(req_encoded)
         if bytes_sent == -1:
             raise Error("Failed to send message")
 
-        var new_buf = Bytes()
-
+        var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
+        
         if bytes_recv == 0:
             conn.close()
-        
-        var response_first_line_headers_and_body = next_line(new_buf, "\r\n\r\n")
-        var response_first_line_headers = response_first_line_headers_and_body.first_line
-        var response_body = response_first_line_headers_and_body.rest
 
-        var response_first_line_and_headers = next_line(response_first_line_headers, "\r\n")
-        var response_first_line = response_first_line_and_headers.first_line
-        var response_headers = response_first_line_and_headers.rest
+        var buf = buffer.new_buffer(new_buf^)
+        var reader = Reader(buf^)
 
-        # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
-        var newline_in_body = response_body.find("\r\n")
-        if newline_in_body != -1:
-            response_body = response_body[:newline_in_body]
+        var error = Error()
 
-        var header = ResponseHeader(response_headers._buffer)
+        # # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
+        # var newline_in_body = response_body.find("\r\n")
+        # if newline_in_body != -1:
+        #     response_body = response_body[:newline_in_body]
 
+        var header = ResponseHeader()
+        var first_line_and_headers_len = 0
         try:
-            header.parse(response_first_line)
+            first_line_and_headers_len = header.parse_raw(reader)
         except e:
             conn.close()
-            raise Error("Failed to parse response header: " + e.__str__())
+            error = Error("Failed to parse response headers: " + e.__str__())
         
-        var total_recv = bytes_recv
+        var response = HTTPResponse(header, Bytes())
 
-        while header.content_length() > total_recv:
-            if header.content_length() != 0 and header.content_length() != -2:
-                var remaining_body = Bytes()
-                var read_len = conn.read(remaining_body)
-                response_body += remaining_body
-                total_recv += read_len
+        try:
+            response.read_body(reader, first_line_and_headers_len,)
+        except e:
+            error = Error("Failed to read request body: " + e.__str__())
+        # var total_recv = bytes_recv
+        # while header.content_length() > total_recv:
+        #     if header.content_length() != 0 and header.content_length() != -2:
+        #         var remaining_body = Bytes()
+        #         var read_len = conn.read(remaining_body)
+        #         response_body += remaining_body
+        #         total_recv += read_len
 
         conn.close()
 
-        return HTTPResponse(header, response_body._buffer)
+        return response

@@ -1,13 +1,13 @@
 from time import now
 from external.morrow import Morrow
-from external.gojo.strings import StringBuilder
+from external.gojo.strings.builder import StringBuilder
+from external.gojo.bufio import Reader
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import strHttp11, strHttp
-
+from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar
 
 trait Request:
     fn __init__(inout self, uri: URI):
@@ -43,7 +43,7 @@ trait Request:
     fn request_uri(inout self) -> String:
         ...
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         ...
 
     fn connection_close(self) -> Bool:
@@ -60,7 +60,7 @@ trait Response:
     fn status_code(self) -> Int:
         ...
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         ...
 
     fn connection_close(self) -> Bool:
@@ -79,7 +79,7 @@ struct HTTPRequest(Request):
     var disable_redirect_path_normalization: Bool
 
     fn __init__(inout self, uri: URI):
-        self.header = RequestHeader(String("127.0.0.1"))
+        self.header = RequestHeader("127.0.0.1")
         self.__uri = uri
         self.body_raw = Bytes()
         self.parsed_uri = False
@@ -88,7 +88,7 @@ struct HTTPRequest(Request):
         self.disable_redirect_path_normalization = False
 
     fn __init__(inout self, uri: URI, headers: RequestHeader):
-        self.header = RequestHeader()
+        self.header = headers
         self.__uri = uri
         self.body_raw = Bytes()
         self.parsed_uri = False
@@ -123,8 +123,12 @@ struct HTTPRequest(Request):
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    fn get_body(self) -> Bytes:
-        return self.body_raw
+    fn get_body_bytes(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+
+    fn set_body_bytes(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
 
     fn set_host(inout self, host: String) -> Self:
         _ = self.__uri.set_host(host)
@@ -135,7 +139,7 @@ struct HTTPRequest(Request):
         return self
 
     fn host(self) -> String:
-        return self.__uri.host()
+        return self.__uri.host_str()
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
         _ = self.header.set_request_uri(request_uri.as_bytes())
@@ -154,13 +158,23 @@ struct HTTPRequest(Request):
     fn uri(self) -> URI:
         return self.__uri
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         _ = self.header.set_connection_close()
         return self
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
+    
+    fn read_body(inout self, inout r: Reader, content_length: Int, header_len: Int, max_body_size: Int) raises -> None:
+        if content_length > max_body_size:
+            raise Error("Request body too large")
 
+        _ = r.discard(header_len)
+
+        var body_buf: Bytes
+        body_buf, _ = r.peek(r.buffered())
+        
+        _ = self.set_body_bytes(bytes(body_buf))        
 
 @value
 struct HTTPResponse(Response):
@@ -176,7 +190,7 @@ struct HTTPResponse(Response):
         self.header = ResponseHeader(
             200,
             bytes("OK"),
-            bytes("Content-Type: application/octet-stream\r\n"),
+            bytes("application/octet-stream"),
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -193,10 +207,17 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
+    
+    fn get_body_bytes(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
 
     fn get_body(self) -> Bytes:
         return self.body_raw
 
+    fn set_body_bytes(inout self, body: Bytes) -> Self:
+        self.body_raw = body
+        return self
+    
     fn set_status_code(inout self, status_code: Int) -> Self:
         _ = self.header.set_status_code(status_code)
         return self
@@ -204,16 +225,24 @@ struct HTTPResponse(Response):
     fn status_code(self) -> Int:
         return self.header.status_code()
 
-    fn set_connection_close(inout self, connection_close: Bool) -> Self:
+    fn set_connection_close(inout self) -> Self:
         _ = self.header.set_connection_close()
         return self
 
     fn connection_close(self) -> Bool:
         return self.header.connection_close()
+    
+    fn read_body(inout self, inout r: Reader, header_len: Int) raises -> None:
+        _ = r.discard(header_len)
+
+        var body_buf: Bytes
+        body_buf, _ = r.peek(r.buffered())
+        
+        _ = self.set_body_bytes(bytes(body_buf)) 
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
@@ -223,7 +252,7 @@ fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
@@ -233,7 +262,7 @@ fn OK(body: String, content_type: String) -> HTTPResponse:
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("Content-Type: text/plain")), body,
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), body,
     )
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
@@ -251,54 +280,58 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest, uri: URI) raises -> Bytes:
-    var res_str = String()
-    var protocol = strHttp11
-    var current_time = String()
-
+fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
-    _ = builder.write_string(String(" "))
-    if len(uri.request_uri()) > 1:
-        _ = builder.write_string(uri.request_uri())
+    _ = builder.write_string(whitespace)
+    if len(req.uri().path_bytes()) > 1:
+        _ = builder.write_string(req.uri().path())
     else:
-        _ = builder.write_string("/")
-    _ = builder.write_string(String(" "))
-    _ = builder.write(protocol)
-    _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string(strSlash)
+    _ = builder.write_string(whitespace)
+    
+    _ = builder.write(req.header.protocol())
 
-    _ = builder.write_string(String("Host: " + String(uri.host())))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+
+    if len(req.header.host()) > 0:
+        _ = builder.write_string("Host: ")
+        _ = builder.write(req.header.host())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
     if len(req.body_raw) > 0:
-        _ = builder.write_string(String("Content-Type: "))
-        _ = builder.write(req.header.content_type())
-        _ = builder.write_string(String("\r\n"))
+        if len(req.header.content_type()) > 0:
+            _ = builder.write_string("Content-Type: ")
+            _ = builder.write(req.header.content_type())
+            _ = builder.write_string(rChar)
+            _ = builder.write_string(nChar)
 
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(req.body_raw)))
-        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string("Content-Length: ")
+        _ = builder.write_string(len(req.body_raw).__str__())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Connection: "))
+    _ = builder.write_string("Connection: ")
     if req.connection_close():
-        _ = builder.write_string(String("close"))
+        _ = builder.write_string("close")
     else:
-        _ = builder.write_string(String("keep-alive"))
+        _ = builder.write_string("keep-alive")
     
-    _ = builder.write_string(String("\r\n"))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
     
     if len(req.body_raw) > 0:
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write(req.body_raw)
-
-    return builder.get_bytes()
+        _ = builder.write(req.get_body_bytes())
+    
+    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:
-    var res_str = String()
-    var protocol = strHttp11
     var current_time = String()
     try:
         current_time = Morrow.utcnow().__str__()
@@ -308,43 +341,90 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     var builder = StringBuilder()
 
-    _ = builder.write(protocol)
-    _ = builder.write_string(String(" "))
-    _ = builder.write_string(String(res.header.status_code()))
-    _ = builder.write_string(String(" "))
+    _ = builder.write(res.header.protocol())
+    _ = builder.write_string(whitespace)
+    _ = builder.write_string(res.header.status_code().__str__())
+    _ = builder.write_string(whitespace)
     _ = builder.write(res.header.status_message())
-    _ = builder.write_string(String("\r\n"))
 
-    _ = builder.write_string(String("Server: lightbug_http"))
-    _ = builder.write_string(String("\r\n"))
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Content-Type: "))
+    _ = builder.write_string("Server: lightbug_http")
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+
+    _ = builder.write_string("Content-Type: ")
     _ = builder.write(res.header.content_type())
-    _ = builder.write_string(String("\r\n"))
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
     if len(res.header.content_encoding()) > 0:
-        _ = builder.write_string(String("Content-Encoding: "))
+        _ = builder.write_string("Content-Encoding: ")
         _ = builder.write(res.header.content_encoding())
-        _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
     if len(res.body_raw) > 0:
-        _ = builder.write_string(String("Content-Length: "))
-        _ = builder.write_string(String(len(res.body_raw)))
-        _ = builder.write_string(String("\r\n"))
-
-    _ = builder.write_string(String("Connection: "))
-    if res.connection_close():
-        _ = builder.write_string(String("close"))
+        _ = builder.write_string("Content-Length: ")
+        _ = builder.write_string(len(res.body_raw).__str__())
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
     else:
-        _ = builder.write_string(String("keep-alive"))
-    _ = builder.write_string(String("\r\n"))
+        _ = builder.write_string("Content-Length: 0")
+        _ = builder.write_string(rChar)
+        _ = builder.write_string(nChar)
 
-    _ = builder.write_string(String("Date: "))
-    _ = builder.write_string(String(current_time))
+    _ = builder.write_string("Connection: ")
+    if res.connection_close():
+        _ = builder.write_string("close")
+    else:
+        _ = builder.write_string("keep-alive")
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
 
+    _ = builder.write_string("Date: ")
+    _ = builder.write_string(current_time)
+
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    _ = builder.write_string(rChar)
+    _ = builder.write_string(nChar)
+    
     if len(res.body_raw) > 0:
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write_string(String("\r\n"))
-        _ = builder.write(res.body_raw)
+        _ = builder.write(res.get_body_bytes())
+    
+    return builder.render().as_bytes_slice()
 
-    return builder.get_bytes()
+fn split_http_string(buf: Bytes) raises -> (String, String, String):
+    var request = String(buf)
+    
+    var request_first_line_headers_body = request.split("\r\n\r\n")
+    
+    if len(request_first_line_headers_body) == 0:
+        raise Error("Invalid HTTP string, did not find a double newline")
+    
+    var request_first_line_headers = request_first_line_headers_body[0]
+    
+    var request_body = String()
+
+    if len(request_first_line_headers_body) > 1:
+        request_body = request_first_line_headers_body[1]    
+    
+    var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
+
+    var request_first_line = String()
+    var request_headers = String()
+
+    if len(request_first_line_headers_list) == 0:
+        raise Error("Invalid HTTP string, did not find a newline in the first line")
+    
+    if len(request_first_line_headers_list) == 1:
+        request_first_line = request_first_line_headers_list[0]
+    else:
+        request_first_line = request_first_line_headers_list[0]
+        request_headers = request_first_line_headers_list[1]
+
+    return (request_first_line, request_headers, request_body)

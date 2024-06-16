@@ -1,5 +1,5 @@
 from collections.optional import Optional
-from ..builtins import Byte, Result, WrappedError
+from ..builtins import Byte
 
 alias Rune = Int32
 
@@ -78,7 +78,7 @@ trait Reader(Movable):
 
     Implementations must not retain p."""
 
-    fn read(inout self, inout dest: List[Byte]) -> Result[Int]:
+    fn read(inout self, inout dest: List[Byte]) -> (Int, Error):
         ...
 
 
@@ -94,7 +94,7 @@ trait Writer(Movable):
     Implementations must not retain p.
     """
 
-    fn write(inout self, src: List[Byte]) -> Result[Int]:
+    fn write(inout self, src: Span[Byte]) -> (Int, Error):
         ...
 
 
@@ -106,7 +106,7 @@ trait Closer(Movable):
     Specific implementations may document their own behavior.
     """
 
-    fn close(inout self) raises:
+    fn close(inout self) -> Error:
         ...
 
 
@@ -129,7 +129,7 @@ trait Seeker(Movable):
     is implementation-dependent.
     """
 
-    fn seek(inout self, offset: Int64, whence: Int) -> Result[Int64]:
+    fn seek(inout self, offset: Int64, whence: Int) -> (Int64, Error):
         ...
 
 
@@ -174,7 +174,7 @@ trait ReaderFrom:
 
     The [copy] function uses [ReaderFrom] if available."""
 
-    fn read_from[R: Reader](inout self, inout reader: R) -> Result[Int64]:
+    fn read_from[R: Reader](inout self, inout reader: R) -> (Int64, Error):
         ...
 
 
@@ -191,7 +191,7 @@ trait WriterTo:
 
     The copy function uses WriterTo if available."""
 
-    fn write_to[W: Writer](inout self, inout writer: W) -> Result[Int64]:
+    fn write_to[W: Writer](inout self, inout writer: W) -> (Int64, Error):
         ...
 
 
@@ -227,7 +227,7 @@ trait ReaderAt:
 
     Implementations must not retain p."""
 
-    fn read_at(self, inout dest: List[Byte], off: Int64) -> Result[Int]:
+    fn read_at(self, inout dest: List[Byte], off: Int64) -> (Int, Error):
         ...
 
 
@@ -248,7 +248,7 @@ trait WriterAt:
 
     Implementations must not retain p."""
 
-    fn write_at(self, src: List[Byte], off: Int64) -> Result[Int]:
+    fn write_at(self, src: Span[Byte], off: Int64) -> (Int, Error):
         ...
 
 
@@ -263,7 +263,7 @@ trait ByteReader:
     processing. A [Reader] that does not implement ByteReader
     can be wrapped using bufio.NewReader to add this method."""
 
-    fn read_byte(inout self) -> Result[Byte]:
+    fn read_byte(inout self) -> (Byte, Error):
         ...
 
 
@@ -277,14 +277,14 @@ trait ByteScanner(ByteReader):
     last-unread byte), or (in implementations that support the [Seeker] trait)
     seek to one byte before the current offset."""
 
-    fn unread_byte(inout self) -> Optional[WrappedError]:
+    fn unread_byte(inout self) -> Error:
         ...
 
 
 trait ByteWriter:
     """ByteWriter is the trait that wraps the write_byte method."""
 
-    fn write_byte(inout self, byte: Byte) -> Result[Int]:
+    fn write_byte(inout self, byte: Byte) -> (Int, Error):
         ...
 
 
@@ -316,5 +316,5 @@ trait RuneScanner(RuneReader):
 trait StringWriter:
     """StringWriter is the trait that wraps the WriteString method."""
 
-    fn write_string(inout self, src: String) -> Result[Int]:
+    fn write_string(inout self, src: String) -> (Int, Error):
         ...

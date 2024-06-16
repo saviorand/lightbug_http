@@ -1,14 +1,18 @@
+from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
+from external.gojo.bytes import buffer
 from lightbug_http.server import DefaultConcurrency
-from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode
+from lightbug_http.net import Listener, default_buffer_size
+from lightbug_http.http import HTTPRequest, encode, split_http_string
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
 from lightbug_http.service import HTTPService
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
-from lightbug_http.strings import next_line, NetworkType
+from lightbug_http.strings import NetworkType
+
+alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 @value
 struct SysServer:
@@ -23,7 +27,7 @@ struct SysServer:
     var max_concurrent_connections: Int
     var max_requests_per_connection: Int
 
-    var max_request_body_size: Int
+    var __max_request_body_size: Int
     var tcp_keep_alive: Bool
 
     var ln: SysListener
@@ -34,8 +38,18 @@ struct SysServer:
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
-        self.max_request_body_size = 0
+        self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
+        self.ln = SysListener()
+    
+    fn __init__(inout self, tcp_keep_alive: Bool) raises:
+        self.error_handler = ErrorHandler()
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = default_max_request_body_size
+        self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
     
     fn __init__(inout self, own_address: String) raises:
@@ -44,7 +58,7 @@ struct SysServer:
         self.__address = own_address
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
-        self.max_request_body_size = 0
+        self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
 
@@ -54,8 +68,28 @@ struct SysServer:
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
-        self.max_request_body_size = 0
+        self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
+        self.ln = SysListener()
+    
+    fn __init__(inout self, max_request_body_size: Int) raises:
+        self.error_handler = ErrorHandler()
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = max_request_body_size
+        self.tcp_keep_alive = False
+        self.ln = SysListener()
+    
+    fn __init__(inout self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
+        self.error_handler = ErrorHandler()
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = max_request_body_size
+        self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
     
     fn address(self) -> String:
@@ -63,6 +97,13 @@ struct SysServer:
     
     fn set_address(inout self, own_address: String) -> Self:
         self.__address = own_address
+        return self
+
+    fn max_request_body_size(self) -> Int:
+        return self.__max_request_body_size
+    
+    fn set_max_request_body_size(inout self, size: Int) -> Self:
+        self.__max_request_body_size = size
         return self
 
     fn get_concurrency(self) -> Int:
@@ -108,56 +149,85 @@ struct SysServer:
 
         while True:
             var conn = self.ln.accept()
-            var buf = Bytes()
-            var read_len = conn.read(buf)
-            
-            if read_len == 0:
-                conn.close()
-                break
-                
-            var request_first_line_headers_and_body = next_line(buf, "\r\n\r\n")
-            var request_first_line_headers = request_first_line_headers_and_body.first_line
-            var request_body = request_first_line_headers_and_body.rest
+            self.serve_connection(conn, handler)
+    
+    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
+        """
+        Serve a single connection.
 
-            var request_first_line_headers_split = next_line(request_first_line_headers, "\r\n")
-            var request_first_line = request_first_line_headers_split.first_line
-            var request_headers = request_first_line_headers_split.rest
+        Args:
+            conn : SysConnection - A connection object that represents a client connection.
+            handler : HTTPService - An object that handles incoming HTTP requests.
 
-            var header = RequestHeader(request_headers._buffer)
+        Raises:
+        If there is an error while serving the connection.
+        """
+        var b = Bytes(capacity=default_buffer_size)
+        var bytes_recv = conn.read(b) 
+        if bytes_recv == 0:
+            conn.close()
+            return
 
+        var buf = buffer.new_buffer(b^)
+        var reader = Reader(buf^)
+
+        var error = Error()
+        
+        var max_request_body_size = self.max_request_body_size()
+        if max_request_body_size <= 0:
+            max_request_body_size = default_max_request_body_size
+        
+        var req_number = 0
+        
+        while True:
+            req_number += 1
+
+            if req_number > 1:
+                var b = Bytes(capacity=default_buffer_size)
+                var bytes_recv = conn.read(b)
+                if bytes_recv == 0:
+                    conn.close()
+                    break
+                buf = buffer.new_buffer(b^)
+                reader = Reader(buf^)
+
+            var header = RequestHeader()
+            var first_line_and_headers_len = 0
             try:
-                header.parse(request_first_line)
+                first_line_and_headers_len = header.parse_raw(reader)
             except e:
-                conn.close()
-                raise Error("Failed to parse request header: " + e.__str__())
-                
+                error = Error("Failed to parse request headers: " + e.__str__())
+
             var uri = URI(self.address() + String(header.request_uri()))
             try:
                 uri.parse()
             except e:
-                conn.close()
-                raise Error("Failed to parse request line:" + e.__str__())
-
-            if header.content_length() != 0 and header.content_length() != (len(request_body) + 1):
-                var remaining_body = Bytes()
-                var remaining_len = header.content_length() - len(request_body + 1)
-                while remaining_len > 0:
-                    var read_len = conn.read(remaining_body)
-                    buf.extend(remaining_body)
-                    remaining_len -= read_len
-
-            var res = handler.func(
-                HTTPRequest(
+                error = Error("Failed to parse request line:" + e.__str__())
+            
+            if header.content_length() > 0:
+                if max_request_body_size > 0 and header.content_length() > max_request_body_size:
+                    error = Error("Request body too large")
+            
+            var request = HTTPRequest(
                     uri,
-                    buf,
+                    Bytes(),
                     header,
                 )
-            )
             
-            # Always close the connection as long as we don't support concurrency
-            _ = res.set_connection_close(True)
+            try:
+                request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
+            except e:
+                error = Error("Failed to read request body: " + e.__str__())
+            
+            var res = handler.func(request)
+            
+            if not self.tcp_keep_alive:
+                _ = res.set_connection_close()
             
             var res_encoded = encode(res)
+
             _ = conn.write(res_encoded)
 
-            conn.close()
+            if not self.tcp_keep_alive:
+                conn.close()
+                return

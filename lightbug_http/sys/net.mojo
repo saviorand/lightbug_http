@@ -1,3 +1,4 @@
+from utils import StaticTuple
 from lightbug_http.net import (
     Listener,
     ListenConfig,
@@ -10,7 +11,7 @@ from lightbug_http.net import (
     get_peer_name,
 )
 from lightbug_http.strings import NetworkType
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
 from external.libc import (
     c_void,
@@ -57,10 +58,10 @@ trait AnAddrInfo:
 fn getaddrinfo[
     T: AnAddrInfo
 ](
-    nodename: Pointer[c_char],
-    servname: Pointer[c_char],
-    hints: Pointer[T],
-    res: Pointer[Pointer[T]],
+    nodename: UnsafePointer[c_char],
+    servname: UnsafePointer[c_char],
+    hints: UnsafePointer[T],
+    res: UnsafePointer[UnsafePointer[T]],
 ) -> c_int:
     """
     Overwrites the existing libc `getaddrinfo` function to use the AnAddrInfo trait.
@@ -72,10 +73,10 @@ fn getaddrinfo[
     return external_call[
         "getaddrinfo",
         c_int,  # FnName, RetType
-        Pointer[c_char],
-        Pointer[c_char],
-        Pointer[T],  # Args
-        Pointer[Pointer[T]],  # Args
+        UnsafePointer[c_char],
+        UnsafePointer[c_char],
+        UnsafePointer[T],  # Args
+        UnsafePointer[UnsafePointer[T]],  # Args
     ](nodename, servname, hints, res)
 
 
@@ -101,13 +102,13 @@ struct SysListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
-        var their_addr_ptr = Pointer[sockaddr].alloc(1)
+        var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
         var new_sockfd = accept(
-            self.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size)
+            self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         )
         if new_sockfd == -1:
-            print("Failed to accept connection")
+            print("Failed to accept connection, system accept() returned an error.")
         var peer = get_peer_name(new_sockfd)
 
         return SysConnection(
@@ -140,14 +141,14 @@ struct SysListenConfig(ListenConfig):
         if address_family == AF_INET6:
             ip_buf_size = 16
 
-        var ip_buf = Pointer[c_void].alloc(ip_buf_size)
+        var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
         var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
-        var raw_ip = ip_buf.bitcast[c_uint]().load()
+        var raw_ip = ip_buf.bitcast[c_uint]()[]
 
         var bin_port = htons(UInt16(addr.port))
 
         var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
-        var ai_ptr = Pointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
+        var ai_ptr = UnsafePointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
         var sockfd = socket(address_family, SOCK_STREAM, 0)
         if sockfd == -1:
@@ -158,7 +159,7 @@ struct SysListenConfig(ListenConfig):
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
-            Pointer[Int].address_of(yes).bitcast[c_void](),
+            UnsafePointer[Int].address_of(yes).bitcast[c_void](),
             sizeof[Int](),
         )
 
@@ -216,14 +217,14 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var new_buf = Pointer[UInt8]().alloc(default_buffer_size)
-        var bytes_recv = recv(self.fd, new_buf, default_buffer_size, 0)
+        var bytes_recv = recv(self.fd, DTypePointer[DType.uint8](buf.unsafe_ptr()).offset(buf.size), buf.capacity - buf.size, 0)
         if bytes_recv == -1:
             return 0
+        buf.size += bytes_recv
         if bytes_recv == 0:
             return 0
-        var bytes_str = String(new_buf.bitcast[Int8](), bytes_recv)
-        buf = bytes_str._buffer
+        if bytes_recv < buf.capacity:
+            return bytes_recv
         return bytes_recv
 
     fn write(self, msg: String) raises -> Int:
@@ -275,13 +276,13 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
-    var ai_canonname: Pointer[c_char]
-    var ai_addr: Pointer[sockaddr]
-    var ai_next: Pointer[c_void]
+    var ai_canonname: UnsafePointer[c_char]
+    var ai_addr: UnsafePointer[sockaddr]
+    var ai_next: UnsafePointer[c_void]
 
     fn __init__() -> Self:
         return Self(
-            0, 0, 0, 0, 0, Pointer[c_char](), Pointer[sockaddr](), Pointer[c_void]()
+            0, 0, 0, 0, 0, UnsafePointer[c_char](), UnsafePointer[sockaddr](), UnsafePointer[c_void]()
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -296,8 +297,8 @@ struct addrinfo_macos(AnAddrInfo):
             UInt32 - The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = Pointer[Self]().alloc(1)
-        servinfo.store(Self())
+        var servinfo = UnsafePointer[Self]().alloc(1)
+        initialize_pointee_move(servinfo, Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -306,15 +307,15 @@ struct addrinfo_macos(AnAddrInfo):
 
         var error = getaddrinfo[Self](
             host_ptr,
-            Pointer[UInt8](),
-            Pointer.address_of(hints),
-            Pointer.address_of(servinfo),
+            UnsafePointer[UInt8](),
+            UnsafePointer.address_of(hints),
+            UnsafePointer.address_of(servinfo),
         )
         if error != 0:
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo.load()
+        var addrinfo = servinfo[]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
@@ -324,7 +325,7 @@ struct addrinfo_macos(AnAddrInfo):
                 " ai_addr is null."
             )
 
-        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
 
@@ -341,13 +342,13 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
-    var ai_addr: Pointer[sockaddr]
-    var ai_canonname: Pointer[c_char]
-    var ai_next: Pointer[c_void]
+    var ai_addr: UnsafePointer[sockaddr]
+    var ai_canonname: UnsafePointer[c_char]
+    var ai_next: UnsafePointer[c_void]
 
     fn __init__() -> Self:
         return Self(
-            0, 0, 0, 0, 0, Pointer[sockaddr](), Pointer[c_char](), Pointer[c_void]()
+            0, 0, 0, 0, 0, UnsafePointer[sockaddr](), UnsafePointer[c_char](), UnsafePointer[c_void]()
         )
 
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -362,8 +363,8 @@ struct addrinfo_unix(AnAddrInfo):
             UInt32 - The IP address.
         """
         var host_ptr = to_char_ptr(String(host))
-        var servinfo = Pointer[Self]().alloc(1)
-        servinfo.store(Self())
+        var servinfo = UnsafePointer[Self]().alloc(1)
+        initialize_pointee_move(servinfo, Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -372,15 +373,15 @@ struct addrinfo_unix(AnAddrInfo):
 
         var error = getaddrinfo[Self](
             host_ptr,
-            Pointer[UInt8](),
-            Pointer.address_of(hints),
-            Pointer.address_of(servinfo),
+            UnsafePointer[UInt8](),
+            UnsafePointer.address_of(hints),
+            UnsafePointer.address_of(servinfo),
         )
         if error != 0:
             print("getaddrinfo failed")
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        var addrinfo = servinfo.load()
+        var addrinfo = servinfo[]
 
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
@@ -390,7 +391,7 @@ struct addrinfo_unix(AnAddrInfo):
                 " ai_addr is null."
             )
 
-        var addr_in = ai_addr.bitcast[sockaddr_in]().load()
+        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
 
@@ -417,7 +418,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     var addr: sockaddr_in = sockaddr_in(
         AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
     )
-    var addr_ptr = Pointer[sockaddr_in].address_of(addr).bitcast[sockaddr]()
+    var addr_ptr = UnsafePointer[sockaddr_in].address_of(addr).bitcast[sockaddr]()
 
     if connect(sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
