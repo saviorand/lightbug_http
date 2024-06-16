@@ -21,12 +21,7 @@ def test_split_http_string():
     List("GET /index.html HTTP/1.1", 
         "Host: www.example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message",
         "Hello, World!")
-    # cases["GET /index.html HTTP/1.1\r\n\r\nHello, World!\0"] = List("GET /index.html HTTP/1.1", "", "Hello, World!")
-    # cases["GET /index.html HTTP/1.1\r\nHost: www.example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"] = 
-    # List("GET /index.html HTTP/1.1",
-    #     "Host: www.example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message", "")
-    # cases["GET /index.html HTTP/1.1\r\n\r\n"] = List("GET /index.html HTTP/1.1", "", "")
-
+    
     for c in cases.items():
         var buf = bytes((c[].key))
         request_first_line, request_headers, request_body = split_http_string(buf)

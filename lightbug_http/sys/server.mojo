@@ -235,6 +235,6 @@ struct SysServer:
 
             _ = conn.write(res_encoded)
 
-        if not self.tcp_keep_alive:
-            conn.close()
-            return
+            if not self.tcp_keep_alive:
+                conn.close()
+                return

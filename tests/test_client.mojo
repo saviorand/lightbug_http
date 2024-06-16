@@ -14,11 +14,9 @@ from lightbug_http.io.bytes import bytes
 
 def test_client():
     var mojo_client = MojoClient()
-    # test_mojo_client_lightbug(mojo_client)
+    var py_client = PythonClient()
     test_mojo_client_lightbug_external_req(mojo_client)
-    
-    # var py_client = PythonClient()
-    # test_python_client_lightbug(py_client) - this is broken for now due to issue with passing a tuple to self.socket.connect()
+    test_python_client_lightbug(py_client)
 
 
 fn test_mojo_client_lightbug(client: MojoClient) raises:

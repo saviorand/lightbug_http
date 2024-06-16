@@ -313,22 +313,22 @@ struct RequestHeader:
 
         if key_first == bytes("h", pop=False)[0] or key_first == bytes("H", pop=False)[0]:
             if compare_case_insensitive(key, bytes("host", pop=False)):
-                _ = self.set_host_bytes(bytes(value, pop=False))
+                _ = self.set_host_bytes(bytes(value))
                 return
         elif key_first == bytes("u", pop=False)[0] or key_first == bytes("U", pop=False)[0]:
             if compare_case_insensitive(key, bytes("user-agent", pop=False)):
-                _ = self.set_user_agent_bytes(bytes(value, pop=False))
+                _ = self.set_user_agent_bytes(bytes(value))
                 return
         elif key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
             if compare_case_insensitive(key, bytes("content-type", pop=False)):
-                _ = self.set_content_type_bytes(bytes(value, pop=False))
+                _ = self.set_content_type_bytes(bytes(value))
                 return
             if compare_case_insensitive(key, bytes("content-length", pop=False)):
                 if self.content_length() != -1:
-                    _ = self.set_content_length_bytes(bytes(value))
+                    _ = self.set_content_length(atol(value))
                 return
             if compare_case_insensitive(key, bytes("connection", pop=False)):
-                if compare_case_insensitive(value, bytes("close", pop=False)):
+                if compare_case_insensitive(bytes(value), bytes("close", pop=False)):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
@@ -346,7 +346,6 @@ struct RequestHeader:
 
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
         var n = index_byte(buf, bytes(nChar, pop=False)[0])
-        
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
             raise Error("Failed to find a newline in headers")
@@ -627,21 +626,6 @@ struct ResponseHeader:
     fn headers(self) -> String:
         return String(self.raw_headers)
 
-    # fn parse_from_list(inout self, headers: List[String], first_line: String) raises -> None:
-    #     _ = self.parse_first_line(first_line)
-
-    #     for header in headers:
-    #         var header_str = header[]
-    #         var separator = header_str.find(":")
-    #         if separator == -1:
-    #             raise Error("Invalid header")
-            
-    #         var key = String(header_str)[:separator]
-    #         var value = String(header_str)[separator + 1 :]
-
-    #         if len(key) > 0:
-    #             self.parse_header(key, value)
-
     fn parse_raw(inout self, inout r: Reader) raises -> Int:
         var first_byte = r.peek(1)
         if len(first_byte) == 0:
@@ -677,14 +661,14 @@ struct ResponseHeader:
         if first_whitespace <= 0:
             raise Error("Could not find HTTP version in response line: " + String(b))
             
-        _ = self.set_protocol(b[:first_whitespace])
+        _ = self.set_protocol(b[:first_whitespace+2])
         
         var end_of_status_code = first_whitespace+5 # status code is always 3 digits, this calculation includes null terminator
 
         var status_code = atol(b[first_whitespace+1:end_of_status_code])
         _ = self.set_status_code(status_code)
 
-        var status_text = b[end_of_status_code + 1 :]
+        var status_text = b[end_of_status_code :]
         if len(status_text) > 1:
             _ = self.set_status_message(status_text)   
 
@@ -707,10 +691,10 @@ struct ResponseHeader:
 
         if key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
             if compare_case_insensitive(key, bytes("content-type", pop=False)):
-                _ = self.set_content_type_bytes(bytes(value, pop=False))
+                _ = self.set_content_type_bytes(bytes(value))
                 return
             if compare_case_insensitive(key, bytes("content-encoding", pop=False)):
-                _ = self.set_content_encoding_bytes(bytes(value, pop=False))
+                _ = self.set_content_encoding_bytes(bytes(value))
                 return
             if compare_case_insensitive(key, bytes("content-length", pop=False)):
                 if self.content_length() != -1:
@@ -719,14 +703,14 @@ struct ResponseHeader:
                     _ = self.set_content_length_bytes(bytes(content_length))
                 return
             if compare_case_insensitive(key, bytes("connection", pop=False)):
-                if compare_case_insensitive(value, bytes("close", pop=False)):
+                if compare_case_insensitive(bytes(value), bytes("close", pop=False)):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
         elif key_first == bytes("s", pop=False)[0] or key_first == bytes("S", pop=False)[0]:
             if compare_case_insensitive(key, bytes("server", pop=False)):
-                _ = self.set_server_bytes(bytes(value, pop=False))
+                _ = self.set_server_bytes(bytes(value))
                 return
         elif key_first == bytes("t", pop=False)[0] or key_first == bytes("T", pop=False)[0]:
             if compare_case_insensitive(key, bytes("transfer-encoding", pop=False)):
@@ -734,7 +718,7 @@ struct ResponseHeader:
                     _ = self.set_content_length(-1)
                 return
             if compare_case_insensitive(key, bytes("trailer", pop=False)):
-                _ = self.set_trailer_bytes(bytes(value, pop=False))
+                _ = self.set_trailer_bytes(bytes(value))
     
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
         var n = index_byte(buf, bytes(nChar, pop=False)[0])
