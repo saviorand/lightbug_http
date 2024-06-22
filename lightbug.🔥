@@ -1,6 +1,37 @@
 from lightbug_http import *
+from lightbug_http.middleware.helpers import Success
+from sys import is_defined
+from lightbug_http import *
+
+@value
+struct HelloWorld(HTTPHandler):
+    fn handle(self, context: Context) -> HTTPResponse:
+        var name = context.params.find("username")
+        if name:
+            return Success("Hello!")
+        else:
+            return Success("Hello, World!")
 
 fn main() raises:
-    var server = SysServer()
-    var handler = Welcome()
-    server.listen_and_serve("0.0.0.0:8080", handler)
+    if not is_defined["TEST"]():
+        var router = RouterMiddleware()
+        router.add("GET", "/hello", HelloWorld())
+
+        var middleware = MiddlewareChain()
+        middleware.add(CompressionMiddleware())
+        middleware.add(ErrorMiddleware())
+        middleware.add(LoggerMiddleware())
+        middleware.add(CorsMiddleware(allows_origin = "*"))
+        middleware.add(BasicAuthMiddleware("admin", "password"))
+        middleware.add(StaticMiddleware("static"))
+        middleware.add(router)
+        middleware.add(NotFoundMiddleware())
+
+        var server = SysServer()
+        server.listen_and_serve("0.0.0.0:8080", middleware)
+    else:
+        try:
+            run_tests()
+            print("Test suite passed")
+        except e:
+            print("Test suite failed: " + e.__str__())
