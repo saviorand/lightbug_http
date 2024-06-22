@@ -13,9 +13,10 @@ struct CorsMiddleware(Middleware):
     fn call(self, context: Context) -> HTTPResponse:
         if bytes_equal(context.request.header.method(), bytes("OPTIONS")):
             var response = self.next.call(context)
-            response.headers["Access-Control-Allow-Origin"] = self.allow_origin
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            # TODO: implement headers
+            # response.headers["Access-Control-Allow-Origin"] = self.allow_origin
+            # response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            # response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
             return response
 
         # TODO: implement headers

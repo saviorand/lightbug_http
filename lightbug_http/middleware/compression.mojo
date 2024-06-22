@@ -8,7 +8,7 @@ struct CompressionMiddleware(Middleware):
 
     fn call(self, context: Context) -> HTTPResponse:
         var response = self.next.call(context)
-        response.body = self.compress(response.body)
+        response.body_raw = self.compress(response.body_raw)
         return response
 
     # TODO: implement compression
