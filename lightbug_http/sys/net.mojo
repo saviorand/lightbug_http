@@ -217,7 +217,7 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var bytes_recv = recv(self.fd, DTypePointer[DType.uint8](buf.unsafe_ptr()).offset(buf.size), buf.capacity - buf.size, 0)
+        var bytes_recv = recv(self.fd, buf.unsafe_ptr().offset(buf.size), buf.capacity - buf.size, 0)
         if bytes_recv == -1:
             return 0
         buf.size += bytes_recv

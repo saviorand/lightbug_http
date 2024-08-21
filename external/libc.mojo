@@ -1,5 +1,6 @@
 from utils import StaticTuple
 from lightbug_http.io.bytes import Bytes
+from sys.ffi import external_call
 
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
@@ -354,13 +355,17 @@ struct addrinfo:
     var ai_addrlen: socklen_t
     var ai_addr: UnsafePointer[sockaddr]
     var ai_canonname: UnsafePointer[c_char]
-    # FIXME(cristian): This should be UnsafePointer[addrinfo]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__() -> Self:
-        return Self(
-            0, 0, 0, 0, 0, UnsafePointer[sockaddr](), UnsafePointer[c_char](), UnsafePointer[c_void]()
-        )
+    fn __init__(inout self) -> None:
+        self.ai_flags = 0
+        self.ai_family = 0
+        self.ai_socktype = 0
+        self.ai_protocol = 0
+        self.ai_addrlen = 0
+        self.ai_addr = UnsafePointer[sockaddr]()
+        self.ai_canonname = UnsafePointer[c_char]()
+        self.ai_next = UnsafePointer[c_void]()
 
 
 fn strlen(s: UnsafePointer[c_char]) -> c_size_t:
@@ -651,7 +656,7 @@ fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen
 
 fn recv(
     socket: c_int,
-    buffer: DTypePointer[DType.uint8],
+    buffer: UnsafePointer[UInt8],
     length: c_size_t,
     flags: c_int,
 ) -> c_ssize_t:
@@ -663,7 +668,7 @@ fn recv(
         "recv",
         c_ssize_t,  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         c_size_t,
         c_int,  # Args
     ](socket, buffer, length, flags)
@@ -783,29 +788,7 @@ fn open[*T: AnyType](path: UnsafePointer[c_char], oflag: c_int, *args: *T) -> c_
     Returns:
         A File Descriptor or -1 in case of failure
     """
-    return external_call[
-        "open", c_int, UnsafePointer[c_char], c_int  # FnName, RetType  # Args
-    ](path, oflag, args)
-
-
-fn openat[
-    *T: AnyType
-](fd: c_int, path: UnsafePointer[c_char], oflag: c_int, *args: *T) -> c_int:
-    """Libc POSIX `open` function
-    Reference: https://man7.org/linux/man-pages/man3/open.3p.html
-    Fn signature: int openat(int fd, const char *path, int oflag, ...).
-
-    Args:
-        fd: A File Descriptor.
-        path: A UnsafePointer to a C string containing the path to open.
-        oflag: The flags to open the file with.
-        args: The optional arguments.
-    Returns:
-        A File Descriptor or -1 in case of failure
-    """
-    return external_call[
-        "openat", c_int, c_int, UnsafePointer[c_char], c_int  # FnName, RetType  # Args
-    ](fd, path, oflag, args)
+    return external_call["open", c_int](path, oflag, args)
 
 
 fn printf[*T: AnyType](format: UnsafePointer[c_char], *args: *T) -> c_int:
@@ -820,25 +803,8 @@ fn printf[*T: AnyType](format: UnsafePointer[c_char], *args: *T) -> c_int:
     return external_call[
         "printf",
         c_int,  # FnName, RetType
-        UnsafePointer[c_char],  # Args
     ](format, args)
 
-
-fn sprintf[
-    *T: AnyType
-](s: UnsafePointer[c_char], format: UnsafePointer[c_char], *args: *T) -> c_int:
-    """Libc POSIX `sprintf` function
-    Reference: https://man7.org/linux/man-pages/man3/fprintf.3p.html
-    Fn signature: int sprintf(char *restrict s, const char *restrict format, ...).
-
-    Args: s: A UnsafePointer to a buffer to store the result.
-        format: A UnsafePointer to a C string containing the format.
-        args: The optional arguments.
-    Returns: The number of bytes written or -1 in case of failure.
-    """
-    return external_call[
-        "sprintf", c_int, UnsafePointer[c_char], UnsafePointer[c_char]  # FnName, RetType  # Args
-    ](s, format, args)
 
 
 fn read(fildes: c_int, buf: UnsafePointer[c_void], nbyte: c_size_t) -> c_int:
