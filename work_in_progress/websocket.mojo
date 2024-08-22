@@ -2,6 +2,19 @@ from collections import Dict, Optional
 from python import Python, PythonObject
 from time import sleep
 
+# it is a "magic" constant, see:
+# https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#server_handshake_response
+alias MAGIC_CONSTANT = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+alias BYTE_0_TEXT: UInt8 = 1
+alias BYTE_0_NO_FRAGMENT:UInt8 = 128
+
+alias BYTE_1_FRAME_IS_MASKED:UInt8 = 128
+
+alias BYTE_1_SIZE_ONE_BYTE:UInt8 = 125
+alias BYTE_1_SIZE_TWO_BYTES:UInt8 = 126
+alias BYTE_1_SIZE_EIGHT_BYTES:UInt8 = 127
+
 fn websocket[
     host: StringLiteral = "127.0.0.1", 
     port: Int = 8000
@@ -77,9 +90,7 @@ fn websocket[
             raise "No Sec-WebSocket-Key for upgrading to websocket"
         
         var accept = PythonObject(request_header["Sec-WebSocket-Key"])
-        accept += PythonObject("258EAFA5-E914-47DA-95CA-C5AB0DC85B11")
-        # it is a "magic" constant, see:
-        # https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#server_handshake_response
+        accept += PythonObject(MAGIC_CONSTANT)
         accept = accept.encode()
         accept = py_base64.b64encode(py_sha1(accept).digest())
         
@@ -113,7 +124,7 @@ def main():
                 sleep(1)
             m = receive_message(ws.value())
             if m:
-                print(m.value())
+                # print(m.value())
                 send_message(ws.value(),m.value())
 
     _ = ws^
@@ -131,25 +142,34 @@ fn receive_message[
     try:
         _ = read_byte(ws) #not implemented yet
         var b = read_byte(ws)
-        if not b&128:
+        if (b&BYTE_1_FRAME_IS_MASKED) == 0:
+            # if client send non-masked frame, connection must be closed
+            # https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#format
+            ws[0].close()
             raise "Not masked"
-        var byte_size_of_message_size = b^128
+
+        var byte_size_of_message_size = b^BYTE_1_FRAME_IS_MASKED
         var message_size = 0
         
-        if byte_size_of_message_size <= 125:
+        if byte_size_of_message_size <= BYTE_1_SIZE_ONE_BYTE:
+            # when size is <= 125, no need for more bytes
             message_size = int(byte_size_of_message_size)
             byte_size_of_message_size = 1
-        elif byte_size_of_message_size == 126 or byte_size_of_message_size  == 127:
-            if byte_size_of_message_size == 126:
+        elif byte_size_of_message_size == BYTE_1_SIZE_TWO_BYTES or byte_size_of_message_size  == BYTE_1_SIZE_EIGHT_BYTES:
+            if byte_size_of_message_size == BYTE_1_SIZE_TWO_BYTES:
                 byte_size_of_message_size = 2
-            elif byte_size_of_message_size == 127:
+            elif byte_size_of_message_size == BYTE_1_SIZE_EIGHT_BYTES:
                 byte_size_of_message_size = 8
             var bytes = UInt64(0)
             # is it always big endian ?
+            # next loop is basically reading 4 or 8 bytes (big endian)
+            # (theses will form a number that is the message size)
             for i in range(byte_size_of_message_size):
                 bytes |= (UInt64(int(read_byte(ws)))<<((int(byte_size_of_message_size)-1-i)*8))
             message_size = int(bytes)
-            if bytes>>56 != 0:
+            if bytes&(1<<63) != 0:
+                # First bit should always be 0, see step 3:
+                # https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#decoding_payload_length
                 raise "too big"
         else:
             raise "error"
@@ -157,6 +177,8 @@ fn receive_message[
         if byte_size_of_message_size == 0:
             raise "message size is 0"
         
+        # client->server messages should always have a mask
+        # https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#format
         var mask = SIMD[DType.uint8,4](
             read_byte(ws),
             read_byte(ws),
@@ -189,23 +211,24 @@ fn send_message(inout ws: PythonObject, message: String)->Bool:
         var byte_array = Python.evaluate("bytearray")
         var message_part = PythonObject(message).encode('utf-8')
         var tmp_len = UInt64(len(message_part))
+        
         var first_part = byte_array(2)
-        #128 is for sending all at once (no fragment)
-        #1 is for text 
-        first_part[0] = 128 | 1 
+        first_part[0] = int(BYTE_0_NO_FRAGMENT | BYTE_0_TEXT)
+        
         var bytes_for_size = 0
-        if tmp_len <= 125:
+        if tmp_len <= int(BYTE_1_SIZE_ONE_BYTE):
             first_part[1] = tmp_len&255
             bytes_for_size = 0
         else:
             if tmp_len <= ((1<<16)-1):
-                first_part[1] = 126
+                first_part[1] = int(BYTE_1_SIZE_TWO_BYTES)
                 bytes_for_size = 2
             else:
-                first_part[1] = 127
+                first_part[1] = int(BYTE_1_SIZE_EIGHT_BYTES)
                 bytes_for_size = 8
         
-        var part_two = byte_array(bytes_for_size)
+        var part_two = byte_array(bytes_for_size) #0, 4 or 8 bytes
+        # When len of message need 4 or 8 bytes:
         for i in range(bytes_for_size):
             part_two[i] =  (tmp_len >> (bytes_for_size-i-1)*8)&255
         
