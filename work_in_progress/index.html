@@ -33,13 +33,13 @@
         }
         socket.onmessage = (e) => {
             messages.innerHTML += "<h1>" + e.data + "<\h1>"
-            if (e.data == "waiting"){
+            if (e.data == "server waiting"){
                 return
             }
             console.log(e.data.length, create_message(iteration).length)
             iteration*=2
             if (iteration <= (1<<12) && e.data.length < (1<<18)){
-                const data =  create_message(iteration)
+                const data = create_message(iteration)
                 socket.send(data)
             } else {
                 console.log("sending/receiving done 👍")
