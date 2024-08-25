@@ -79,7 +79,7 @@ struct PythonListenConfig:
         )
         _ = listener.socket.bind((UnsafeString(addr.ip), addr.port))
         _ = listener.socket.listen()
-        print("Listening on " + String(addr.ip) + ":" + String(addr.port))
+        print("Listening on " + addr.ip + ":" + addr.port.__str__())
         return listener
 
 

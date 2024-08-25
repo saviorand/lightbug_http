@@ -1,5 +1,6 @@
 from utils import StaticTuple
 from sys.info import sizeof
+from sys.ffi import external_call
 from lightbug_http.net import (
     Listener,
     ListenConfig,
@@ -103,15 +104,15 @@ struct SysListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
-        print("Accepting connection...")
         var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
-        print("Allocated their_addr_ptr: " + their_addr_ptr.__str__())
-        # var sin_size = socklen_t(sizeof[socklen_t]())
-        var sin_size = socklen_t(sizeof[sockaddr]())
+        var sin_size = socklen_t(sizeof[socklen_t]())
         print("allocated sin_size: " + sin_size.__str__())
+        print("fd: " + self.fd.__str__())
+        print("their_addr_ptr: " + their_addr_ptr.__str__())
+        var sin_size_ptr = UnsafePointer[socklen_t]()
+        sin_size_ptr.init_pointee_copy(sin_size)
         var new_sockfd = accept(
-            self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
-        )
+            self.fd, their_addr_ptr, sin_size_ptr)
         print("Accepted connection...")
         print("new_sockfd: " + new_sockfd.__str__())
         if new_sockfd == -1:
@@ -154,8 +155,10 @@ struct SysListenConfig(ListenConfig):
         var raw_ip = ip_buf.bitcast[c_uint]()[]
 
         var bin_port = htons(UInt16(addr.port))
+        print("bin_port", bin_port)
 
         var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
+        
         var ai_ptr = UnsafePointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
 
         var sockfd = socket(address_family, SOCK_STREAM, 0)
@@ -288,11 +291,16 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_addr: UnsafePointer[sockaddr]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__() -> Self:
-        return Self(
-            0, 0, 0, 0, 0, UnsafePointer[c_char](), UnsafePointer[sockaddr](), UnsafePointer[c_void]()
-        )
-
+    fn __init__(inout self):
+        self.ai_flags = 0
+        self.ai_family = 0
+        self.ai_socktype = 0
+        self.ai_protocol = 0
+        self.ai_addrlen = 0
+        self.ai_canonname = UnsafePointer[c_char]()
+        self.ai_addr = UnsafePointer[sockaddr]() 
+        self.ai_next = UnsafePointer[c_void]()
+        
     fn get_ip_address(self, host: String) raises -> in_addr:
         """
         Returns an IP address based on the host.
@@ -306,7 +314,7 @@ struct addrinfo_macos(AnAddrInfo):
         """
         var host_ptr = to_char_ptr(host)
         var servinfo = UnsafePointer[Self]().alloc(1)
-        initialize_pointee_move(servinfo, Self())
+        servinfo.init_pointee_move(Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
@@ -354,10 +362,15 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_canonname: UnsafePointer[c_char]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__() -> Self:
-        return Self(
-            0, 0, 0, 0, 0, UnsafePointer[sockaddr](), UnsafePointer[c_char](), UnsafePointer[c_void]()
-        )
+    fn __init__(inout self):
+        self.ai_flags = 0
+        self.ai_family = 0
+        self.ai_socktype = 0
+        self.ai_protocol = 0
+        self.ai_addrlen = 0
+        self.ai_addr = UnsafePointer[sockaddr]()
+        self.ai_canonname = UnsafePointer[c_char]()
+        self.ai_next = UnsafePointer[c_void]()
 
     fn get_ip_address(self, host: String) raises -> in_addr:
         """
@@ -370,9 +383,9 @@ struct addrinfo_unix(AnAddrInfo):
         Returns:
             UInt32 - The IP address.
         """
-        var host_ptr = to_char_ptr(String(host))
+        var host_ptr = to_char_ptr(host)
         var servinfo = UnsafePointer[Self]().alloc(1)
-        initialize_pointee_move(servinfo, Self())
+        servinfo.init_pointee_move(Self())
 
         var hints = Self()
         hints.ai_family = AF_INET

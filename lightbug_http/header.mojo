@@ -628,10 +628,10 @@ struct ResponseHeader:
         if len(first_byte) == 0:
             raise Error("Failed to read first byte from response header")
         
-        var buf: Bytes
-        var e: Error
+        var buf_result = r.peek(r.buffered())
+        var buf = buf_result[0]
+        var e = buf_result[1]
         
-        buf, e = r.peek(r.buffered())
         if e:
             raise Error("Failed to read response header: " + e.__str__())
         if len(buf) == 0:

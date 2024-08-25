@@ -102,7 +102,7 @@ struct MojoClient(Client):
         if bytes_recv == 0:
             conn.close()
 
-        var buf = buffer.new_buffer(new_buf^)
+        var buf = buffer.Buffer(new_buf^)
         var reader = Reader(buf^)
 
         var error = Error()

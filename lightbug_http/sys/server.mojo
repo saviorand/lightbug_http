@@ -148,7 +148,6 @@ struct SysServer:
         self.ln = ln
 
         while True:
-            print("We are in the loop")
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
     

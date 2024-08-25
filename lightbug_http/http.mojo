@@ -236,10 +236,10 @@ struct HTTPResponse(Response):
     fn read_body(inout self, inout r: Reader, header_len: Int) raises -> None:
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
+        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(bytes(body_buf)) 
+        _ = self.set_body_bytes(body_buf)
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
