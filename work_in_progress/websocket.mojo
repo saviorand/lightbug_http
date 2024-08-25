@@ -124,7 +124,6 @@ def main():
                 sleep(1)
             m = receive_message(ws.value())
             if m:
-                # print(m.value())
                 send_message(ws.value(),m.value())
 
     _ = ws^
