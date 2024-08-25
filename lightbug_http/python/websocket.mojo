@@ -2,8 +2,9 @@ from collections import Dict, Optional
 from python import Python, PythonObject
 from time import sleep
 
-# it is a "magic" constant, see:
-# https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#server_handshake_response
+# This is a "magic" GUID (Globally Unique Identifier) string that is concatenated 
+# with the value of the Sec-WebSocket-Key header in order to securely conduct the websocket handshake
+# https://datatracker.ietf.org/doc/html/rfc6455#section-1.3
 alias MAGIC_CONSTANT = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 alias BYTE_0_TEXT: UInt8 = 1
@@ -110,24 +111,6 @@ fn websocket[
         print(e)
     
     return None
-
-def main():
-    var select = Python.import_module("select").select
-    var ws = websocket()
-    if ws:
-        for i in range(32):
-            var res = select([ws.value()[0]],[],[],0)[0]
-            while len(res) == 0:
-                send_message(ws.value(), "server waiting")
-                res = select([ws.value()[0]],[],[],0)[0]
-                print("\nwait\n")
-                sleep(1)
-            m = receive_message(ws.value())
-            if m:
-                send_message(ws.value(),m.value())
-
-    _ = ws^
-    _ = select^
 
 fn read_byte(inout ws: PythonObject)raises->UInt8:
     return UInt8(int(ws[0].recv(1)[0]))
