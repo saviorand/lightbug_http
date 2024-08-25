@@ -22,7 +22,7 @@ trait Addr(CollectionElement, Stringable):
 
 
 @value
-struct TCPAddr(Addr):
+struct BaseAddr:
     """Addr struct representing a TCP address.
 
     Args:
@@ -35,29 +35,32 @@ struct TCPAddr(Addr):
     var port: Int
     var zone: String  # IPv6 addressing zone
 
-    fn __init__(inout self):
-        self.ip = String("127.0.0.1")
-        self.port = 8000
-        self.zone = ""
-
-    fn __init__(inout self, ip: String, port: Int):
+    fn __init__(inout self, ip: String = "", port: Int = 0, zone: String = ""):
         self.ip = ip
         self.port = port
-        self.zone = ""
+        self.zone = zone
+
+    fn __init__(inout self, other: TCPAddr):
+        self.ip = other.ip
+        self.port = other.port
+        self.zone = other.zone
+
+    fn __init__(inout self, other: UDPAddr):
+        self.ip = other.ip
+        self.port = other.port
+        self.zone = other.zone
 
     fn __str__(self) -> String:
         if self.zone != "":
-            return join_host_port(str(self.ip) + "%" + self.zone, str(self.port))
+            return join_host_port(self.ip + "%" + self.zone, str(self.port))
         return join_host_port(self.ip, str(self.port))
 
-    fn network(self) -> String:
-        return NetworkType.tcp.value
 
-
-fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
+fn resolve_internet_addr(network: String, address: String) -> (TCPAddr, Error):
     var host: String = ""
     var port: String = ""
     var portnum: Int = 0
+    var err = Error()
     if (
         network == NetworkType.tcp.value
         or network == NetworkType.tcp4.value
@@ -67,29 +70,33 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         or network == NetworkType.udp6.value
     ):
         if address != "":
-            var host_port = split_host_port(address)
-            host = host_port.host
-            port = str(host_port.port)
-            portnum = atol(port.__str__())
+            var result = split_host_port(address)
+            if result[1]:
+                return TCPAddr(), result[1]
+
+            host = result[0].host
+            port = str(result[0].port)
+            portnum = result[0].port
     elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":
             host = address
     elif network == NetworkType.unix.value:
-        raise Error("Unix addresses not supported yet")
+        return TCPAddr(), Error("Unix addresses not supported yet")
     else:
-        raise Error("unsupported network type: " + network)
-    return TCPAddr(host, portnum)
+        return TCPAddr(), Error("unsupported network type: " + network)
+    return TCPAddr(host, portnum), err
 
 
-alias missingPortError = Error("missing port in address")
-alias tooManyColonsError = Error("too many colons in address")
+alias MISSING_PORT_ERROR = Error("missing port in address")
+alias TOO_MANY_COLONS_ERROR = Error("too many colons in address")
 
 
+@value
 struct HostPort(Stringable):
     var host: String
     var port: Int
 
-    fn __init__(inout self, host: String, port: Int):
+    fn __init__(inout self, host: String = "", port: Int = 0):
         self.host = host
         self.port = port
 
@@ -103,7 +110,7 @@ fn join_host_port(host: String, port: String) -> String:
     return host + ":" + port
 
 
-fn split_host_port(hostport: String) raises -> HostPort:
+fn split_host_port(hostport: String) -> (HostPort, Error):
     var host: String = ""
     var port: String = ""
     var colon_index = hostport.rfind(":")
@@ -111,35 +118,38 @@ fn split_host_port(hostport: String) raises -> HostPort:
     var k: Int = 0
 
     if colon_index == -1:
-        raise missingPortError
+        return HostPort(), MISSING_PORT_ERROR
     if hostport[0] == "[":
         var end_bracket_index = hostport.find("]")
         if end_bracket_index == -1:
-            raise Error("missing ']' in address")
+            return HostPort(), Error("missing ']' in address")
         if end_bracket_index + 1 == len(hostport):
-            raise missingPortError
+            return HostPort(), MISSING_PORT_ERROR
         elif end_bracket_index + 1 == colon_index:
             host = hostport[1:end_bracket_index]
             j = 1
             k = end_bracket_index + 1
         else:
             if hostport[end_bracket_index + 1] == ":":
-                raise tooManyColonsError
+                return HostPort(), TOO_MANY_COLONS_ERROR
             else:
-                raise missingPortError
+                return HostPort(), MISSING_PORT_ERROR
     else:
         host = hostport[:colon_index]
         if host.find(":") != -1:
-            raise tooManyColonsError
+            return HostPort(), TOO_MANY_COLONS_ERROR
     if hostport[j:].find("[") != -1:
-        raise Error("unexpected '[' in address")
+        return HostPort(), Error("unexpected '[' in address")
     if hostport[k:].find("]") != -1:
-        raise Error("unexpected ']' in address")
+        return HostPort(), Error("unexpected ']' in address")
     port = hostport[colon_index + 1 :]
 
     if port == "":
-        raise missingPortError
+        return HostPort(), MISSING_PORT_ERROR
     if host == "":
-        raise Error("missing host")
+        return HostPort(), Error("missing host")
 
-    return HostPort(host, atol(port))
+    try:
+        return HostPort(host, atol(port)), Error()
+    except e:
+        return HostPort(), e

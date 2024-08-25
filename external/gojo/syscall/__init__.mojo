@@ -1,4 +1,42 @@
-from .net import FD_STDIN, FD_STDOUT, FD_STDERR
+from .net import (
+    FD,
+    SocketType,
+    AddressFamily,
+    ProtocolFamily,
+    SocketOptions,
+    AddressInformation,
+    send,
+    sendto,
+    recv,
+    recvfrom,
+    open,
+    addrinfo,
+    addrinfo_unix,
+    sockaddr,
+    sockaddr_in,
+    socklen_t,
+    socket,
+    connect,
+    htons,
+    ntohs,
+    inet_pton,
+    inet_ntop,
+    getaddrinfo,
+    getaddrinfo_unix,
+    gai_strerror,
+    shutdown,
+    inet_ntoa,
+    bind,
+    listen,
+    accept,
+    setsockopt,
+    getsockopt,
+    getsockname,
+    getpeername,
+    SHUT_RDWR,
+    SOL_SOCKET,
+)
+from .file import close, FileDescriptorBase
 
 # Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
 # C types

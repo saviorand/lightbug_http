@@ -1,3 +1,4 @@
+from sys.info import sizeof
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
@@ -268,6 +269,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
 
 fn get_peer_name(fd: Int32) raises -> HostPort:
     """Return the address of the peer connected to the socket."""
+    print("We are in get_peer_name")
     var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
 
@@ -281,7 +283,7 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
     var addr_in = remote_address_ptr.bitcast[sockaddr_in]()[]
-
+    print("Returned from getpeername")
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
         port=convert_binary_port_to_int(addr_in.sin_port).__str__(),

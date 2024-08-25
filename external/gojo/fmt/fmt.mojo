@@ -9,8 +9,6 @@ Boolean
 Integer
 %d	base 10
 %q	a single-quoted character literal.
-%x	base 16, with lower-case letters for a-f
-%X	base 16, with upper-case letters for A-F
 
 Floating-point and complex constituents:
 %f	decimal point but no exponent, e.g. 123.456
@@ -28,18 +26,17 @@ TODO:
 
 from utils.variant import Variant
 from math import floor
-from ..builtins import Byte
 
-alias Args = Variant[String, Int, Float64, Bool, List[Byte]]
+alias Args = Variant[String, Int, Float64, Bool, List[UInt8, True]]
 
 
 fn replace_first(s: String, old: String, new: String) -> String:
     """Replace the first occurrence of a substring in a string.
 
     Args:
-        s: The original string
-        old: The substring to be replaced
-        new: The new substring
+        s: The original string.
+        old: The substring to be replaced.
+        new: The new substring.
 
     Returns:
         The string with the first occurrence of the old substring replaced by the new one.
@@ -59,7 +56,7 @@ fn find_first_verb(s: String, verbs: List[String]) -> String:
     """Find the first occurrence of a verb in a string.
 
     Args:
-        s: The original string
+        s: The original string.
         verbs: The list of verbs to search for.
 
     Returns:
@@ -77,34 +74,6 @@ fn find_first_verb(s: String, verbs: List[String]) -> String:
     return verb
 
 
-alias BASE10_TO_BASE16 = List[String]("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f")
-
-
-fn convert_base10_to_base16(value: Int) -> String:
-    """Converts a base 10 number to base 16.
-
-    Args:
-        value: Base 10 number.
-
-    Returns:
-        Base 16 number as a String.
-    """
-
-    var val: Float64 = 0.0
-    var result: Float64 = value
-    var base16: String = ""
-    while result > 1:
-        var temp = result / 16
-        var floor_result = floor(temp)
-        var remainder = temp - floor_result
-        result = floor_result
-        val = 16 * remainder
-
-        base16 = BASE10_TO_BASE16[int(val)] + base16
-
-    return base16
-
-
 fn format_string(format: String, arg: String) -> String:
     var verb = find_first_verb(format, List[String]("%s", "%q"))
     var arg_to_place = arg
@@ -114,7 +83,7 @@ fn format_string(format: String, arg: String) -> String:
     return replace_first(format, String("%s"), arg)
 
 
-fn format_bytes(format: String, arg: List[Byte]) -> String:
+fn format_bytes(format: String, arg: List[UInt8, True]) -> String:
     var argument = arg
     if argument[-1] != 0:
         argument.append(0)
@@ -123,13 +92,9 @@ fn format_bytes(format: String, arg: List[Byte]) -> String:
 
 
 fn format_integer(format: String, arg: Int) -> String:
-    var verb = find_first_verb(format, List[String]("%x", "%X", "%d", "%q"))
+    var verb = find_first_verb(format, List[String]("%d", "%q"))
     var arg_to_place = str(arg)
-    if verb == "%x":
-        arg_to_place = str(convert_base10_to_base16(arg)).lower()
-    elif verb == "%X":
-        arg_to_place = str(convert_base10_to_base16(arg)).upper()
-    elif verb == "%q":
+    if verb == "%q":
         arg_to_place = "'" + str(arg) + "'"
 
     return replace_first(format, verb, arg_to_place)
@@ -163,8 +128,8 @@ fn sprintf(formatting: String, *args: Args) -> String:
         var argument = args[i]
         if argument.isa[String]():
             text = format_string(text, argument[String])
-        elif argument.isa[List[Byte]]():
-            text = format_bytes(text, argument[List[Byte]])
+        elif argument.isa[List[UInt8, True]]():
+            text = format_bytes(text, argument[List[UInt8, True]])
         elif argument.isa[Int]():
             text = format_integer(text, argument[Int])
         elif argument.isa[Float64]():
@@ -205,8 +170,8 @@ fn printf(formatting: String, *args: Args) raises:
         var argument = args[i]
         if argument.isa[String]():
             text = format_string(text, argument[String])
-        elif argument.isa[List[Byte]]():
-            text = format_bytes(text, argument[List[Byte]])
+        elif argument.isa[List[UInt8]]():
+            text = format_bytes(text, argument[List[UInt8, True]])
         elif argument.isa[Int]():
             text = format_integer(text, argument[Int])
         elif argument.isa[Float64]():

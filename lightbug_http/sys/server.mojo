@@ -1,5 +1,5 @@
 from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from external.gojo.bytes import buffer
+from external.gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
 from lightbug_http.http import HTTPRequest, encode, split_http_string
@@ -148,6 +148,7 @@ struct SysServer:
         self.ln = ln
 
         while True:
+            print("We are in the loop")
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
     
@@ -162,15 +163,18 @@ struct SysServer:
         Raises:
         If there is an error while serving the connection.
         """
+        print("Serving connection")
         var b = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(b) 
+        print("Bytes received: ", bytes_recv)
         if bytes_recv == 0:
             conn.close()
             return
 
-        var buf = buffer.new_buffer(b^)
+        print("Buffer time")
+        var buf = Buffer(b^)
         var reader = Reader(buf^)
-
+        print("Reader time")
         var error = Error()
         
         var max_request_body_size = self.max_request_body_size()
@@ -188,7 +192,7 @@ struct SysServer:
                 if bytes_recv == 0:
                     conn.close()
                     break
-                buf = buffer.new_buffer(b^)
+                buf = Buffer(b^)
                 reader = Reader(buf^)
 
             var header = RequestHeader()

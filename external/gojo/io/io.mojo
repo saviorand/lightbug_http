@@ -1,8 +1,6 @@
-from collections.optional import Optional
-from ..builtins import cap, copy, Byte, panic
-from .traits import ERR_UNEXPECTED_EOF
+from ..builtins import copy, panic
 
-alias BUFFER_SIZE = 8200
+alias BUFFER_SIZE = 4096
 
 
 fn write_string[W: Writer](inout writer: W, string: String) -> (Int, Error):
@@ -34,7 +32,7 @@ fn write_string[W: StringWriter](inout writer: W, string: String) -> (Int, Error
     return writer.write_string(string)
 
 
-fn read_at_least[R: Reader](inout reader: R, inout dest: List[Byte], min: Int) -> (Int, Error):
+fn read_at_least[R: Reader](inout reader: R, inout dest: List[UInt8], min: Int) -> (Int, Error):
     """Reads from r into buf until it has read at least min bytes.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -53,7 +51,7 @@ fn read_at_least[R: Reader](inout reader: R, inout dest: List[Byte], min: Int) -
         The number of bytes read."""
     var error = Error()
     if len(dest) < min:
-        return 0, Error(io.ERR_SHORT_BUFFER)
+        return 0, io.ERR_SHORT_BUFFER
 
     var total_bytes_read: Int = 0
     while total_bytes_read < min and not error:
@@ -65,12 +63,12 @@ fn read_at_least[R: Reader](inout reader: R, inout dest: List[Byte], min: Int) -
         error = Error()
 
     elif total_bytes_read > 0 and str(error):
-        error = Error(ERR_UNEXPECTED_EOF)
+        error = ERR_UNEXPECTED_EOF
 
     return total_bytes_read, error
 
 
-fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error):
+fn read_full[R: Reader](inout reader: R, inout dest: List[UInt8]) -> (Int, Error):
     """Reads exactly len(buf) bytes from r into buf.
     It returns the number of bytes copied and an error if fewer bytes were read.
     The error is EOF only if no bytes were read.
@@ -82,7 +80,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
     return read_at_least(reader, dest, len(dest))
 
 
-# fn copy_n[W: Writer, R: Reader](dst: W, src: R, n: Int64) raises -> Int64:
+# fn copy_n[W: Writer, R: Reader](dst: W, src: R, n: Int) raises -> Int:
 #     """Copies n bytes (or until an error) from src to dst.
 #     It returns the number of bytes copied and the earliest
 #     error encountered while copying.
@@ -101,7 +99,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 #     return written
 
 
-# fn copy[W: Writer, R: Reader](dst: W, src: R, n: Int64) -> Int64:
+# fn copy[W: Writer, R: Reader](dst: W, src: R, n: Int) -> Int:
 #     """copy copies from src to dst until either EOF is reached
 # on src or an error occurs. It returns the number of bytes
 # copied and the first error encountered while copying, if any.
@@ -124,7 +122,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # #
 # # If either src implements [WriterTo] or dst implements [ReaderFrom],
 # # buf will not be used to perform the copy.
-# fn CopyBuffer(dst Writer, src Reader, buf bytes) (written int64, err error) {
+# fn CopyBuffer(dst Writer, src Reader, buf bytes) (written Int, err error) {
 # 	if buf != nil and len(buf) == 0 {
 # 		panic("empty buffer in CopyBuffer")
 # 	}
@@ -132,7 +130,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # }
 
 
-# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Span[Byte]) raises -> Int64:
+# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Span[UInt8]) raises -> Int:
 #     """Actual implementation of copy and CopyBuffer.
 #     if buf is nil, one is allocated.
 #     """
@@ -145,24 +143,24 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 #             if nw < 0 or nr < nw:
 #                 nw = 0
 
-#             var written = Int64(nw)
+#             var written = Int(nw)
 #             if nr != nw:
 #                 raise Error(ERR_SHORT_WRITE)
 
 #     return written
 
 
-# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Span[Byte]) -> Int64:
+# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Span[UInt8]) -> Int:
 #     return src.write_to(dst)
 
 
-# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Span[Byte]) -> Int64:
+# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Span[UInt8]) -> Int:
 #     return dst.read_from(src)
 
 # # LimitReader returns a Reader that reads from r
 # # but stops with EOF after n bytes.
 # # The underlying implementation is a *LimitedReader.
-# fn LimitReader(r Reader, n int64) Reader { return &LimitedReader{r, n} }
+# fn LimitReader(r Reader, n Int) Reader { return &LimitedReader{r, n} }
 
 # # A LimitedReader reads from R but limits the amount of
 # # data returned to just N bytes. Each call to Read
@@ -170,31 +168,31 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # # Read returns EOF when N <= 0 or when the underlying R returns EOF.
 # struct LimitedReader():
 # 	var R: Reader # underlying reader
-# 	N int64  # max bytes remaining
+# 	N Int  # max bytes remaining
 
 # fn (l *LimitedReader) Read(p bytes) (n Int, err error) {
 # 	if l.N <= 0 {
 # 		return 0, EOF
 # 	}
-# 	if int64(len(p)) > l.N {
+# 	if Int(len(p)) > l.N {
 # 		p = p[0:l.N]
 # 	}
 # 	n, err = l.R.Read(p)
-# 	l.N -= int64(n)
+# 	l.N -= Int(n)
 # 	return
 # }
 
 # # NewSectionReader returns a [SectionReader] that reads from r
 # # starting at offset off and stops with EOF after n bytes.
-# fn NewSectionReader(r ReaderAt, off int64, n int64) *SectionReader {
-# 	var remaining int64
-# 	const maxint64 = 1<<63 - 1
-# 	if off <= maxint64-n {
+# fn NewSectionReader(r ReaderAt, off Int, n Int) *SectionReader {
+# 	var remaining Int
+# 	const maxInt = 1<<63 - 1
+# 	if off <= maxInt-n {
 # 		remaining = n + off
 # 	} else {
 # 		# Overflow, with no way to return error.
 # 		# Assume we can read up to an offset of 1<<63 - 1.
-# 		remaining = maxint64
+# 		remaining = maxInt
 # 	}
 # 	return &SectionReader{r, off, off, remaining, n}
 # }
@@ -203,28 +201,28 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # # of an underlying [ReaderAt].
 # type SectionReader struct {
 # 	r     ReaderAt # constant after creation
-# 	base  int64    # constant after creation
-# 	off   int64
-# 	limit int64 # constant after creation
-# 	n     int64 # constant after creation
+# 	base  Int    # constant after creation
+# 	off   Int
+# 	limit Int # constant after creation
+# 	n     Int # constant after creation
 # }
 
 # fn (s *SectionReader) Read(p bytes) (n Int, err error) {
 # 	if s.off >= s.limit {
 # 		return 0, EOF
 # 	}
-# 	if max := s.limit - s.off; int64(len(p)) > max {
+# 	if max := s.limit - s.off; Int(len(p)) > max {
 # 		p = p[0:max]
 # 	}
 # 	n, err = s.r.ReadAt(p, s.off)
-# 	s.off += int64(n)
+# 	s.off += Int(n)
 # 	return
 # }
 
 # alias errWhence = "Seek: invalid whence"
 # alias errOffset = "Seek: invalid offset"
 
-# fn (s *SectionReader) Seek(offset int64, whence Int) (int64, error) {
+# fn (s *SectionReader) Seek(offset Int, whence Int) (Int, error) {
 # 	switch whence {
 # 	default:
 # 		return 0, errWhence
@@ -242,12 +240,12 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # 	return offset - s.base, nil
 # }
 
-# fn (s *SectionReader) ReadAt(p bytes, off int64) (n Int, err error) {
+# fn (s *SectionReader) ReadAt(p bytes, off Int) (n Int, err error) {
 # 	if off < 0 or off >= s.capacity {
 # 		return 0, EOF
 # 	}
 # 	off += s.base
-# 	if max := s.limit - off; int64(len(p)) > max {
+# 	if max := s.limit - off; Int(len(p)) > max {
 # 		p = p[0:max]
 # 		n, err = s.r.ReadAt(p, off)
 # 		if err == nil {
@@ -259,36 +257,36 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # }
 
 # # Size returns the size of the section in bytes.
-# fn (s *SectionReader) Size() int64 { return s.limit - s.base }
+# fn (s *SectionReader) Size() Int { return s.limit - s.base }
 
 # # Outer returns the underlying [ReaderAt] and offsets for the section.
 # #
 # # The returned values are the same that were passed to [NewSectionReader]
 # # when the [SectionReader] was created.
-# fn (s *SectionReader) Outer() (r ReaderAt, off int64, n int64) {
+# fn (s *SectionReader) Outer() (r ReaderAt, off Int, n Int) {
 # 	return s.r, s.base, s.n
 # }
 
 # # An OffsetWriter maps writes at offset base to offset base+off in the underlying writer.
 # type OffsetWriter struct {
 # 	w    WriterAt
-# 	base int64 # the original offset
-# 	off  int64 # the current offset
+# 	base Int # the original offset
+# 	off  Int # the current offset
 # }
 
 # # NewOffsetWriter returns an [OffsetWriter] that writes to w
 # # starting at offset off.
-# fn NewOffsetWriter(w WriterAt, off int64) *OffsetWriter {
+# fn NewOffsetWriter(w WriterAt, off Int) *OffsetWriter {
 # 	return &OffsetWriter{w, off, off}
 # }
 
 # fn (o *OffsetWriter) Write(p bytes) (n Int, err error) {
 # 	n, err = o.w.WriteAt(p, o.off)
-# 	o.off += int64(n)
+# 	o.off += Int(n)
 # 	return
 # }
 
-# fn (o *OffsetWriter) WriteAt(p bytes, off int64) (n Int, err error) {
+# fn (o *OffsetWriter) WriteAt(p bytes, off Int) (n Int, err error) {
 # 	if off < 0 {
 # 		return 0, errOffset
 # 	}
@@ -297,7 +295,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # 	return o.w.WriteAt(p, off)
 # }
 
-# fn (o *OffsetWriter) Seek(offset int64, whence Int) (int64, error) {
+# fn (o *OffsetWriter) Seek(offset Int, whence Int) (Int, error) {
 # 	switch whence {
 # 	default:
 # 		return 0, errWhence
@@ -362,12 +360,12 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # 	},
 # }
 
-# fn (discard) ReadFrom(r Reader) (n int64, err error) {
+# fn (discard) ReadFrom(r Reader) (n Int, err error) {
 # 	bufp := blackHolePool.Get().(*bytes)
 # 	readSize := 0
 # 	for {
 # 		readSize, err = r.Read(*bufp)
-# 		n += int64(readSize)
+# 		n += Int(readSize)
 # 		if err != nil {
 # 			blackHolePool.Put(bufp)
 # 			if err == EOF {
@@ -401,12 +399,13 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 
 # fn (nopCloserWriterTo) Close() error { return nil }
 
-# fn (c nopCloserWriterTo) WriteTo(w Writer) (n int64, err error) {
+# fn (c nopCloserWriterTo) WriteTo(w Writer) (n Int, err error) {
 # 	return c.Reader.(WriterTo).WriteTo(w)
 # }
 
 
-fn read_all[R: Reader](inout reader: R) -> (List[Byte], Error):
+# TODO: read directly into dest
+fn read_all[R: Reader](inout reader: R) -> (List[UInt8], Error):
     """Reads from r until an error or EOF and returns the data it read.
     A successful call returns err == nil, not err == EOF. Because ReadAll is
     defined to read from src until EOF, it does not treat an EOF from Read
@@ -417,17 +416,16 @@ fn read_all[R: Reader](inout reader: R) -> (List[Byte], Error):
 
     Returns:
         The data read."""
-    var dest = List[Byte](capacity=BUFFER_SIZE)
+    var dest = List[UInt8](capacity=BUFFER_SIZE)
     var at_eof: Bool = False
 
     while True:
-        var temp = List[Byte](capacity=BUFFER_SIZE)
+        var temp = List[UInt8](capacity=BUFFER_SIZE)
         var bytes_read: Int
         var err: Error
         bytes_read, err = reader.read(temp)
-        var err_message = str(err)
-        if err_message != "":
-            if err_message != EOF:
+        if str(err) != "":
+            if str(err) != str(EOF):
                 return dest, err
 
             at_eof = True

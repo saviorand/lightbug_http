@@ -1,91 +1,78 @@
-from ..builtins import Byte
-from ..syscall.net import SO_REUSEADDR
-from .net import Connection, Conn
-from .address import TCPAddr, NetworkType, split_host_port
+from utils import Span
+from collections import InlineList
+from ..syscall import SocketOptions
+from .address import NetworkType, split_host_port, join_host_port, BaseAddr, resolve_internet_addr, HostPort
 from .socket import Socket
 
 
-# Time in nanoseconds
-alias Duration = Int
-alias DEFAULT_BUFFER_SIZE = 8200
-alias DEFAULT_TCP_KEEP_ALIVE = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
-
-
-fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
-    var host: String = ""
-    var port: String = ""
-    var portnum: Int = 0
-    if (
-        network == NetworkType.tcp.value
-        or network == NetworkType.tcp4.value
-        or network == NetworkType.tcp6.value
-        or network == NetworkType.udp.value
-        or network == NetworkType.udp4.value
-        or network == NetworkType.udp6.value
-    ):
-        if address != "":
-            var host_port = split_host_port(address)
-            host = host_port.host
-            port = str(host_port.port)
-            portnum = atol(port.__str__())
-    elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
-        if address != "":
-            host = address
-    elif network == NetworkType.unix.value:
-        raise Error("Unix addresses not supported yet")
-    else:
-        raise Error("unsupported network type: " + network)
-    return TCPAddr(host, portnum)
-
-
-# TODO: For now listener is paired with TCP until we need to support
-# more than one type of Connection or Listener
 @value
-struct ListenConfig(CollectionElement):
-    var keep_alive: Duration
+struct TCPAddr(Addr):
+    """Addr struct representing a TCP address.
 
-    fn listen(self, network: String, address: String) raises -> TCPListener:
-        var tcp_addr = resolve_internet_addr(network, address)
-        var socket = Socket(local_address=tcp_addr)
-        socket.bind(tcp_addr.ip, tcp_addr.port)
-        socket.set_socket_option(SO_REUSEADDR, 1)
-        socket.listen()
-        print(str("Listening on ") + str(socket.local_address))
-        return TCPListener(socket^, self, network, address)
+    Args:
+        ip: IP address.
+        port: Port number.
+        zone: IPv6 addressing zone.
+    """
+
+    var ip: String
+    var port: Int
+    var zone: String  # IPv6 addressing zone
+
+    fn __init__(inout self, ip: String = "127.0.0.1", port: Int = 8000, zone: String = ""):
+        self.ip = ip
+        self.port = port
+        self.zone = zone
+
+    fn __init__(inout self, addr: BaseAddr):
+        self.ip = addr.ip
+        self.port = addr.port
+        self.zone = addr.zone
+
+    fn __str__(self) -> String:
+        if self.zone != "":
+            return join_host_port(str(self.ip) + "%" + self.zone, str(self.port))
+        return join_host_port(self.ip, str(self.port))
+
+    fn network(self) -> String:
+        return NetworkType.tcp.value
 
 
-trait Listener(Movable):
-    # Raising here because a Result[Optional[Connection], Error] is funky.
-    fn accept(self) raises -> Connection:
-        ...
-
-    fn close(inout self) -> Error:
-        ...
-
-    fn addr(self) raises -> TCPAddr:
-        ...
-
-
-@value
-struct TCPConnection(Conn):
+struct TCPConnection(Movable):
     """TCPConn is an implementation of the Conn interface for TCP network connections.
 
     Args:
         connection: The underlying Connection.
     """
 
-    var _connection: Connection
-
-    fn __init__(inout self, connection: Connection):
-        self._connection = connection
+    var socket: Socket
 
     fn __init__(inout self, owned socket: Socket):
-        self._connection = Connection(socket^)
+        self.socket = socket^
 
     fn __moveinit__(inout self, owned existing: Self):
-        self._connection = existing._connection^
+        self.socket = existing.socket^
 
-    fn read(inout self, inout dest: List[Byte]) -> (Int, Error):
+    fn _read(inout self, inout dest: Span[UInt8], capacity: Int) -> (Int, Error):
+        """Reads data from the underlying file descriptor.
+
+        Args:
+            dest: The buffer to read data into.
+            capacity: The capacity of the destination buffer.
+
+        Returns:
+            The number of bytes read, or an error if one occurred.
+        """
+        var bytes_read: Int
+        var err = Error()
+        bytes_read, err = self.socket._read(dest, capacity)
+        if err:
+            if str(err) != str(io.EOF):
+                return bytes_read, err
+
+        return bytes_read, err
+
+    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
         """Reads data from the underlying file descriptor.
 
         Args:
@@ -94,16 +81,16 @@ struct TCPConnection(Conn):
         Returns:
             The number of bytes read, or an error if one occurred.
         """
-        var bytes_written: Int
+        var span = Span(dest)
+
+        var bytes_read: Int
         var err: Error
-        bytes_written, err = self._connection.read(dest)
-        if err:
-            if str(err) != io.EOF:
-                return 0, err
+        bytes_read, err = self._read(span, dest.capacity)
+        dest.size += bytes_read
 
-        return bytes_written, Error()
+        return bytes_read, err
 
-    fn write(inout self, src: List[Byte]) -> (Int, Error):
+    fn write(inout self, src: Span[UInt8]) -> (Int, Error):
         """Writes data to the underlying file descriptor.
 
         Args:
@@ -112,13 +99,7 @@ struct TCPConnection(Conn):
         Returns:
             The number of bytes written, or an error if one occurred.
         """
-        var bytes_written: Int
-        var err: Error
-        bytes_written, err = self._connection.write(src)
-        if err:
-            return 0, err
-
-        return bytes_written, Error()
+        return self.socket.write(src)
 
     fn close(inout self) -> Error:
         """Closes the underlying file descriptor.
@@ -126,7 +107,7 @@ struct TCPConnection(Conn):
         Returns:
             An error if one occurred, or None if the file descriptor was closed successfully.
         """
-        return self._connection.close()
+        return self.socket.close()
 
     fn local_address(self) -> TCPAddr:
         """Returns the local network address.
@@ -135,7 +116,7 @@ struct TCPConnection(Conn):
         Returns:
             The local network address.
         """
-        return self._connection.local_address()
+        return self.socket.local_address_as_tcp()
 
     fn remote_address(self) -> TCPAddr:
         """Returns the remote network address.
@@ -144,7 +125,7 @@ struct TCPConnection(Conn):
         Returns:
             The remote network address.
         """
-        return self._connection.remote_address()
+        return self.socket.remote_address_as_tcp()
 
 
 fn listen_tcp(network: String, local_address: TCPAddr) raises -> TCPListener:
@@ -154,7 +135,12 @@ fn listen_tcp(network: String, local_address: TCPAddr) raises -> TCPListener:
         network: The network type.
         local_address: The local address to listen on.
     """
-    return ListenConfig(DEFAULT_TCP_KEEP_ALIVE).listen(network, local_address.ip + ":" + str(local_address.port))
+    var socket = Socket()
+    socket.bind(local_address.ip, local_address.port)
+    socket.set_socket_option(SocketOptions.SO_REUSEADDR, 1)
+    socket.listen()
+    # print(str("Listening on ") + str(socket.local_address_as_tcp()))
+    return TCPListener(socket^, network, local_address)
 
 
 fn listen_tcp(network: String, local_address: String) raises -> TCPListener:
@@ -164,44 +150,106 @@ fn listen_tcp(network: String, local_address: String) raises -> TCPListener:
         network: The network type.
         local_address: The address to listen on. The format is "host:port".
     """
-    return ListenConfig(DEFAULT_TCP_KEEP_ALIVE).listen(network, local_address)
+    var tcp_addr: TCPAddr
+    var err: Error
+    tcp_addr, err = resolve_internet_addr(network, local_address)
+    if err:
+        raise err
+    return listen_tcp(network, tcp_addr)
 
 
-struct TCPListener(Listener):
-    var _file_descriptor: Socket
-    var listen_config: ListenConfig
+fn listen_tcp(network: String, host: String, port: Int) raises -> TCPListener:
+    """Creates a new TCP listener.
+
+    Args:
+        network: The network type.
+        host: The address to listen on, in ipv4 format.
+        port: The port to listen on.
+    """
+    return listen_tcp(network, TCPAddr(host, port))
+
+
+struct TCPListener:
+    var socket: Socket
     var network_type: String
-    var address: String
+    var address: TCPAddr
 
     fn __init__(
         inout self,
-        owned file_descriptor: Socket,
-        listen_config: ListenConfig,
+        owned socket: Socket,
         network_type: String,
-        address: String,
+        address: TCPAddr,
     ):
-        self._file_descriptor = file_descriptor^
-        self.listen_config = listen_config
+        self.socket = socket^
         self.network_type = network_type
         self.address = address
 
     fn __moveinit__(inout self, owned existing: Self):
-        self._file_descriptor = existing._file_descriptor^
-        self.listen_config = existing.listen_config^
-        self.network_type = existing.network_type
-        self.address = existing.address
+        self.socket = existing.socket^
+        self.network_type = existing.network_type^
+        self.address = existing.address^
 
-    fn listen(self) raises -> Self:
-        return self.listen_config.listen(self.network_type, self.address)
-
-    fn accept(self) raises -> Connection:
-        return Connection(self._file_descriptor.accept())
-
-    fn accept_tcp(self) raises -> TCPConnection:
-        return TCPConnection(self._file_descriptor.accept())
+    fn accept(self) raises -> TCPConnection:
+        return TCPConnection(self.socket.accept())
 
     fn close(inout self) -> Error:
-        return self._file_descriptor.close()
+        return self.socket.close()
 
-    fn addr(self) raises -> TCPAddr:
-        return resolve_internet_addr(self.network_type, self.address)
+
+alias TCP_NETWORK_TYPES = InlineList[String, 3]("tcp", "tcp4", "tcp6")
+
+
+fn dial_tcp(network: String, remote_address: TCPAddr) raises -> TCPConnection:
+    """Connects to the address on the named network.
+
+    The network must be "tcp", "tcp4", or "tcp6".
+    Args:
+        network: The network type.
+        remote_address: The remote address to connect to.
+
+    Returns:
+        The TCP connection.
+    """
+    # TODO: Add conversion of domain name to ip address
+    if network not in TCP_NETWORK_TYPES:
+        raise Error("unsupported network type: " + network)
+
+    var socket = Socket()
+    var err = socket.connect(remote_address.ip, remote_address.port)
+    if err:
+        raise err
+    return TCPConnection(socket^)
+
+
+fn dial_tcp(network: String, remote_address: String) raises -> TCPConnection:
+    """Connects to the address on the named network.
+
+    The network must be "tcp", "tcp4", or "tcp6".
+    Args:
+        network: The network type.
+        remote_address: The remote address to connect to. (The format is "host:port").
+
+    Returns:
+        The TCP connection.
+    """
+    var remote: HostPort
+    var err: Error
+    remote, err = split_host_port(remote_address)
+    if err:
+        raise err
+    return dial_tcp(network, TCPAddr(remote.host, remote.port))
+
+
+fn dial_tcp(network: String, host: String, port: Int) raises -> TCPConnection:
+    """Connects to the address on the named network.
+
+    The network must be "tcp", "tcp4", or "tcp6".
+    Args:
+        network: The network type.
+        host: The remote address to connect to in ipv4 format.
+        port: The remote port.
+
+    Returns:
+        The TCP connection.
+    """
+    return dial_tcp(network, TCPAddr(host, port))

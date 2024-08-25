@@ -1,2 +1,2 @@
-from .buffer import Buffer, new_buffer
-from .reader import Reader, new_reader
+from .buffer import Buffer
+from .reader import Reader

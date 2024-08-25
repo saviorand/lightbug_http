@@ -1,4 +1,5 @@
 from time import now
+from utils.string_slice import StringSlice
 from external.morrow import Morrow
 from external.gojo.strings.builder import StringBuilder
 from external.gojo.bufio import Reader
@@ -171,10 +172,10 @@ struct HTTPRequest(Request):
 
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
+        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(bytes(body_buf))        
+        _ = self.set_body_bytes(body_buf)
 
 @value
 struct HTTPResponse(Response):
@@ -280,7 +281,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest) raises -> StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -328,7 +329,7 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.__len__())
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:

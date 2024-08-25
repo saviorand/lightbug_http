@@ -613,13 +613,17 @@ fn accept(
         address_len: A UnsafePointer to the size of the buffer.
     Returns: A File Descriptor or -1 in case of failure.
     """
-    return external_call[
+    var result = external_call[
         "accept",
         c_int,  # FnName, RetType
         c_int,
         UnsafePointer[sockaddr],
-        UnsafePointer[socklen_t],  # Args
-    ](socket, address, address_len)
+        UnsafePointer[socklen_t],
+        c_int,  # Args
+    ](socket, address, address_len, SOCK_NONBLOCK)
+
+    print("Accept result: " + str(result))
+    return result
 
 
 fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t) -> c_int:

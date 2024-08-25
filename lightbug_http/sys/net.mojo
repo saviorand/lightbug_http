@@ -1,4 +1,5 @@
 from utils import StaticTuple
+from sys.info import sizeof
 from lightbug_http.net import (
     Listener,
     ListenConfig,
@@ -102,15 +103,22 @@ struct SysListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
+        print("Accepting connection...")
         var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
-        var sin_size = socklen_t(sizeof[socklen_t]())
+        print("Allocated their_addr_ptr: " + their_addr_ptr.__str__())
+        # var sin_size = socklen_t(sizeof[socklen_t]())
+        var sin_size = socklen_t(sizeof[sockaddr]())
+        print("allocated sin_size: " + sin_size.__str__())
         var new_sockfd = accept(
             self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         )
+        print("Accepted connection...")
+        print("new_sockfd: " + new_sockfd.__str__())
         if new_sockfd == -1:
             print("Failed to accept connection, system accept() returned an error.")
+        print("Getting peer name...")
         var peer = get_peer_name(new_sockfd)
-
+        print("Returning connection...")
         return SysConnection(
             self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd
         )

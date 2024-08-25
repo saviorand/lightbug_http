@@ -1,8 +1,9 @@
 from python import PythonObject
+from utils.span import Span
 from lightbug_http.strings import nChar, rChar
 
 alias Byte = UInt8
-alias Bytes = List[Byte]
+alias Bytes = List[Byte, True]
 alias BytesView = Span[is_mutable=False, T=Byte, lifetime=ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
@@ -54,23 +55,29 @@ fn next_line(b: Bytes) raises -> (Bytes, Bytes):
 @value
 @register_passable("trivial")
 struct UnsafeString:
-    var data: Pointer[UInt8]
+    var data: UnsafePointer[UInt8]
     var len: Int
 
-    fn __init__(str: StringLiteral) -> UnsafeString:
+    fn __init__(inout self) -> None:
+        self.data = UnsafePointer[UInt8]()
+        self.len = 0
+
+    fn __init__(inout self, str: StringLiteral) -> None:
         var l = str.__len__()
         var s = String(str)
-        var p = Pointer[UInt8].alloc(l)
+        var p = UnsafePointer[UInt8].alloc(l)
         for i in range(l):
             p.store(i, s._buffer[i])
-        return UnsafeString(p, l)
+        self.data = p
+        self.len = l
 
-    fn __init__(str: String) -> UnsafeString:
+    fn __init__(inout self, str: String) -> None:
         var l = str.__len__()
-        var p = Pointer[UInt8].alloc(l)
+        var p = UnsafePointer[UInt8].alloc(l)
         for i in range(l):
             p.store(i, str._buffer[i])
-        return UnsafeString(p, l)
+        self.data = p
+        self.len = l
 
     fn to_string(self) -> String:
         var s = String(self.data, self.len)

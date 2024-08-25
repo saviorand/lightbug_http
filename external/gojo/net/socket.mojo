@@ -1,34 +1,29 @@
-from collections.optional import Optional
-from ..builtins import Byte
-from ..syscall.file import close
-from ..syscall.types import (
-    c_void,
-    c_uint,
-    c_char,
-    c_int,
-)
-from ..syscall.net import (
+from utils import Span
+from ..syscall import (
     sockaddr,
     sockaddr_in,
     addrinfo,
     addrinfo_unix,
     socklen_t,
+    c_void,
+    c_uint,
+    c_char,
+    c_int,
     socket,
     connect,
     recv,
+    recvfrom,
     send,
+    sendto,
     shutdown,
     inet_pton,
     inet_ntoa,
     inet_ntop,
-    to_char_ptr,
     htons,
     ntohs,
-    strlen,
     getaddrinfo,
     getaddrinfo_unix,
     gai_strerror,
-    c_charptr_to_string,
     bind,
     listen,
     accept,
@@ -36,21 +31,23 @@ from ..syscall.net import (
     getsockopt,
     getsockname,
     getpeername,
-    AF_INET,
-    SOCK_STREAM,
+    AddressFamily,
+    AddressInformation,
+    SocketOptions,
+    SocketType,
     SHUT_RDWR,
-    AI_PASSIVE,
     SOL_SOCKET,
-    SO_REUSEADDR,
-    SO_RCVTIMEO,
+    close,
 )
 from .fd import FileDescriptor, FileDescriptorBase
 from .ip import (
     convert_binary_ip_to_string,
     build_sockaddr_pointer,
     convert_binary_port_to_int,
+    convert_sockaddr_to_host_port,
 )
-from .address import Addr, TCPAddr, HostPort
+from .address import Addr, BaseAddr, HostPort
+from sys import sizeof
 
 alias SocketClosedError = Error("Socket: Socket is already closed")
 
@@ -66,21 +63,21 @@ struct Socket(FileDescriptorBase):
         protocol: The protocol.
     """
 
-    var sockfd: FileDescriptor
+    var fd: FileDescriptor
     var address_family: Int
-    var socket_type: UInt8
+    var socket_type: Int32
     var protocol: UInt8
-    var local_address: TCPAddr
-    var remote_address: TCPAddr
+    var local_address: BaseAddr
+    var remote_address: BaseAddr
     var _closed: Bool
     var _is_connected: Bool
 
     fn __init__(
         inout self,
-        local_address: TCPAddr = TCPAddr(),
-        remote_address: TCPAddr = TCPAddr(),
-        address_family: Int = AF_INET,
-        socket_type: UInt8 = SOCK_STREAM,
+        local_address: BaseAddr = BaseAddr(),
+        remote_address: BaseAddr = BaseAddr(),
+        address_family: Int = AddressFamily.AF_INET,
+        socket_type: Int32 = SocketType.SOCK_STREAM,
         protocol: UInt8 = 0,
     ) raises:
         """Create a new socket object.
@@ -96,10 +93,10 @@ struct Socket(FileDescriptorBase):
         self.socket_type = socket_type
         self.protocol = protocol
 
-        var fd = socket(address_family, SOCK_STREAM, 0)
+        var fd = socket(address_family, socket_type, 0)
         if fd == -1:
             raise Error("Socket creation error")
-        self.sockfd = FileDescriptor(int(fd))
+        self.fd = FileDescriptor(int(fd))
         self.local_address = local_address
         self.remote_address = remote_address
         self._closed = False
@@ -109,10 +106,10 @@ struct Socket(FileDescriptorBase):
         inout self,
         fd: Int32,
         address_family: Int,
-        socket_type: UInt8,
+        socket_type: Int32,
         protocol: UInt8,
-        local_address: TCPAddr = TCPAddr(),
-        remote_address: TCPAddr = TCPAddr(),
+        local_address: BaseAddr = BaseAddr(),
+        remote_address: BaseAddr = BaseAddr(),
     ):
         """
         Create a new socket object when you already have a socket file descriptor. Typically through socket.accept().
@@ -122,10 +119,10 @@ struct Socket(FileDescriptorBase):
             address_family: The address family of the socket.
             socket_type: The socket type.
             protocol: The protocol.
-            local_address: Local address of socket.
-            remote_address: Remote address of port.
+            local_address: The local address of the socket (local address if bound).
+            remote_address: The remote address of the socket (peer's address if connected).
         """
-        self.sockfd = FileDescriptor(int(fd))
+        self.fd = FileDescriptor(int(fd))
         self.address_family = address_family
         self.socket_type = socket_type
         self.protocol = protocol
@@ -135,7 +132,7 @@ struct Socket(FileDescriptorBase):
         self._is_connected = True
 
     fn __moveinit__(inout self, owned existing: Self):
-        self.sockfd = existing.sockfd^
+        self.fd = existing.fd^
         self.address_family = existing.address_family
         self.socket_type = existing.socket_type
         self.protocol = existing.protocol
@@ -151,37 +148,59 @@ struct Socket(FileDescriptorBase):
     #     if self._is_connected:
     #         self.shutdown()
     #     if not self._closed:
-    #         self.close()
+    #         var err = self.close()
+    #         if err:
+    #             raise err
 
     fn __del__(owned self):
         if self._is_connected:
             self.shutdown()
         if not self._closed:
             var err = self.close()
-            _ = self.sockfd.fd
+            _ = self.fd.fd
             if err:
                 print("Failed to close socket during deletion:", str(err))
 
-    @always_inline
-    fn accept(self) raises -> Self:
+    fn local_address_as_udp(self) -> UDPAddr:
+        return UDPAddr(self.local_address)
+
+    fn local_address_as_tcp(self) -> TCPAddr:
+        return TCPAddr(self.local_address)
+
+    fn remote_address_as_udp(self) -> UDPAddr:
+        return UDPAddr(self.remote_address)
+
+    fn remote_address_as_tcp(self) -> TCPAddr:
+        return TCPAddr(self.remote_address)
+
+    fn accept(self) raises -> Socket:
         """Accept a connection. The socket must be bound to an address and listening for connections.
         The return value is a connection where conn is a new socket object usable to send and receive data on the connection,
         and address is the address bound to the socket on the other end of the connection.
         """
-        var their_addr_ptr = Pointer[sockaddr].alloc(1)
+        var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
         var sin_size = socklen_t(sizeof[socklen_t]())
-        var new_sockfd = accept(self.sockfd.fd, their_addr_ptr, Pointer[socklen_t].address_of(sin_size))
-        if new_sockfd == -1:
+        var new_fd = accept(
+            self.fd.fd,
+            remote_address_ptr,
+            UnsafePointer[socklen_t].address_of(sin_size),
+        )
+        if new_fd == -1:
             raise Error("Failed to accept connection")
 
-        var remote = self.get_peer_name()
-        return Self(
-            new_sockfd,
+        var remote: HostPort
+        var err: Error
+        remote, err = convert_sockaddr_to_host_port(remote_address_ptr)
+        if err:
+            raise err
+
+        return Socket(
+            new_fd,
             self.address_family,
             self.socket_type,
             self.protocol,
             self.local_address,
-            TCPAddr(remote.host, remote.port),
+            BaseAddr(remote.host, remote.port),
         )
 
     fn listen(self, backlog: Int = 0) raises:
@@ -193,17 +212,16 @@ struct Socket(FileDescriptorBase):
         var queued = backlog
         if backlog < 0:
             queued = 0
-        if listen(self.sockfd.fd, queued) == -1:
+        if listen(self.fd.fd, queued) == -1:
             raise Error("Failed to listen for connections")
 
-    @always_inline
     fn bind(inout self, address: String, port: Int) raises:
         """Bind the socket to address. The socket must not already be bound. (The format of address depends on the address family).
 
         When a socket is created with Socket(), it exists in a name
         space (address family) but has no address assigned to it.  bind()
         assigns the address specified by addr to the socket referred to
-        by the file descriptor sockfd.  addrlen specifies the size, in
+        by the file descriptor fd.  addrlen specifies the size, in
         bytes, of the address structure pointed to by addr.
         Traditionally, this operation is called 'assigning a name to a
         socket'.
@@ -214,19 +232,17 @@ struct Socket(FileDescriptorBase):
         """
         var sockaddr_pointer = build_sockaddr_pointer(address, port, self.address_family)
 
-        if bind(self.sockfd.fd, sockaddr_pointer, sizeof[sockaddr_in]()) == -1:
-            _ = shutdown(self.sockfd.fd, SHUT_RDWR)
+        if bind(self.fd.fd, sockaddr_pointer, sizeof[sockaddr_in]()) == -1:
+            _ = shutdown(self.fd.fd, SHUT_RDWR)
             raise Error("Binding socket failed. Wait a few seconds and try again?")
 
         var local = self.get_sock_name()
-        self.local_address = TCPAddr(local.host, local.port)
+        self.local_address = BaseAddr(local.host, local.port)
 
-    @always_inline
     fn file_no(self) -> Int32:
         """Return the file descriptor of the socket."""
-        return self.sockfd.fd
+        return self.fd.fd
 
-    @always_inline
     fn get_sock_name(self) raises -> HostPort:
         """Return the address of the socket."""
         if self._closed:
@@ -234,45 +250,45 @@ struct Socket(FileDescriptorBase):
 
         # TODO: Add check to see if the socket is bound and error if not.
 
-        var local_address_ptr = Pointer[sockaddr].alloc(1)
+        var local_address_ptr = UnsafePointer[sockaddr].alloc(1)
         var local_address_ptr_size = socklen_t(sizeof[sockaddr]())
         var status = getsockname(
-            self.sockfd.fd,
+            self.fd.fd,
             local_address_ptr,
-            Pointer[socklen_t].address_of(local_address_ptr_size),
+            UnsafePointer[socklen_t].address_of(local_address_ptr_size),
         )
         if status == -1:
             raise Error("Socket.get_sock_name: Failed to get address of local socket.")
-        var addr_in = local_address_ptr.bitcast[sockaddr_in]().load()
+        var addr_in = local_address_ptr.bitcast[sockaddr_in]().take_pointee()
 
         return HostPort(
-            host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
+            host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AddressFamily.AF_INET, 16),
             port=convert_binary_port_to_int(addr_in.sin_port),
         )
 
-    fn get_peer_name(self) raises -> HostPort:
+    fn get_peer_name(self) -> (HostPort, Error):
         """Return the address of the peer connected to the socket."""
         if self._closed:
-            raise SocketClosedError
+            return HostPort(), SocketClosedError
 
         # TODO: Add check to see if the socket is bound and error if not.
-        var remote_address_ptr = Pointer[sockaddr].alloc(1)
+        var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
         var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
         var status = getpeername(
-            self.sockfd.fd,
+            self.fd.fd,
             remote_address_ptr,
-            Pointer[socklen_t].address_of(remote_address_ptr_size),
+            UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
         )
         if status == -1:
-            raise Error("Socket.get_peer_name: Failed to get address of remote socket.")
+            return HostPort(), Error("Socket.get_peer_name: Failed to get address of remote socket.")
 
-        # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
-        var addr_in = remote_address_ptr.bitcast[sockaddr_in]().load()
+        var remote: HostPort
+        var err: Error
+        remote, err = convert_sockaddr_to_host_port(remote_address_ptr)
+        if err:
+            return HostPort(), err
 
-        return HostPort(
-            host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
-            port=convert_binary_port_to_int(addr_in.sin_port),
-        )
+        return remote, Error()
 
     fn get_socket_option(self, option_name: Int) raises -> Int:
         """Return the value of the given socket option.
@@ -280,11 +296,11 @@ struct Socket(FileDescriptorBase):
         Args:
             option_name: The socket option to get.
         """
-        var option_value_pointer = Pointer[c_void].alloc(1)
+        var option_value_pointer = UnsafePointer[c_void].alloc(1)
         var option_len = socklen_t(sizeof[socklen_t]())
-        var option_len_pointer = Pointer.address_of(option_len)
+        var option_len_pointer = UnsafePointer.address_of(option_len)
         var status = getsockopt(
-            self.sockfd.fd,
+            self.fd.fd,
             SOL_SOCKET,
             option_name,
             option_value_pointer,
@@ -293,7 +309,7 @@ struct Socket(FileDescriptorBase):
         if status == -1:
             raise Error("Socket.get_sock_opt failed with status: " + str(status))
 
-        return option_value_pointer.bitcast[Int]().load()
+        return option_value_pointer.bitcast[Int]().take_pointee()
 
     fn set_socket_option(self, option_name: Int, owned option_value: UInt8 = 1) raises:
         """Return the value of the given socket option.
@@ -302,13 +318,19 @@ struct Socket(FileDescriptorBase):
             option_name: The socket option to set.
             option_value: The value to set the socket option to.
         """
-        var option_value_pointer = Pointer[c_void].address_of(option_value)
+        var option_value_pointer = UnsafePointer[c_void].address_of(option_value)
         var option_len = sizeof[socklen_t]()
-        var status = setsockopt(self.sockfd.fd, SOL_SOCKET, option_name, option_value_pointer, option_len)
+        var status = setsockopt(
+            self.fd.fd,
+            SOL_SOCKET,
+            option_name,
+            option_value_pointer,
+            option_len,
+        )
         if status == -1:
             raise Error("Socket.set_sock_opt failed with status: " + str(status))
 
-    fn connect(inout self, address: String, port: Int) raises:
+    fn connect(inout self, address: String, port: Int) -> Error:
         """Connect to a remote socket at address.
 
         Args:
@@ -317,14 +339,20 @@ struct Socket(FileDescriptorBase):
         """
         var sockaddr_pointer = build_sockaddr_pointer(address, port, self.address_family)
 
-        if connect(self.sockfd.fd, sockaddr_pointer, sizeof[sockaddr_in]()) == -1:
+        if connect(self.fd.fd, sockaddr_pointer, sizeof[sockaddr_in]()) == -1:
             self.shutdown()
-            raise Error("Socket.connect: Failed to connect to the remote socket at: " + address + ":" + str(port))
+            return Error("Socket.connect: Failed to connect to the remote socket at: " + address + ":" + str(port))
 
-        var remote = self.get_peer_name()
-        self.remote_address = TCPAddr(remote.host, remote.port)
+        var remote: HostPort
+        var err: Error
+        remote, err = self.get_peer_name()
+        if err:
+            return err
 
-    fn write(inout self: Self, src: List[Byte]) -> (Int, Error):
+        self.remote_address = BaseAddr(remote.host, remote.port)
+        return Error()
+
+    fn write(inout self: Self, src: Span[UInt8]) -> (Int, Error):
         """Send data to the socket. The socket must be connected to a remote socket.
 
         Args:
@@ -333,42 +361,38 @@ struct Socket(FileDescriptorBase):
         Returns:
             The number of bytes sent.
         """
-        var bytes_written: Int
-        var err: Error
-        bytes_written, err = self.sockfd.write(src)
-        if err:
-            return 0, err
+        return self.fd.write(src)
 
-        return bytes_written, Error()
-
-    fn send_all(self, src: List[Byte], max_attempts: Int = 3) raises:
+    fn send_all(self, src: Span[UInt8], max_attempts: Int = 3) -> Error:
         """Send data to the socket. The socket must be connected to a remote socket.
 
         Args:
             src: The data to send.
             max_attempts: The maximum number of attempts to send the data.
         """
-        var header_pointer = src.unsafe_ptr()
+        var bytes_to_send = len(src)
         var total_bytes_sent = 0
         var attempts = 0
 
         # Try to send all the data in the buffer. If it did not send all the data, keep trying but start from the offset of the last successful send.
         while total_bytes_sent < len(src):
             if attempts > max_attempts:
-                raise Error("Failed to send message after " + str(max_attempts) + " attempts.")
+                return Error("Failed to send message after " + str(max_attempts) + " attempts.")
 
             var bytes_sent = send(
-                self.sockfd.fd,
-                header_pointer.offset(total_bytes_sent),
-                strlen(header_pointer.offset(total_bytes_sent)),
+                self.fd.fd,
+                src.unsafe_ptr() + total_bytes_sent,
+                bytes_to_send - total_bytes_sent,
                 0,
             )
             if bytes_sent == -1:
-                raise Error("Failed to send message, wrote" + String(total_bytes_sent) + "bytes before failing.")
+                return Error("Failed to send message, wrote" + str(total_bytes_sent) + "bytes before failing.")
             total_bytes_sent += bytes_sent
             attempts += 1
 
-    fn send_to(inout self, src: List[Byte], address: String, port: Int) raises -> Int:
+        return Error()
+
+    fn send_to(inout self, src: Span[UInt8], address: String, port: Int) -> (Int, Error):
         """Send data to the a remote address by connecting to the remote socket before sending.
         The socket must be not already be connected to a remote socket.
 
@@ -377,30 +401,141 @@ struct Socket(FileDescriptorBase):
             address: The IP address to connect to.
             port: The port number to connect to.
         """
-        var header_pointer = Pointer[Int8](src.data.address).bitcast[UInt8]()
-        self.connect(address, port)
-        var bytes_written: Int
-        var err: Error
-        bytes_written, err = self.write(src)
-        if err:
-            raise err
-        return bytes_written
+        var bytes_sent = sendto(
+            self.fd.fd,
+            src.unsafe_ptr(),
+            len(src),
+            0,
+            build_sockaddr_pointer(address, port, self.address_family),
+            sizeof[sockaddr_in](),
+        )
 
-    fn read(inout self, inout dest: List[Byte]) -> (Int, Error):
-        """Receive data from the socket."""
-        # Not ideal since we can't use the pointer from the List[Byte] struct directly. So we use a temporary pointer to receive the data.
-        # Then we copy all the data over.
-        var bytes_written: Int
-        var err: Error
-        bytes_written, err = self.sockfd.read(dest)
-        if err:
-            if str(err) != "EOF":
-                return 0, err
+        if bytes_sent == -1:
+            return 0, Error("Socket.send_to: Failed to send message to remote socket at: " + address + ":" + str(port))
 
-        return bytes_written, Error()
+        return bytes_sent, Error()
+
+    fn receive(inout self, size: Int = io.BUFFER_SIZE) -> (List[UInt8], Error):
+        """Receive data from the socket into the buffer with capacity of `size` bytes.
+
+        Args:
+            size: The size of the buffer to receive data into.
+
+        Returns:
+            The buffer with the received data, and an error if one occurred.
+        """
+        var buffer = UnsafePointer[UInt8].alloc(size)
+        var bytes_received = recv(
+            self.fd.fd,
+            buffer,
+            size,
+            0,
+        )
+        if bytes_received == -1:
+            return List[UInt8](), Error("Socket.receive: Failed to receive message from socket.")
+
+        var bytes = List[UInt8](unsafe_pointer=buffer, size=bytes_received, capacity=size)
+        if bytes_received < bytes.capacity:
+            return bytes, io.EOF
+
+        return bytes, Error()
+
+    fn _read(inout self, inout dest: Span[UInt8], capacity: Int) -> (Int, Error):
+        """Receive data from the socket into the buffer dest. Equivalent to recv_into().
+
+        Args:
+            dest: The buffer to read data into.
+            capacity: The capacity of the buffer.
+
+        Returns:
+            The number of bytes read, and an error if one occurred.
+        """
+        return self.fd._read(dest, capacity)
+
+    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
+        """Receive data from the socket into the buffer dest. Equivalent to recv_into().
+
+        Args:
+            dest: The buffer to read data into.
+
+        Returns:
+            The number of bytes read, and an error if one occurred.
+        """
+        var span = Span(dest)
+
+        var bytes_read: Int
+        var err: Error
+        bytes_read, err = self._read(span, dest.capacity)
+        dest.size += bytes_read
+
+        return bytes_read, err
+
+    fn receive_from(inout self, size: Int = io.BUFFER_SIZE) -> (List[UInt8], HostPort, Error):
+        """Receive data from the socket into the buffer dest.
+
+        Args:
+            size: The size of the buffer to receive data into.
+
+        Returns:
+            The number of bytes read, the remote address, and an error if one occurred.
+        """
+        var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
+        var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
+        var buffer = UnsafePointer[UInt8].alloc(size)
+        var bytes_received = recvfrom(
+            self.fd.fd,
+            buffer,
+            size,
+            0,
+            remote_address_ptr,
+            UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
+        )
+
+        if bytes_received == -1:
+            return List[UInt8](), HostPort(), Error("Failed to read from socket, received a -1 response.")
+
+        var remote: HostPort
+        var err: Error
+        remote, err = convert_sockaddr_to_host_port(remote_address_ptr)
+        if err:
+            return List[UInt8](), HostPort(), err
+
+        var bytes = List[UInt8](unsafe_pointer=buffer, size=bytes_received, capacity=size)
+        if bytes_received < bytes.capacity:
+            return bytes, remote, io.EOF
+
+        return bytes, remote, Error()
+
+    fn receive_from_into(inout self, inout dest: List[UInt8]) -> (Int, HostPort, Error):
+        """Receive data from the socket into the buffer dest."""
+        var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
+        var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
+        var bytes_read = recvfrom(
+            self.fd.fd,
+            dest.unsafe_ptr() + dest.size,
+            dest.capacity - dest.size,
+            0,
+            remote_address_ptr,
+            UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
+        )
+        dest.size += bytes_read
+
+        if bytes_read == -1:
+            return 0, HostPort(), Error("Socket.receive_from_into: Failed to read from socket, received a -1 response.")
+
+        var remote: HostPort
+        var err: Error
+        remote, err = convert_sockaddr_to_host_port(remote_address_ptr)
+        if err:
+            return 0, HostPort(), err
+
+        if bytes_read < dest.capacity:
+            return bytes_read, remote, io.EOF
+
+        return bytes_read, remote, Error()
 
     fn shutdown(self):
-        _ = shutdown(self.sockfd.fd, SHUT_RDWR)
+        _ = shutdown(self.fd.fd, SHUT_RDWR)
 
     fn close(inout self) -> Error:
         """Mark the socket closed.
@@ -408,7 +543,7 @@ struct Socket(FileDescriptorBase):
         The remote end will receive no more data (after queued data is flushed).
         """
         self.shutdown()
-        var err = self.sockfd.close()
+        var err = self.fd.close()
         if err:
             return err
 
@@ -416,17 +551,21 @@ struct Socket(FileDescriptorBase):
         return Error()
 
     # TODO: Trying to set timeout fails, but some other options don't?
-    # fn get_timeout(self) raises -> Seconds:
+    # fn get_timeout(self) raises -> Int:
     #     """Return the timeout value for the socket."""
-    #     return self.get_socket_option(SO_RCVTIMEO)
+    #     return self.get_socket_option(SocketOptions.SO_RCVTIMEO)
 
-    # fn set_timeout(self, owned duration: Seconds) raises:
+    # fn set_timeout(self, owned duration: Int) raises:
     #     """Set the timeout value for the socket.
 
     #     Args:
     #         duration: Seconds - The timeout duration in seconds.
     #     """
-    #     self.set_socket_option(SO_RCVTIMEO, duration)
+    #     self.set_socket_option(SocketOptions.SO_RCVTIMEO, duration)
 
-    fn send_file(self, file: FileHandle, offset: Int = 0) raises:
-        self.send_all(file.read_bytes())
+    fn send_file(self, file: FileHandle) -> Error:
+        try:
+            var bytes = file.read_bytes()
+            return self.send_all(Span(bytes))
+        except e:
+            return e

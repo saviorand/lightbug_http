@@ -1,72 +1,70 @@
-from . import c_char, c_int, c_ushort, c_uint, c_size_t, c_ssize_t
-from .types import strlen
-from .file import O_CLOEXEC, O_NONBLOCK
 from utils.static_tuple import StaticTuple
+from sys import external_call
+from . import c_char, c_int, c_ushort, c_uint, c_size_t, c_ssize_t
+from .file import O_CLOEXEC, O_NONBLOCK
 
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
 
-# Adapted from https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/ . Huge thanks to Gabriel!
 
-alias FD_STDIN: c_int = 0
-alias FD_STDOUT: c_int = 1
-alias FD_STDERR: c_int = 2
+struct FD:
+    alias STDIN = 0
+    alias STDOUT = 1
+    alias STDERR = 2
+
 
 alias SUCCESS = 0
 alias GRND_NONBLOCK: UInt8 = 1
 
-alias char_pointer = DTypePointer[DType.uint8]
+alias char_pointer = UnsafePointer[UInt8]
 
 
 # --- ( error.h Constants )-----------------------------------------------------
-alias EPERM = 1
-alias ENOENT = 2
-alias ESRCH = 3
-alias EINTR = 4
-alias EIO = 5
-alias ENXIO = 6
-alias E2BIG = 7
-alias ENOEXEC = 8
-alias EBADF = 9
-alias ECHILD = 10
-alias EAGAIN = 11
-alias ENOMEM = 12
-alias EACCES = 13
-alias EFAULT = 14
-alias ENOTBLK = 15
-alias EBUSY = 16
-alias EEXIST = 17
-alias EXDEV = 18
-alias ENODEV = 19
-alias ENOTDIR = 20
-alias EISDIR = 21
-alias EINVAL = 22
-alias ENFILE = 23
-alias EMFILE = 24
-alias ENOTTY = 25
-alias ETXTBSY = 26
-alias EFBIG = 27
-alias ENOSPC = 28
-alias ESPIPE = 29
-alias EROFS = 30
-alias EMLINK = 31
-alias EPIPE = 32
-alias EDOM = 33
-alias ERANGE = 34
-alias EWOULDBLOCK = EAGAIN
+struct ErrnoConstants:
+    alias EPERM = 1
+    alias ENOENT = 2
+    alias ESRCH = 3
+    alias EINTR = 4
+    alias EIO = 5
+    alias ENXIO = 6
+    alias E2BIG = 7
+    alias ENOEXEC = 8
+    alias EBADF = 9
+    alias ECHILD = 10
+    alias EAGAIN = 11
+    alias ENOMEM = 12
+    alias EACCES = 13
+    alias EFAULT = 14
+    alias ENOTBLK = 15
+    alias EBUSY = 16
+    alias EEXIST = 17
+    alias EXDEV = 18
+    alias ENODEV = 19
+    alias ENOTDIR = 20
+    alias EISDIR = 21
+    alias EINVAL = 22
+    alias ENFILE = 23
+    alias EMFILE = 24
+    alias ENOTTY = 25
+    alias ETXTBSY = 26
+    alias EFBIG = 27
+    alias ENOSPC = 28
+    alias ESPIPE = 29
+    alias EROFS = 30
+    alias EMLINK = 31
+    alias EPIPE = 32
+    alias EDOM = 33
+    alias ERANGE = 34
+    alias EWOULDBLOCK = 11
 
 
-fn to_char_ptr(s: String) -> DTypePointer[DType.uint8]:
-    """Only ASCII-based strings."""
-    var ptr = DTypePointer[DType.uint8]().alloc(len(s))
-    for i in range(len(s)):
-        ptr.store(i, ord(s[i]))
-    return ptr
-
-
-fn c_charptr_to_string(s: DTypePointer[DType.uint8]) -> String:
-    return String(s, strlen(s))
+# fn to_char_ptr(s: String) -> UnsafePointer[UInt8]:
+#     """Only ASCII-based strings."""
+#     var ptr = UnsafePointer[UInt8]().alloc(len(s))
+#     for i in range(len(s)):
+#         ptr.store(i, ord(s[i]))
+#     return ptr
 
 
 fn cftob(val: c_int) -> Bool:
@@ -80,117 +78,126 @@ alias socklen_t = c_uint
 alias in_addr_t = c_uint
 alias in_port_t = c_ushort
 
+
 # Address Family Constants
-alias AF_UNSPEC = 0
-alias AF_UNIX = 1
-alias AF_LOCAL = AF_UNIX
-alias AF_INET = 2
-alias AF_AX25 = 3
-alias AF_IPX = 4
-alias AF_APPLETALK = 5
-alias AF_NETROM = 6
-alias AF_BRIDGE = 7
-alias AF_ATMPVC = 8
-alias AF_X25 = 9
-alias AF_INET6 = 10
-alias AF_ROSE = 11
-alias AF_DECnet = 12
-alias AF_NETBEUI = 13
-alias AF_SECURITY = 14
-alias AF_KEY = 15
-alias AF_NETLINK = 16
-alias AF_ROUTE = AF_NETLINK
-alias AF_PACKET = 17
-alias AF_ASH = 18
-alias AF_ECONET = 19
-alias AF_ATMSVC = 20
-alias AF_RDS = 21
-alias AF_SNA = 22
-alias AF_IRDA = 23
-alias AF_PPPOX = 24
-alias AF_WANPIPE = 25
-alias AF_LLC = 26
-alias AF_CAN = 29
-alias AF_TIPC = 30
-alias AF_BLUETOOTH = 31
-alias AF_IUCV = 32
-alias AF_RXRPC = 33
-alias AF_ISDN = 34
-alias AF_PHONET = 35
-alias AF_IEEE802154 = 36
-alias AF_CAIF = 37
-alias AF_ALG = 38
-alias AF_NFC = 39
-alias AF_VSOCK = 40
-alias AF_KCM = 41
-alias AF_QIPCRTR = 42
-alias AF_MAX = 43
+struct AddressFamily:
+    alias AF_UNSPEC = 0
+    alias AF_UNIX = 1
+    alias AF_LOCAL = 1
+    alias AF_INET = 2
+    alias AF_AX25 = 3
+    alias AF_IPX = 4
+    alias AF_APPLETALK = 5
+    alias AF_NETROM = 6
+    alias AF_BRIDGE = 7
+    alias AF_ATMPVC = 8
+    alias AF_X25 = 9
+    alias AF_INET6 = 10
+    alias AF_ROSE = 11
+    alias AF_DECnet = 12
+    alias AF_NETBEUI = 13
+    alias AF_SECURITY = 14
+    alias AF_KEY = 15
+    alias AF_NETLINK = 16
+    alias AF_ROUTE = 16
+    alias AF_PACKET = 17
+    alias AF_ASH = 18
+    alias AF_ECONET = 19
+    alias AF_ATMSVC = 20
+    alias AF_RDS = 21
+    alias AF_SNA = 22
+    alias AF_IRDA = 23
+    alias AF_PPPOX = 24
+    alias AF_WANPIPE = 25
+    alias AF_LLC = 26
+    alias AF_CAN = 29
+    alias AF_TIPC = 30
+    alias AF_BLUETOOTH = 31
+    alias AF_IUCV = 32
+    alias AF_RXRPC = 33
+    alias AF_ISDN = 34
+    alias AF_PHONET = 35
+    alias AF_IEEE802154 = 36
+    alias AF_CAIF = 37
+    alias AF_ALG = 38
+    alias AF_NFC = 39
+    alias AF_VSOCK = 40
+    alias AF_KCM = 41
+    alias AF_QIPCRTR = 42
+    alias AF_MAX = 43
+
 
 # Protocol family constants
-alias PF_UNSPEC = AF_UNSPEC
-alias PF_UNIX = AF_UNIX
-alias PF_LOCAL = AF_LOCAL
-alias PF_INET = AF_INET
-alias PF_AX25 = AF_AX25
-alias PF_IPX = AF_IPX
-alias PF_APPLETALK = AF_APPLETALK
-alias PF_NETROM = AF_NETROM
-alias PF_BRIDGE = AF_BRIDGE
-alias PF_ATMPVC = AF_ATMPVC
-alias PF_X25 = AF_X25
-alias PF_INET6 = AF_INET6
-alias PF_ROSE = AF_ROSE
-alias PF_DECnet = AF_DECnet
-alias PF_NETBEUI = AF_NETBEUI
-alias PF_SECURITY = AF_SECURITY
-alias PF_KEY = AF_KEY
-alias PF_NETLINK = AF_NETLINK
-alias PF_ROUTE = AF_ROUTE
-alias PF_PACKET = AF_PACKET
-alias PF_ASH = AF_ASH
-alias PF_ECONET = AF_ECONET
-alias PF_ATMSVC = AF_ATMSVC
-alias PF_RDS = AF_RDS
-alias PF_SNA = AF_SNA
-alias PF_IRDA = AF_IRDA
-alias PF_PPPOX = AF_PPPOX
-alias PF_WANPIPE = AF_WANPIPE
-alias PF_LLC = AF_LLC
-alias PF_CAN = AF_CAN
-alias PF_TIPC = AF_TIPC
-alias PF_BLUETOOTH = AF_BLUETOOTH
-alias PF_IUCV = AF_IUCV
-alias PF_RXRPC = AF_RXRPC
-alias PF_ISDN = AF_ISDN
-alias PF_PHONET = AF_PHONET
-alias PF_IEEE802154 = AF_IEEE802154
-alias PF_CAIF = AF_CAIF
-alias PF_ALG = AF_ALG
-alias PF_NFC = AF_NFC
-alias PF_VSOCK = AF_VSOCK
-alias PF_KCM = AF_KCM
-alias PF_QIPCRTR = AF_QIPCRTR
-alias PF_MAX = AF_MAX
+struct ProtocolFamily:
+    alias PF_UNSPEC = AddressFamily.AF_UNSPEC
+    alias PF_UNIX = AddressFamily.AF_UNIX
+    alias PF_LOCAL = AddressFamily.AF_LOCAL
+    alias PF_INET = AddressFamily.AF_INET
+    alias PF_AX25 = AddressFamily.AF_AX25
+    alias PF_IPX = AddressFamily.AF_IPX
+    alias PF_APPLETALK = AddressFamily.AF_APPLETALK
+    alias PF_NETROM = AddressFamily.AF_NETROM
+    alias PF_BRIDGE = AddressFamily.AF_BRIDGE
+    alias PF_ATMPVC = AddressFamily.AF_ATMPVC
+    alias PF_X25 = AddressFamily.AF_X25
+    alias PF_INET6 = AddressFamily.AF_INET6
+    alias PF_ROSE = AddressFamily.AF_ROSE
+    alias PF_DECnet = AddressFamily.AF_DECnet
+    alias PF_NETBEUI = AddressFamily.AF_NETBEUI
+    alias PF_SECURITY = AddressFamily.AF_SECURITY
+    alias PF_KEY = AddressFamily.AF_KEY
+    alias PF_NETLINK = AddressFamily.AF_NETLINK
+    alias PF_ROUTE = AddressFamily.AF_ROUTE
+    alias PF_PACKET = AddressFamily.AF_PACKET
+    alias PF_ASH = AddressFamily.AF_ASH
+    alias PF_ECONET = AddressFamily.AF_ECONET
+    alias PF_ATMSVC = AddressFamily.AF_ATMSVC
+    alias PF_RDS = AddressFamily.AF_RDS
+    alias PF_SNA = AddressFamily.AF_SNA
+    alias PF_IRDA = AddressFamily.AF_IRDA
+    alias PF_PPPOX = AddressFamily.AF_PPPOX
+    alias PF_WANPIPE = AddressFamily.AF_WANPIPE
+    alias PF_LLC = AddressFamily.AF_LLC
+    alias PF_CAN = AddressFamily.AF_CAN
+    alias PF_TIPC = AddressFamily.AF_TIPC
+    alias PF_BLUETOOTH = AddressFamily.AF_BLUETOOTH
+    alias PF_IUCV = AddressFamily.AF_IUCV
+    alias PF_RXRPC = AddressFamily.AF_RXRPC
+    alias PF_ISDN = AddressFamily.AF_ISDN
+    alias PF_PHONET = AddressFamily.AF_PHONET
+    alias PF_IEEE802154 = AddressFamily.AF_IEEE802154
+    alias PF_CAIF = AddressFamily.AF_CAIF
+    alias PF_ALG = AddressFamily.AF_ALG
+    alias PF_NFC = AddressFamily.AF_NFC
+    alias PF_VSOCK = AddressFamily.AF_VSOCK
+    alias PF_KCM = AddressFamily.AF_KCM
+    alias PF_QIPCRTR = AddressFamily.AF_QIPCRTR
+    alias PF_MAX = AddressFamily.AF_MAX
+
 
 # Socket Type constants
-alias SOCK_STREAM = 1
-alias SOCK_DGRAM = 2
-alias SOCK_RAW = 3
-alias SOCK_RDM = 4
-alias SOCK_SEQPACKET = 5
-alias SOCK_DCCP = 6
-alias SOCK_PACKET = 10
-alias SOCK_CLOEXEC = O_CLOEXEC
-alias SOCK_NONBLOCK = O_NONBLOCK
+struct SocketType:
+    alias SOCK_STREAM = 1
+    alias SOCK_DGRAM = 2
+    alias SOCK_RAW = 3
+    alias SOCK_RDM = 4
+    alias SOCK_SEQPACKET = 5
+    alias SOCK_DCCP = 6
+    alias SOCK_PACKET = 10
+    alias SOCK_CLOEXEC = O_CLOEXEC
+    alias SOCK_NONBLOCK = O_NONBLOCK
+
 
 # Address Information
-alias AI_PASSIVE = 1
-alias AI_CANONNAME = 2
-alias AI_NUMERICHOST = 4
-alias AI_V4MAPPED = 2048
-alias AI_ALL = 256
-alias AI_ADDRCONFIG = 1024
-alias AI_IDN = 64
+struct AddressInformation:
+    alias AI_PASSIVE = 1
+    alias AI_CANONNAME = 2
+    alias AI_NUMERICHOST = 4
+    alias AI_V4MAPPED = 2048
+    alias AI_ALL = 256
+    alias AI_ADDRCONFIG = 1024
+    alias AI_IDN = 64
+
 
 alias INET_ADDRSTRLEN = 16
 alias INET6_ADDRSTRLEN = 46
@@ -201,86 +208,87 @@ alias SHUT_RDWR = 2
 
 alias SOL_SOCKET = 65535
 
-# Socket Options
-alias SO_DEBUG = 1
-alias SO_REUSEADDR = 4
-alias SO_TYPE = 4104
-alias SO_ERROR = 4103
-alias SO_DONTROUTE = 16
-alias SO_BROADCAST = 32
-alias SO_SNDBUF = 4097
-alias SO_RCVBUF = 4098
-alias SO_KEEPALIVE = 8
-alias SO_OOBINLINE = 256
-alias SO_LINGER = 128
-alias SO_REUSEPORT = 512
-alias SO_RCVLOWAT = 4100
-alias SO_SNDLOWAT = 4099
-alias SO_RCVTIMEO = 4102
-alias SO_SNDTIMEO = 4101
-alias SO_RCVTIMEO_OLD = 4102
-alias SO_SNDTIMEO_OLD = 4101
-alias SO_ACCEPTCONN = 2
 
-# unsure of these socket options, they weren't available via python
-alias SO_NO_CHECK = 11
-alias SO_PRIORITY = 12
-alias SO_BSDCOMPAT = 14
-alias SO_PASSCRED = 16
-alias SO_PEERCRED = 17
-alias SO_SECURITY_AUTHENTICATION = 22
-alias SO_SECURITY_ENCRYPTION_TRANSPORT = 23
-alias SO_SECURITY_ENCRYPTION_NETWORK = 24
-alias SO_BINDTODEVICE = 25
-alias SO_ATTACH_FILTER = 26
-alias SO_DETACH_FILTER = 27
-alias SO_GET_FILTER = SO_ATTACH_FILTER
-alias SO_PEERNAME = 28
-alias SO_TIMESTAMP = 29
-alias SO_TIMESTAMP_OLD = 29
-alias SO_PEERSEC = 31
-alias SO_SNDBUFFORCE = 32
-alias SO_RCVBUFFORCE = 33
-alias SO_PASSSEC = 34
-alias SO_TIMESTAMPNS = 35
-alias SO_TIMESTAMPNS_OLD = 35
-alias SO_MARK = 36
-alias SO_TIMESTAMPING = 37
-alias SO_TIMESTAMPING_OLD = 37
-alias SO_PROTOCOL = 38
-alias SO_DOMAIN = 39
-alias SO_RXQ_OVFL = 40
-alias SO_WIFI_STATUS = 41
-alias SCM_WIFI_STATUS = SO_WIFI_STATUS
-alias SO_PEEK_OFF = 42
-alias SO_NOFCS = 43
-alias SO_LOCK_FILTER = 44
-alias SO_SELECT_ERR_QUEUE = 45
-alias SO_BUSY_POLL = 46
-alias SO_MAX_PACING_RATE = 47
-alias SO_BPF_EXTENSIONS = 48
-alias SO_INCOMING_CPU = 49
-alias SO_ATTACH_BPF = 50
-alias SO_DETACH_BPF = SO_DETACH_FILTER
-alias SO_ATTACH_REUSEPORT_CBPF = 51
-alias SO_ATTACH_REUSEPORT_EBPF = 52
-alias SO_CNX_ADVICE = 53
-alias SCM_TIMESTAMPING_OPT_STATS = 54
-alias SO_MEMINFO = 55
-alias SO_INCOMING_NAPI_ID = 56
-alias SO_COOKIE = 57
-alias SCM_TIMESTAMPING_PKTINFO = 58
-alias SO_PEERGROUPS = 59
-alias SO_ZEROCOPY = 60
-alias SO_TXTIME = 61
-alias SCM_TXTIME = SO_TXTIME
-alias SO_BINDTOIFINDEX = 62
-alias SO_TIMESTAMP_NEW = 63
-alias SO_TIMESTAMPNS_NEW = 64
-alias SO_TIMESTAMPING_NEW = 65
-alias SO_RCVTIMEO_NEW = 66
-alias SO_SNDTIMEO_NEW = 67
-alias SO_DETACH_REUSEPORT_BPF = 68
+# Socket Options
+struct SocketOptions:
+    alias SO_DEBUG = 1
+    alias SO_REUSEADDR = 4
+    alias SO_TYPE = 4104
+    alias SO_ERROR = 4103
+    alias SO_DONTROUTE = 16
+    alias SO_BROADCAST = 32
+    alias SO_SNDBUF = 4097
+    alias SO_RCVBUF = 4098
+    alias SO_KEEPALIVE = 8
+    alias SO_OOBINLINE = 256
+    alias SO_LINGER = 128
+    alias SO_REUSEPORT = 512
+    alias SO_RCVLOWAT = 4100
+    alias SO_SNDLOWAT = 4099
+    alias SO_RCVTIMEO = 4102
+    alias SO_SNDTIMEO = 4101
+    alias SO_RCVTIMEO_OLD = 4102
+    alias SO_SNDTIMEO_OLD = 4101
+    alias SO_ACCEPTCONN = 2
+    # unsure of these socket options, they weren't available via python
+    alias SO_NO_CHECK = 11
+    alias SO_PRIORITY = 12
+    alias SO_BSDCOMPAT = 14
+    alias SO_PASSCRED = 16
+    alias SO_PEERCRED = 17
+    alias SO_SECURITY_AUTHENTICATION = 22
+    alias SO_SECURITY_ENCRYPTION_TRANSPORT = 23
+    alias SO_SECURITY_ENCRYPTION_NETWORK = 24
+    alias SO_BINDTODEVICE = 25
+    alias SO_ATTACH_FILTER = 26
+    alias SO_DETACH_FILTER = 27
+    alias SO_GET_FILTER = 26
+    alias SO_PEERNAME = 28
+    alias SO_TIMESTAMP = 29
+    alias SO_TIMESTAMP_OLD = 29
+    alias SO_PEERSEC = 31
+    alias SO_SNDBUFFORCE = 32
+    alias SO_RCVBUFFORCE = 33
+    alias SO_PASSSEC = 34
+    alias SO_TIMESTAMPNS = 35
+    alias SO_TIMESTAMPNS_OLD = 35
+    alias SO_MARK = 36
+    alias SO_TIMESTAMPING = 37
+    alias SO_TIMESTAMPING_OLD = 37
+    alias SO_PROTOCOL = 38
+    alias SO_DOMAIN = 39
+    alias SO_RXQ_OVFL = 40
+    alias SO_WIFI_STATUS = 41
+    alias SCM_WIFI_STATUS = 41
+    alias SO_PEEK_OFF = 42
+    alias SO_NOFCS = 43
+    alias SO_LOCK_FILTER = 44
+    alias SO_SELECT_ERR_QUEUE = 45
+    alias SO_BUSY_POLL = 46
+    alias SO_MAX_PACING_RATE = 47
+    alias SO_BPF_EXTENSIONS = 48
+    alias SO_INCOMING_CPU = 49
+    alias SO_ATTACH_BPF = 50
+    alias SO_DETACH_BPF = 27
+    alias SO_ATTACH_REUSEPORT_CBPF = 51
+    alias SO_ATTACH_REUSEPORT_EBPF = 52
+    alias SO_CNX_ADVICE = 53
+    alias SCM_TIMESTAMPING_OPT_STATS = 54
+    alias SO_MEMINFO = 55
+    alias SO_INCOMING_NAPI_ID = 56
+    alias SO_COOKIE = 57
+    alias SCM_TIMESTAMPING_PKTINFO = 58
+    alias SO_PEERGROUPS = 59
+    alias SO_ZEROCOPY = 60
+    alias SO_TXTIME = 61
+    alias SCM_TXTIME = 61
+    alias SO_BINDTOIFINDEX = 62
+    alias SO_TIMESTAMP_NEW = 63
+    alias SO_TIMESTAMPNS_NEW = 64
+    alias SO_TIMESTAMPING_NEW = 65
+    alias SO_RCVTIMEO_NEW = 66
+    alias SO_SNDTIMEO_NEW = 67
+    alias SO_DETACH_REUSEPORT_BPF = 68
 
 
 # --- ( Network Related Structs )-----------------------------------------------
@@ -335,7 +343,7 @@ struct addrinfo:
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
-    var ai_canonname: DTypePointer[DType.uint8]
+    var ai_canonname: UnsafePointer[UInt8]
     var ai_addr: UnsafePointer[sockaddr]
     var ai_next: UnsafePointer[addrinfo]
 
@@ -346,7 +354,7 @@ struct addrinfo:
         ai_socktype: c_int = 0,
         ai_protocol: c_int = 0,
         ai_addrlen: socklen_t = 0,
-        ai_canonname: DTypePointer[DType.uint8] = DTypePointer[DType.uint8](),
+        ai_canonname: UnsafePointer[UInt8] = UnsafePointer[UInt8](),
         ai_addr: UnsafePointer[sockaddr] = UnsafePointer[sockaddr](),
         ai_next: UnsafePointer[addrinfo] = UnsafePointer[addrinfo](),
     ):
@@ -360,7 +368,7 @@ struct addrinfo:
         self.ai_next = ai_next
 
     # fn __init__() -> Self:
-    #     return Self(0, 0, 0, 0, 0, DTypePointer[DType.uint8](), UnsafePointer[sockaddr](), UnsafePointer[addrinfo]())
+    #     return Self(0, 0, 0, 0, 0, UnsafePointer[UInt8](), UnsafePointer[sockaddr](), UnsafePointer[addrinfo]())
 
 
 @value
@@ -377,7 +385,7 @@ struct addrinfo_unix:
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
     var ai_addr: UnsafePointer[sockaddr]
-    var ai_canonname: DTypePointer[DType.uint8]
+    var ai_canonname: UnsafePointer[UInt8]
     var ai_next: UnsafePointer[addrinfo]
 
     fn __init__(
@@ -387,7 +395,7 @@ struct addrinfo_unix:
         ai_socktype: c_int = 0,
         ai_protocol: c_int = 0,
         ai_addrlen: socklen_t = 0,
-        ai_canonname: DTypePointer[DType.uint8] = DTypePointer[DType.uint8](),
+        ai_canonname: UnsafePointer[UInt8] = UnsafePointer[UInt8](),
         ai_addr: UnsafePointer[sockaddr] = UnsafePointer[sockaddr](),
         ai_next: UnsafePointer[addrinfo] = UnsafePointer[addrinfo](),
     ):
@@ -449,8 +457,11 @@ fn ntohs(netshort: c_ushort) -> c_ushort:
 
 
 fn inet_ntop(
-    af: c_int, src: DTypePointer[DType.uint8], dst: DTypePointer[DType.uint8], size: socklen_t
-) -> DTypePointer[DType.uint8]:
+    af: c_int,
+    src: UnsafePointer[UInt8],
+    dst: UnsafePointer[UInt8],
+    size: socklen_t,
+) -> UnsafePointer[UInt8]:
     """Libc POSIX `inet_ntop` function
     Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     Fn signature: const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size).
@@ -466,15 +477,15 @@ fn inet_ntop(
     """
     return external_call[
         "inet_ntop",
-        DTypePointer[DType.uint8],  # FnName, RetType
+        UnsafePointer[UInt8],  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
+        UnsafePointer[UInt8],
         socklen_t,  # Args
     ](af, src, dst, size)
 
 
-fn inet_pton(af: c_int, src: DTypePointer[DType.uint8], dst: DTypePointer[DType.uint8]) -> c_int:
+fn inet_pton(af: c_int, src: UnsafePointer[UInt8], dst: UnsafePointer[UInt8]) -> c_int:
     """Libc POSIX `inet_pton` function
     Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     Fn signature: int inet_pton(int af, const char *restrict src, void *restrict dst).
@@ -488,12 +499,12 @@ fn inet_pton(af: c_int, src: DTypePointer[DType.uint8], dst: DTypePointer[DType.
         "inet_pton",
         c_int,  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],  # Args
+        UnsafePointer[UInt8],
+        UnsafePointer[UInt8],  # Args
     ](af, src, dst)
 
 
-fn inet_addr(cp: DTypePointer[DType.uint8]) -> in_addr_t:
+fn inet_addr(cp: UnsafePointer[UInt8]) -> in_addr_t:
     """Libc POSIX `inet_addr` function
     Reference: https://man7.org/linux/man-pages/man3/inet_addr.3p.html
     Fn signature: in_addr_t inet_addr(const char *cp).
@@ -501,10 +512,10 @@ fn inet_addr(cp: DTypePointer[DType.uint8]) -> in_addr_t:
     Args: cp: A pointer to a string containing the address.
     Returns: The address in network byte order.
     """
-    return external_call["inet_addr", in_addr_t, DTypePointer[DType.uint8]](cp)
+    return external_call["inet_addr", in_addr_t, UnsafePointer[UInt8]](cp)
 
 
-fn inet_ntoa(addr: in_addr) -> DTypePointer[DType.uint8]:
+fn inet_ntoa(addr: in_addr) -> UnsafePointer[UInt8]:
     """Libc POSIX `inet_ntoa` function
     Reference: https://man7.org/linux/man-pages/man3/inet_addr.3p.html
     Fn signature: char *inet_ntoa(struct in_addr in).
@@ -512,7 +523,7 @@ fn inet_ntoa(addr: in_addr) -> DTypePointer[DType.uint8]:
     Args: in: A pointer to a string containing the address.
     Returns: The address in network byte order.
     """
-    return external_call["inet_ntoa", DTypePointer[DType.uint8], in_addr](addr)
+    return external_call["inet_ntoa", UnsafePointer[UInt8], in_addr](addr)
 
 
 fn socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
@@ -532,7 +543,7 @@ fn setsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: DTypePointer[DType.uint8],
+    option_value: UnsafePointer[UInt8],
     option_len: socklen_t,
 ) -> c_int:
     """Libc POSIX `setsockopt` function
@@ -553,7 +564,7 @@ fn setsockopt(
         c_int,
         c_int,
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         socklen_t,  # Args
     ](socket, level, option_name, option_value, option_len)
 
@@ -562,7 +573,7 @@ fn getsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: DTypePointer[DType.uint8],
+    option_value: UnsafePointer[UInt8],
     option_len: UnsafePointer[socklen_t],
 ) -> c_int:
     """Libc POSIX `getsockopt` function
@@ -582,12 +593,16 @@ fn getsockopt(
         c_int,
         c_int,
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         UnsafePointer[socklen_t],  # Args
     ](socket, level, option_name, option_value, option_len)
 
 
-fn getsockname(socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
+fn getsockname(
+    socket: c_int,
+    address: UnsafePointer[sockaddr],
+    address_len: UnsafePointer[socklen_t],
+) -> c_int:
     """Libc POSIX `getsockname` function
     Reference: https://man7.org/linux/man-pages/man3/getsockname.3p.html
     Fn signature: int getsockname(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
@@ -606,7 +621,11 @@ fn getsockname(socket: c_int, address: UnsafePointer[sockaddr], address_len: Uns
     ](socket, address, address_len)
 
 
-fn getpeername(sockfd: c_int, addr: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
+fn getpeername(
+    sockfd: c_int,
+    addr: UnsafePointer[sockaddr],
+    address_len: UnsafePointer[socklen_t],
+) -> c_int:
     """Libc POSIX `getpeername` function
     Reference: https://man7.org/linux/man-pages/man2/getpeername.2.html
     Fn signature:   int getpeername(int socket, struct sockaddr *restrict addr, socklen_t *restrict address_len).
@@ -647,7 +666,11 @@ fn listen(socket: c_int, backlog: c_int) -> c_int:
     return external_call["listen", c_int, c_int, c_int](socket, backlog)
 
 
-fn accept(socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
+fn accept(
+    socket: c_int,
+    address: UnsafePointer[sockaddr],
+    address_len: UnsafePointer[socklen_t],
+) -> c_int:
     """Libc POSIX `accept` function
     Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     Fn signature: int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
@@ -681,22 +704,88 @@ fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen
     )
 
 
-fn recv(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flags: c_int) -> c_ssize_t:
+fn recv(
+    socket: c_int,
+    buffer: UnsafePointer[UInt8],
+    length: c_size_t,
+    flags: c_int,
+) -> c_ssize_t:
     """Libc POSIX `recv` function
     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
     Fn signature: ssize_t recv(int socket, void *buffer, size_t length, int flags).
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        buffer: Points to the buffer where the message should be stored.
+        length: Specifies the length in bytes of the buffer pointed to by the buffer argument.
+        flags: Specifies the type of message reception.
+
+    Returns:
+        The number of bytes received or -1 in case of failure.
+
+    Valid Flags:
+        MSG_PEEK: Peeks at an incoming message. The data is treated as unread and the next recvfrom() or similar function shall still return this data.
+        MSG_OOB: Requests out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        MSG_WAITALL: On SOCK_STREAM sockets this requests that the function block until the full amount of data can be returned. The function may return the smaller amount of data if the socket is a message-based socket, if a signal is caught, if the connection is terminated, if MSG_PEEK was specified, or if an error is pending for the socket.
     """
     return external_call[
         "recv",
-        c_ssize_t,  # FnName, RetType
+        c_ssize_t,
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         c_size_t,
-        c_int,  # Args
+        c_int,
     ](socket, buffer, length, flags)
 
 
-fn send(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flags: c_int) -> c_ssize_t:
+fn recvfrom(
+    socket: c_int,
+    buffer: UnsafePointer[UInt8],
+    length: c_size_t,
+    flags: c_int,
+    address: UnsafePointer[sockaddr],
+    address_len: UnsafePointer[socklen_t],
+) -> c_ssize_t:
+    """Libc POSIX `recvfrom` function
+    Reference: https://man7.org/linux/man-pages/man3/recvfrom.3p.html
+    Fn signature: ssize_t recvfrom(int socket, void *restrict buffer, size_t length,
+        int flags, struct sockaddr *restrict address,
+        socklen_t *restrict address_len).
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        buffer: Points to the buffer where the message should be stored.
+        length: Specifies the length in bytes of the buffer pointed to by the buffer argument.
+        flags: Specifies the type of message reception.
+        address: A null pointer, or points to a sockaddr structure in which the sending address is to be stored.
+        address_len: Either a null pointer, if address is a null pointer, or a pointer to a socklen_t object which on input specifies the length of the supplied sockaddr structure, and on output specifies the length of the stored address.
+
+    Returns:
+        The number of bytes received or -1 in case of failure.
+
+    Valid Flags:
+        MSG_PEEK: Peeks at an incoming message. The data is treated as unread and the next recvfrom() or similar function shall still return this data.
+        MSG_OOB: Requests out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        MSG_WAITALL: On SOCK_STREAM sockets this requests that the function block until the full amount of data can be returned. The function may return the smaller amount of data if the socket is a message-based socket, if a signal is caught, if the connection is terminated, if MSG_PEEK was specified, or if an error is pending for the socket.
+    """
+    return external_call[
+        "recvfrom",
+        c_ssize_t,
+        c_int,
+        UnsafePointer[UInt8],
+        c_size_t,
+        c_int,
+        UnsafePointer[sockaddr],
+        UnsafePointer[socklen_t],
+    ](socket, buffer, length, flags, address, address_len)
+
+
+fn send(
+    socket: c_int,
+    buffer: UnsafePointer[UInt8],
+    length: c_size_t,
+    flags: c_int,
+) -> c_ssize_t:
     """Libc POSIX `send` function
     Reference: https://man7.org/linux/man-pages/man3/send.3p.html
     Fn signature: ssize_t send(int socket, const void *buffer, size_t length, int flags).
@@ -711,10 +800,45 @@ fn send(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flag
         "send",
         c_ssize_t,  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         c_size_t,
         c_int,  # Args
     ](socket, buffer, length, flags)
+
+
+fn sendto(
+    socket: c_int,
+    message: UnsafePointer[UInt8],
+    length: c_size_t,
+    flags: c_int,
+    dest_addr: UnsafePointer[sockaddr],
+    dest_len: socklen_t,
+) -> c_ssize_t:
+    """Libc POSIX `sendto` function
+    Reference: https://man7.org/linux/man-pages/man3/sendto.3p.html
+    Fn signature: ssize_t sendto(int socket, const void *message, size_t length,
+        int flags, const struct sockaddr *dest_addr,
+        socklen_t dest_len).
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        message: Points to a buffer containing the message to be sent.
+        length: Specifies the size of the message in bytes.
+        flags: Specifies the type of message transmission.
+        dest_addr: Points to a sockaddr structure containing the destination address.
+        dest_len: Specifies the length of the sockaddr.
+
+    Returns:
+        The number of bytes sent or -1 in case of failure.
+
+    Valid Flags:
+        MSG_EOR: Terminates a record (if supported by the protocol).
+        MSG_OOB: Sends out-of-band data on sockets that support out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        MSG_NOSIGNAL: Requests not to send the SIGPIPE signal if an attempt to send is made on a stream-oriented socket that is no longer connected. The [EPIPE] error shall still be returned.
+    """
+    return external_call[
+        "sendto", c_ssize_t, c_int, UnsafePointer[UInt8], c_size_t, c_int, UnsafePointer[sockaddr], socklen_t
+    ](socket, message, length, flags, dest_addr, dest_len)
 
 
 fn shutdown(socket: c_int, how: c_int) -> c_int:
@@ -730,8 +854,8 @@ fn shutdown(socket: c_int, how: c_int) -> c_int:
 
 
 fn getaddrinfo(
-    nodename: DTypePointer[DType.uint8],
-    servname: DTypePointer[DType.uint8],
+    nodename: UnsafePointer[UInt8],
+    servname: UnsafePointer[UInt8],
     hints: UnsafePointer[addrinfo],
     res: UnsafePointer[UnsafePointer[addrinfo]],
 ) -> c_int:
@@ -742,16 +866,16 @@ fn getaddrinfo(
     return external_call[
         "getaddrinfo",
         c_int,  # FnName, RetType
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
+        UnsafePointer[UInt8],
         UnsafePointer[addrinfo],  # Args
         UnsafePointer[UnsafePointer[addrinfo]],  # Args
     ](nodename, servname, hints, res)
 
 
 fn getaddrinfo_unix(
-    nodename: DTypePointer[DType.uint8],
-    servname: DTypePointer[DType.uint8],
+    nodename: UnsafePointer[UInt8],
+    servname: UnsafePointer[UInt8],
     hints: UnsafePointer[addrinfo_unix],
     res: UnsafePointer[UnsafePointer[addrinfo_unix]],
 ) -> c_int:
@@ -762,14 +886,14 @@ fn getaddrinfo_unix(
     return external_call[
         "getaddrinfo",
         c_int,  # FnName, RetType
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
+        UnsafePointer[UInt8],
         UnsafePointer[addrinfo_unix],  # Args
         UnsafePointer[UnsafePointer[addrinfo_unix]],  # Args
     ](nodename, servname, hints, res)
 
 
-fn gai_strerror(ecode: c_int) -> DTypePointer[DType.uint8]:
+fn gai_strerror(ecode: c_int) -> UnsafePointer[UInt8]:
     """Libc POSIX `gai_strerror` function
     Reference: https://man7.org/linux/man-pages/man3/gai_strerror.3p.html
     Fn signature: const char *gai_strerror(int ecode).
@@ -777,7 +901,7 @@ fn gai_strerror(ecode: c_int) -> DTypePointer[DType.uint8]:
     Args: ecode: The error code.
     Returns: A pointer to a string describing the error.
     """
-    return external_call["gai_strerror", DTypePointer[DType.uint8], c_int](ecode)  # FnName, RetType  # Args
+    return external_call["gai_strerror", UnsafePointer[UInt8], c_int](ecode)  # FnName, RetType  # Args
 
 
 # fn inet_pton(address_family: Int, address: String) -> Int:
@@ -785,6 +909,6 @@ fn gai_strerror(ecode: c_int) -> DTypePointer[DType.uint8]:
 #     if address_family == AF_INET6:
 #         ip_buf_size = 16
 
-#     var ip_buf = DTypePointer[DType.uint8].alloc(ip_buf_size)
+#     var ip_buf = UnsafePointer[UInt8].alloc(ip_buf_size)
 #     var conv_status = inet_pton(rebind[c_int](address_family), to_char_ptr(address), ip_buf)
 #     return int(ip_buf.bitcast[c_uint]().load())
