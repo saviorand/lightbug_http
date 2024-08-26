@@ -162,18 +162,14 @@ struct SysServer:
         Raises:
         If there is an error while serving the connection.
         """
-        print("Serving connection")
         var b = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(b) 
-        print("Bytes received: ", bytes_recv)
         if bytes_recv == 0:
             conn.close()
             return
 
-        print("Buffer time")
         var buf = Buffer(b^)
         var reader = Reader(buf^)
-        print("Reader time")
         var error = Error()
         
         var max_request_body_size = self.max_request_body_size()

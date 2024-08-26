@@ -1,7 +1,8 @@
 from utils import StaticTuple
-from lightbug_http.io.bytes import Bytes
 from sys.ffi import external_call
-
+from sys.info import sizeof
+from memory import memcpy
+from lightbug_http.io.bytes import Bytes
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
@@ -464,10 +465,10 @@ fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) 
     """
     return external_call[
         "inet_pton",
-        c_int,  # FnName, RetType
+        c_int,
         c_int,
         UnsafePointer[c_char],
-        UnsafePointer[c_void],  # Args
+        UnsafePointer[c_void],
     ](af, src, dst)
 
 
@@ -585,7 +586,7 @@ fn bind(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t)
     Fn signature: int bind(int socket, const struct sockaddr *address, socklen_t address_len).
     """
     return external_call[
-        "bind", c_int, c_int, UnsafePointer[sockaddr], socklen_t  # FnName, RetType  # Args
+        "bind", c_int, c_int, UnsafePointer[sockaddr], socklen_t
     ](socket, address, address_len)
 
 
