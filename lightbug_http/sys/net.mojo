@@ -20,6 +20,7 @@ from external.libc import (
     c_int,
     c_uint,
     c_char,
+    c_ssize_t,
     in_addr,
     sockaddr,
     sockaddr_in,
@@ -104,9 +105,12 @@ struct SysListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
-        var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
+        var their_addr = sockaddr(0, StaticTuple[c_char, 14]())
+        var their_addr_ptr = Reference[sockaddr](their_addr)
         var sin_size = socklen_t(sizeof[socklen_t]())
-        var new_sockfd = external_call["accept", c_int, c_int, UnsafePointer[sockaddr], UnsafePointer[socklen_t]](self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size))
+        var sin_size_ptr = Reference[socklen_t](sin_size)
+        var new_sockfd = external_call["accept", c_int](
+            self.fd, their_addr_ptr, sin_size_ptr)
         
         # var new_sockfd = accept( 
         #     self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)

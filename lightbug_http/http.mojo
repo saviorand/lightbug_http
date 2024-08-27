@@ -333,12 +333,12 @@ fn encode(req: HTTPRequest) raises -> StringSlice[is_mutable=False, lifetime=Imm
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:
-    var current_time = String()
-    try:
-        current_time = Morrow.utcnow().__str__()
-    except e:
-        print("Error getting current time: " + str(e))
-        current_time = str(now())
+    # var current_time = String()
+    # try:
+    #     current_time = Morrow.utcnow().__str__()
+    # except e:
+    #     print("Error getting current time: " + str(e))
+    #     current_time = str(now())
 
     var builder = StringBuilder()
 
@@ -386,8 +386,8 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
-    _ = builder.write_string("Date: ")
-    _ = builder.write_string(current_time)
+    # _ = builder.write_string("Date: ")
+    # _ = builder.write_string(current_time)
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
