@@ -57,7 +57,7 @@ struct RequestHeader:
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
-        self.__host = bytes(host)
+        self.__host = host.as_bytes()
         self.__content_type = Bytes()
         self.__user_agent = Bytes()
         self.__transfer_encoding = Bytes()
@@ -113,7 +113,7 @@ struct RequestHeader:
         self.__trailer = trailer
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = bytes(content_type)
+        self.__content_type = content_type.as_bytes()
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -124,7 +124,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__content_type)
 
     fn set_host(inout self, host: String) -> Self:
-        self.__host = bytes(host)
+        self.__host = host.as_bytes()
         return self
 
     fn set_host_bytes(inout self, host: Bytes) -> Self:
@@ -135,7 +135,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__host)
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
-        self.__user_agent = bytes(user_agent)
+        self.__user_agent = user_agent.as_bytes()
         return self
 
     fn set_user_agent_bytes(inout self, user_agent: Bytes) -> Self:
@@ -146,7 +146,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__user_agent)
 
     fn set_method(inout self, method: String) -> Self:
-        self.__method = bytes(method)
+        self.__method = method.as_bytes()
         return self
 
     fn set_method_bytes(inout self, method: Bytes) -> Self:
@@ -160,7 +160,7 @@ struct RequestHeader:
     
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
-        self.proto = bytes(proto)
+        self.proto = proto.as_bytes()
         return self
 
     fn set_protocol_bytes(inout self, proto: Bytes) -> Self:
@@ -189,7 +189,7 @@ struct RequestHeader:
         return self
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
-        self.__request_uri = request_uri.as_bytes_slice()
+        self.__request_uri = request_uri.as_bytes()
         return self
 
     fn set_request_uri_bytes(inout self, request_uri: Bytes) -> Self:
@@ -202,7 +202,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__request_uri)
 
     fn set_transfer_encoding(inout self, transfer_encoding: String) -> Self:
-        self.__transfer_encoding = bytes(transfer_encoding)
+        self.__transfer_encoding = transfer_encoding.as_bytes()
         return self
     
     fn set_transfer_encoding_bytes(inout self, transfer_encoding: Bytes) -> Self:
@@ -213,7 +213,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__transfer_encoding)
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = bytes(trailer)
+        self.__trailer = trailer.as_bytes()
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -273,20 +273,22 @@ struct RequestHeader:
             except e:
                 raise Error("Failed to read first line from request, " + e.__str__())
         
-        var first_whitespace = index_byte(b, bytes(whitespace, pop=False)[0])
+        var first_whitespace = index_byte(b, whitespace.as_bytes_slice()[0])
         if first_whitespace <= 0:
             raise Error("Could not find HTTP request method in request line: " + String(b))
         
         _ = self.set_method_bytes(b[:first_whitespace])
 
-        var last_whitespace = last_index_byte(b, bytes(whitespace, pop=False)[0]) + 1
+        var last_whitespace = last_index_byte(b, whitespace.as_bytes_slice()[0]) + 1
 
         if last_whitespace < 0:
             raise Error("Could not find request target or HTTP version in request line: " + String(b))
         elif last_whitespace == 0:
             raise Error("Request URI is empty: " + String(b))
-        var proto = b[last_whitespace :]
-        if len(proto) != len(bytes(strHttp11, pop=False)):
+        var proto = b[last_whitespace :-1] # TODO: Trying -1 for now, it includes the trailing \r
+        if len(proto) != len(strHttp11):
+            print(len(proto), len(strHttp11))
+            proto.append(0)
             raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
         _ = self.set_protocol_bytes(proto)
         _ = self.set_request_uri_bytes(b[first_whitespace+1:last_whitespace])
@@ -296,58 +298,58 @@ struct RequestHeader:
     fn parse_headers(inout self, buf: Bytes) raises -> None:
         _ = self.set_content_length(-2)
         var s = headerScanner()
-        s.body = buf
+        s.set_b(buf)
 
         while s.next():
             if len(s.key()) > 0:
                 self.parse_header(s.key(), s.value())
     
     fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
-        if index_byte(key, bytes(colonChar, pop=False)[0]) == -1 or index_byte(key, bytes(tab, pop=False)[0]) != -1:
+        if index_byte(key, colonChar.as_bytes_slice()[0]) == -1 or index_byte(key, tab.as_bytes_slice()[0]) != -1:
             raise Error("Invalid header key: " + String(key))
 
         var key_first = key[0].__xor__(0x20)
 
-        if key_first == bytes("h", pop=False)[0] or key_first == bytes("H", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("host", pop=False)):
-                _ = self.set_host_bytes(bytes(value))
+        if key_first == "h".as_bytes_slice()[0] or key_first == "H".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "host".as_bytes_slice()):
+                _ = self.set_host_bytes(value)
                 return
-        elif key_first == bytes("u", pop=False)[0] or key_first == bytes("U", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("user-agent", pop=False)):
-                _ = self.set_user_agent_bytes(bytes(value))
+        elif key_first == "u".as_bytes_slice()[0] or key_first == "U".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "user-agent".as_bytes_slice()):
+                _ = self.set_user_agent_bytes(value)
                 return
-        elif key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("content-type", pop=False)):
-                _ = self.set_content_type_bytes(bytes(value))
+        elif key_first == "c".as_bytes_slice()[0] or key_first == "C".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "content-type".as_bytes_slice()):
+                _ = self.set_content_type_bytes(value)
                 return
-            if compare_case_insensitive(key, bytes("content-length", pop=False)):
+            if compare_case_insensitive(key, "content-length".as_bytes_slice()):
                 if self.content_length() != -1:
                     _ = self.set_content_length(atol(value))
                 return
-            if compare_case_insensitive(key, bytes("connection", pop=False)):
-                if compare_case_insensitive(bytes(value), bytes("close", pop=False)):
+            if compare_case_insensitive(key, "connection".as_bytes_slice()):
+                if compare_case_insensitive(value, "close".as_bytes_slice()):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
-        elif key_first == bytes("t", pop=False)[0] or key_first == bytes("T", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("transfer-encoding", pop=False)):
-                _ = self.set_transfer_encoding_bytes(bytes(value, pop=False))
+        elif key_first == "t".as_bytes_slice()[0] or key_first == "T".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
+                _ = self.set_transfer_encoding_bytes(value)
                 return
-            if compare_case_insensitive(key, bytes("trailer", pop=False)):
-                _ = self.set_trailer_bytes(bytes(value, pop=False))
+            if compare_case_insensitive(key, "trailer".as_bytes_slice()):
+                _ = self.set_trailer_bytes(value)
                 return
         if self.content_length() < 0:
             _ = self.set_content_length(0)
         return
 
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
-        var n = index_byte(buf, bytes(nChar, pop=False)[0])
+        var n = index_byte(buf, nChar.as_bytes_slice()[0])
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
             raise Error("Failed to find a newline in headers")
         
-        if n == 0 or (n == 1 and (buf[0] == bytes(rChar, pop=False)[0])):
+        if n == 0 or (n == 1 and (buf[0] == rChar.as_bytes_slice()[0])):
             # empty line -> end of headers
             return n + 1
         
@@ -356,12 +358,12 @@ struct RequestHeader:
         var m = n
         while True:
             b = b[m:]
-            m = index_byte(b, bytes(nChar, pop=False)[0])
+            m = index_byte(b, nChar.as_bytes_slice()[0])
             if m == -1:
                 raise Error("Failed to find a newline in headers")
             m += 1
             n += m
-            if m == 2 and (b[0] == bytes(rChar, pop=False)[0]) or m == 1:
+            if m == 2 and (b[0] == rChar.as_bytes_slice()[0]) or m == 1:
                 self.raw_headers = self.raw_headers + buf[:n]
                 return n
 
@@ -532,7 +534,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__content_type)
 
     fn set_content_type(inout self, content_type: String) -> Self:
-        self.__content_type = bytes(content_type)
+        self.__content_type = content_type.as_bytes()
         return self
 
     fn set_content_type_bytes(inout self, content_type: Bytes) -> Self:
@@ -543,7 +545,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__content_encoding)
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
-        self.__content_encoding = bytes(content_encoding)
+        self.__content_encoding = content_encoding.as_bytes()
         return self
 
     fn set_content_encoding_bytes(inout self, content_encoding: Bytes) -> Self:
@@ -565,7 +567,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__server)
 
     fn set_server(inout self, server: String) -> Self:
-        self.__server = bytes(server)
+        self.__server = server.as_bytes()
         return self
 
     fn set_server_bytes(inout self, server: Bytes) -> Self:
@@ -574,7 +576,7 @@ struct ResponseHeader:
 
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
-        self.__protocol = bytes(proto)
+        self.__protocol = proto.as_bytes()
         return self
     
     fn set_protocol_bytes(inout self, protocol: Bytes) -> Self:
@@ -592,7 +594,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__protocol)
 
     fn set_trailer(inout self, trailer: String) -> Self:
-        self.__trailer = bytes(trailer)
+        self.__trailer = trailer.as_bytes()
         return self
 
     fn set_trailer_bytes(inout self, trailer: Bytes) -> Self:
@@ -653,7 +655,7 @@ struct ResponseHeader:
             except e:
                 raise Error("Failed to read first line from response, " + e.__str__())
         
-        var first_whitespace = index_byte(b, bytes(whitespace, pop=False)[0])
+        var first_whitespace = index_byte(b, whitespace.as_bytes_slice()[0])
         if first_whitespace <= 0:
             raise Error("Could not find HTTP version in response line: " + String(b))
             
@@ -673,57 +675,57 @@ struct ResponseHeader:
     fn parse_headers(inout self, buf: Bytes) raises -> None:
         _ = self.set_content_length(-2)
         var s = headerScanner()
-        s.body = buf
+        s.set_b(buf)
 
         while s.next():
             if len(s.key()) > 0:
                 self.parse_header(s.key(), s.value())
     
     fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
-        if index_byte(key, bytes(colonChar, pop=False)[0]) == -1 or index_byte(key, bytes(tab, pop=False)[0]) != -1:
+        if index_byte(key, colonChar.as_bytes_slice()[0]) == -1 or index_byte(key, tab.as_bytes_slice()[0]) != -1:
             raise Error("Invalid header key: " + String(key))
         
         var key_first = key[0].__xor__(0x20)
 
-        if key_first == bytes("c", pop=False)[0] or key_first == bytes("C", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("content-type", pop=False)):
-                _ = self.set_content_type_bytes(bytes(value))
+        if key_first == "c".as_bytes_slice()[0] or key_first == "C".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "content-type".as_bytes_slice()):
+                _ = self.set_content_type_bytes(value)
                 return
-            if compare_case_insensitive(key, bytes("content-encoding", pop=False)):
-                _ = self.set_content_encoding_bytes(bytes(value))
+            if compare_case_insensitive(key, "content-encoding".as_bytes_slice()):
+                _ = self.set_content_encoding_bytes(value)
                 return
-            if compare_case_insensitive(key, bytes("content-length", pop=False)):
+            if compare_case_insensitive(key, "content-length".as_bytes_slice()):
                 if self.content_length() != -1:
                     var content_length = value
                     _ = self.set_content_length(atol(content_length))
-                    _ = self.set_content_length_bytes(bytes(content_length))
+                    _ = self.set_content_length_bytes(content_length)
                 return
-            if compare_case_insensitive(key, bytes("connection", pop=False)):
-                if compare_case_insensitive(bytes(value), bytes("close", pop=False)):
+            if compare_case_insensitive(key, "connection".as_bytes_slice()):
+                if compare_case_insensitive(value, "close".as_bytes_slice()):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
-        elif key_first == bytes("s", pop=False)[0] or key_first == bytes("S", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("server", pop=False)):
-                _ = self.set_server_bytes(bytes(value))
+        elif key_first == "s".as_bytes_slice()[0] or key_first == "S".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "server".as_bytes_slice()):
+                _ = self.set_server_bytes(value)
                 return
-        elif key_first == bytes("t", pop=False)[0] or key_first == bytes("T", pop=False)[0]:
-            if compare_case_insensitive(key, bytes("transfer-encoding", pop=False)):
-                if not compare_case_insensitive(value, bytes("identity", pop=False)):
+        elif key_first == "t".as_bytes_slice()[0] or key_first == "T".as_bytes_slice()[0]:
+            if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
+                if not compare_case_insensitive(value, "identity".as_bytes_slice()):
                     _ = self.set_content_length(-1)
                 return
-            if compare_case_insensitive(key, bytes("trailer", pop=False)):
-                _ = self.set_trailer_bytes(bytes(value))
+            if compare_case_insensitive(key, "trailer".as_bytes_slice()):
+                _ = self.set_trailer_bytes(value)
     
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
-        var n = index_byte(buf, bytes(nChar, pop=False)[0])
+        var n = index_byte(buf, nChar.as_bytes_slice()[0])
         
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
             raise Error("Failed to find a newline in headers")
         
-        if n == 0 or (n == 1 and (buf[0] == bytes(rChar, pop=False)[0])):
+        if n == 0 or (n == 1 and (buf[0] == rChar.as_bytes_slice()[0])):
             # empty line -> end of headers
             return n + 1
         
@@ -732,17 +734,17 @@ struct ResponseHeader:
         var m = n
         while True:
             b = b[m:]
-            m = index_byte(b, bytes(nChar, pop=False)[0])
+            m = index_byte(b, nChar.as_bytes_slice()[0])
             if m == -1:
                 raise Error("Failed to find a newline in headers")
             m += 1
             n += m
-            if m == 2 and (b[0] == bytes(rChar, pop=False)[0]) or m == 1:
+            if m == 2 and (b[0] == rChar.as_bytes_slice()[0]) or m == 1:
                 self.raw_headers = self.raw_headers + buf[:n]
                 return n
 
 struct headerScanner:
-    var body: Bytes
+    var __b: Bytes
     var __key: Bytes
     var __value: Bytes
     var __subslice_len: Int
@@ -752,7 +754,7 @@ struct headerScanner:
     var __initialized: Bool
 
     fn __init__(inout self) -> None:
-        self.body = Bytes()
+        self.__b = Bytes()
         self.__key = Bytes()
         self.__value = Bytes()
         self.__subslice_len = 0
@@ -760,6 +762,12 @@ struct headerScanner:
         self.__next_colon = 0
         self.__next_line = 0
         self.__initialized = False
+    
+    fn b(self) -> Bytes:
+        return self.__b
+
+    fn set_b(inout self, b: Bytes) -> None:
+        self.__b = b    
 
     fn key(self) -> Bytes:
         return self.__key
@@ -803,15 +811,15 @@ struct headerScanner:
             self.set_next_line(-1)
             self.set_initialized()
         
-        var b_len = len(self.body)
+        var b_len = len(self.b())
 
-        if b_len >= 2 and (self.body[0] == bytes(rChar, pop=False)[0]) and (self.body[1] == bytes(nChar, pop=False)[0]):
-            self.body = self.body[2:]
+        if b_len >= 2 and (self.b()[0] == rChar.as_bytes_slice()[0]) and (self.b()[1] == nChar.as_bytes_slice()[0]):
+            self.set_b(self.b()[2:])
             self.set_subslice_len(2)
             return False
         
-        if b_len >= 1 and (self.body[0] == bytes(nChar, pop=False)[0]):
-            self.body = self.body[1:]
+        if b_len >= 1 and (self.b()[0] == nChar.as_bytes_slice()[0]):
+            self.set_b(self.b()[1:])
             self.set_subslice_len(self.subslice_len() + 1)
             return False
         
@@ -820,8 +828,8 @@ struct headerScanner:
             colon = self.next_colon()
             self.set_next_colon(-1)
         else:
-            colon = index_byte(self.body, bytes(colonChar, pop=False)[0])
-            var newline = index_byte(self.body, bytes(nChar, pop=False)[0])
+            colon = index_byte(self.b(), colonChar.as_bytes_slice()[0])
+            var newline = index_byte(self.b(), nChar.as_bytes_slice()[0])
             if newline < 0:
                 raise Error("Invalid header, did not find a newline at the end of the header")
             if newline < colon:
@@ -830,31 +838,31 @@ struct headerScanner:
             raise Error("Invalid header, did not find a colon")
         
         var jump_to = colon + 1
-        self.set_key(self.body[:jump_to])
+        self.set_key(self.b()[:jump_to])
 
-        while len(self.body) > jump_to and (self.body[jump_to] == bytes(whitespace, pop=False)[0]):
+        while len(self.b()) > jump_to and (self.b()[jump_to] == whitespace.as_bytes_slice()[0]):
             jump_to += 1
             self.set_next_line(self.next_line() - 1)
         
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.body = self.body[jump_to:]
+        self.set_b(self.b()[jump_to:])
 
         if self.next_line() >= 0:
             jump_to = self.next_line()
             self.set_next_line(-1)
         else:
-            jump_to = index_byte(self.body, bytes(nChar, pop=False)[0])
+            jump_to = index_byte(self.b(), nChar.as_bytes_slice()[0])
         if jump_to < 0:
             raise Error("Invalid header, did not find a newline")
         
         jump_to += 1
-        self.set_value(self.body[:jump_to])
+        self.set_value(self.b()[:jump_to])
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.body = self.body[jump_to:]
+        self.set_b(self.b()[jump_to:])
 
-        if jump_to > 0 and (self.value()[jump_to-1] == bytes(rChar, pop=False)[0]):
+        if jump_to > 0 and (self.value()[jump_to-1] == rChar.as_bytes_slice()[0]):
             jump_to -= 1
-        while jump_to > 0 and (self.value()[jump_to-1] == bytes(whitespace, pop=False)[0]):
+        while jump_to > 0 and (self.value()[jump_to-1] == whitespace.as_bytes_slice()[0]):
             jump_to -= 1
         self.set_value(self.value()[:jump_to])
         

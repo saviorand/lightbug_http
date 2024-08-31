@@ -191,8 +191,8 @@ struct HTTPResponse(Response):
     fn __init__(inout self, body_bytes: Bytes):
         self.header = ResponseHeader(
             200,
-            bytes("OK"),
-            bytes("application/octet-stream"),
+            "OK".as_bytes_slice(),
+            "application/octet-stream".as_bytes_slice(),
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -243,42 +243,42 @@ struct HTTPResponse(Response):
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
+        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body.as_bytes_slice(),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
+        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body.as_bytes_slice(),
     )
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
+        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body.as_bytes(),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
+        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body.as_bytes(),
     )
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), body,
+        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body,
     )
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), body,
+        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body,
     )
 
 fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type), bytes(content_encoding)), body,
+        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes(), content_encoding.as_bytes()), body,
     )
 
 fn NotFound(path: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
+        ResponseHeader(404, "Not Found".as_bytes_slice(), "text/plain".as_bytes_slice()), ("path " + path + " not found").as_bytes(),
     )
 
 fn encode(req: HTTPRequest) -> Bytes:

@@ -20,8 +20,12 @@ def test_uri_no_parse_defaults():
     var uri = URI("http://example.com")
     var full_uri = List[UInt8, True](uri.full_uri())
     full_uri.append(0)
+    print(len(full_uri))
     testing.assert_equal(String(full_uri), "http://example.com")
-    testing.assert_equal(String(uri.scheme()), "http")
+
+    var scheme = List[UInt8, True](uri.scheme())
+    scheme.append(0)
+    testing.assert_equal(String(scheme), "http")
     testing.assert_equal(uri.path(), "/")
 
 def test_uri_parse_http_with_port():

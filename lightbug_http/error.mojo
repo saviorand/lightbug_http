@@ -6,4 +6,4 @@ from lightbug_http.io.bytes import bytes
 @value
 struct ErrorHandler:
     fn Error(self) -> HTTPResponse:
-        return HTTPResponse(ResponseHeader(), bytes("TODO"))
+        return HTTPResponse(ResponseHeader(), "TODO".as_bytes_slice())

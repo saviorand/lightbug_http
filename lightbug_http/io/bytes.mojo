@@ -42,11 +42,11 @@ fn compare_case_insensitive(a: Bytes, b: Bytes) -> Bool:
     return True
 
 fn next_line(b: Bytes) raises -> (Bytes, Bytes):
-    var n_next = index_byte(b, bytes(nChar, pop=False)[0])
+    var n_next = index_byte(b, nChar.as_bytes_slice()[0])
     if n_next < 0:
         raise Error("next_line: newline not found")
     var n = n_next
-    if n > 0 and (b[n-1] == bytes(rChar, pop=False)[0]):
+    if n > 0 and (b[n-1] == rChar.as_bytes_slice()[0]):
         n -= 1
     return (b[:n+1], b[n_next+1:])
 
