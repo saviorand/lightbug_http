@@ -4,14 +4,21 @@ from .table import Interval, narrow, combining, doublewidth, ambiguous, emoji, n
 
 @value
 struct Condition:
-    """Condition have flag EastAsianWidth whether the current locale is CJK or not."""
+    """Condition have the flag `EastAsianWidth` enabled if the current locale is `CJK` or not."""
 
     var east_asian_width: Bool
     var strict_emoji_neutral: Bool
 
     fn rune_width(self, r: UInt32) -> Int:
         """Returns the number of cells in r.
-        See http://www.unicode.org/reports/tr11/."""
+        See http://www.unicode.org/reports/tr11/.
+
+        Args:
+            r: The rune to calculate the width of.
+
+        Returns:
+            The printable width of the rune.
+        """
         if r < 0 or r > 0x10FFFF:
             return 0
 
@@ -56,7 +63,14 @@ struct Condition:
                 return 1
 
     fn string_width(self, s: String) -> Int:
-        """Return width as you can see."""
+        """Return width as you can see.
+
+        Args:
+            s: The string to calculate the width of.
+
+        Returns:
+            The printable width of the string.
+        """
         var width = 0
         for r in s:
             width += self.rune_width(ord(String(r)))
@@ -90,6 +104,7 @@ fn in_table[size: Int](r: UInt32, t: InlineArray[Interval, size]) -> Bool:
 
 
 alias DEFAULT_CONDITION = Condition(east_asian_width=False, strict_emoji_neutral=True)
+"""The default configuration for calculating the width of runes and strings."""
 
 
 fn string_width(s: String) -> Int:

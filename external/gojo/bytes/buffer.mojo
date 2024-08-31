@@ -4,35 +4,39 @@ import ..io
 from ..builtins import copy, panic, index_byte
 
 
-# SMALL_BUFFER_SIZE is an initial allocation minimal capacity.
 alias SMALL_BUFFER_SIZE: Int = 64
+"""Initial allocation minimal capacity."""
 
-# The ReadOp constants describe the last action performed on
-# the buffer, so that unread_rune and unread_byte can check for
-# invalid usage. op_read_runeX constants are chosen such that
-# converted to Int they correspond to the rune size that was read.
 alias ReadOp = Int8
+"""The ReadOp constants describe the last action performed on
+the buffer, so that unread_rune and unread_byte can check for
+invalid usage. op_read_runeX constants are chosen such that
+converted to Int they correspond to the rune size that was read."""
 
-# Don't use iota for these, as the values need to correspond with the
-# names and comments, which is easier to see when being explicit.
-alias OP_READ: ReadOp = -1  # Any other read operation.
-alias OP_INVALID: ReadOp = 0  # Non-read operation.
-alias OP_READ_RUNE1: ReadOp = 1  # read rune of size 1.
-alias OP_READ_RUNE2: ReadOp = 2  # read rune of size 2.
-alias OP_READ_RUNE3: ReadOp = 3  # read rune of size 3.
-alias OP_READ_RUNE4: ReadOp = 4  # read rune of size 4.
+alias OP_READ: ReadOp = -1
+"""Any other read operation."""
+alias OP_INVALID: ReadOp = 0
+"""Non-read operation."""
+alias OP_READ_RUNE1: ReadOp = 1
+"""Read rune of size 1."""
+alias OP_READ_RUNE2: ReadOp = 2
+"""Read rune of size 2."""
+alias OP_READ_RUNE3: ReadOp = 3
+"""Read rune of size 3."""
+alias OP_READ_RUNE4: ReadOp = 4
+"""Read rune of size 4."""
 
 alias MAX_INT: Int = 2147483647
-# MIN_READ is the minimum slice size passed to a read call by
-# [Buffer.read_from]. As long as the [Buffer] has at least MIN_READ bytes beyond
-# what is required to hold the contents of r, read_from will not grow the
-# underlying buffer.
 alias MIN_READ: Int = 512
+"""MIN_READ is the minimum slice size passed to a read call by
+[Buffer.read_from]. As long as the [Buffer] has at least MIN_READ bytes beyond
+what is required to hold the contents of r, read_from will not grow the
+underlying buffer."""
 
-# ERR_TOO_LARGE is passed to panic if memory cannot be allocated to store data in a buffer.
 alias ERR_TOO_LARGE = "buffer.Buffer: too large"
+"""ERR_TOO_LARGE is passed to panic if memory cannot be allocated to store data in a buffer."""
 alias ERR_NEGATIVE_READ = "buffer.Buffer: reader returned negative count from read"
-alias ERR_SHORTwrite = "short write"
+alias ERR_SHORT_WRITE = "short write"
 
 
 struct Buffer(
@@ -44,13 +48,39 @@ struct Buffer(
     io.ByteWriter,
     io.ByteReader,
 ):
-    var _data: UnsafePointer[UInt8]  # contents are the bytes buf[off : len(buf)]
-    var _size: Int
-    var _capacity: Int
-    var offset: Int  # read at &buf[off], write at &buf[len(buf)]
-    var last_read: ReadOp  # last read operation, so that unread* can work correctly.
+    """A Buffer is a variable-sized buffer of bytes with Read and Write methods.
 
-    fn __init__(inout self, capacity: Int = io.BUFFER_SIZE):
+    Examples:
+    ```mojo
+    from gojo.bytes import buffer
+    var buf = buffer.Buffer(capacity=16)
+    _ = buf.write_string("Hello, World!")
+
+    var dest = List[UInt8, True](capacity=16)
+    _ = buf.read(dest)
+    dest.append(0)
+    print(String(dest))  # Output: Hello, World!
+    ```
+    .
+    """
+
+    var _data: UnsafePointer[UInt8]
+    """The contents of the bytes buffer. Active contents are from buf[off : len(buf)]."""
+    var _size: Int
+    """The number of bytes stored in the buffer."""
+    var _capacity: Int
+    """The maximum capacity of the buffer, eg the allocation of self._data."""
+    var offset: Int  #
+    """The read/writer offset of the buffer. read at buf[off], write at buf[len(buf)]."""
+    var last_read: ReadOp
+    """Last read operation, so that unread* can work correctly."""
+
+    fn __init__(inout self, *, capacity: Int = io.BUFFER_SIZE):
+        """Creates a new buffer with the specified capacity.
+
+        Args:
+            capacity: The initial capacity of the buffer.
+        """
         self._capacity = capacity
         self._size = 0
         self._data = UnsafePointer[UInt8]().alloc(capacity)
@@ -58,13 +88,38 @@ struct Buffer(
         self.last_read = OP_INVALID
 
     fn __init__(inout self, owned buf: List[UInt8, True]):
+        """Creates a new buffer with List buffer provided.
+
+        Args:
+            buf: The List buffer to initialize the buffer with.
+        """
         self._capacity = buf.capacity
         self._size = buf.size
         self._data = buf.steal_data()
         self.offset = 0
         self.last_read = OP_INVALID
 
-    fn __init__(inout self, owned data: UnsafePointer[UInt8], capacity: Int, size: Int):
+    fn __init__(inout self, buf: String):
+        """Creates a new buffer with String provided.
+
+        Args:
+            buf: The String to initialize the buffer with.
+        """
+        var bytes = buf.as_bytes()
+        self._capacity = bytes.capacity
+        self._size = bytes.size
+        self._data = bytes.steal_data()
+        self.offset = 0
+        self.last_read = OP_INVALID
+
+    fn __init__(inout self, *, owned data: UnsafePointer[UInt8], capacity: Int, size: Int):
+        """Creates a new buffer with UnsafePointer buffer provided.
+
+        Args:
+            data: The List buffer to initialize the buffer with.
+            capacity: The initial capacity of the buffer.
+            size: The number of bytes stored in the buffer.
+        """
         self._capacity = capacity
         self._size = size
         self._data = data
@@ -88,12 +143,11 @@ struct Buffer(
             self._data.free()
 
     fn __len__(self) -> Int:
-        """Returns the number of bytes of the unread portion of the buffer.
-        self._size - self.offset."""
+        """Returns the number of bytes of the unread portion of the buffer. `self._size - self.offset`."""
         return self._size - self.offset
 
     fn bytes_ptr(self) -> UnsafePointer[UInt8]:
-        """Returns a pointer holding the unread portion of the buffer."""
+        """Returns a pointer to the beginning of the unread portion of the buffer."""
         return self._data.offset(self.offset)
 
     fn bytes(self) -> List[UInt8, True]:
@@ -111,7 +165,7 @@ struct Buffer(
         Return a StringSlice view of the data owned by the builder.
 
         Returns:
-          The string representation of the string builder. Returns an empty string if the string builder is empty.
+          The string representation of the bytes buffer. Returns an empty string if the bytes buffer is empty.
         """
         return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self._data, len=self._size)
 
@@ -130,7 +184,12 @@ struct Buffer(
 
         return None
 
-    fn _resize_if_needed(inout self, bytes_to_add: Int):
+    fn _resize_if_needed(inout self, bytes_to_add: Int) -> None:
+        """Resizes the buffer if the number of bytes to add exceeds the buffer's capacity.
+
+        Args:
+            bytes_to_add: The number of bytes to add to the buffer.
+        """
         # TODO: Handle the case where new_capacity is greater than MAX_INT. It should panic.
         if bytes_to_add > self._capacity - self._size:
             var new_capacity = int(self._capacity * 2)
@@ -148,7 +207,7 @@ struct Buffer(
         """
         return self.as_string_slice()
 
-    @deprecated("Buffer.render() has been deprecated. Use Buffer.as_string_slice() instead.")
+    @deprecated("Buffer.render() has been deprecated. Use Buffer.as_string_slice() or call str() instead.")
     fn render(self) -> StringSlice[__lifetime_of(self)]:
         """
         Return a StringSlice view of the data owned by the builder.
@@ -160,10 +219,13 @@ struct Buffer(
 
     fn write(inout self, src: Span[UInt8]) -> (Int, Error):
         """
-        Appends a byte Span to the builder buffer.
+        Appends a byte Span to the buffer.
 
         Args:
-          src: The byte array to append.
+            src: The byte array to append.
+
+        Returns:
+            The number of bytes written to the buffer.
         """
         self._resize_if_needed(len(src))
 
@@ -174,18 +236,21 @@ struct Buffer(
 
     fn write_string(inout self, src: String) -> (Int, Error):
         """
-        Appends a string to the builder buffer.
+        Appends a string to the buffer.
 
         Args:
-          src: The string to append.
+            src: The string to append.
+
+        Returns:
+            The number of bytes written to the buffer.
         """
         return self.write(src.as_bytes_slice())
 
     fn write_byte(inout self, byte: UInt8) -> (Int, Error):
-        """Appends the byte c to the buffer, growing the buffer as needed.
-        The returned error is always nil, but is included to match [bufio.Writer]'s
+        """Appends a byte to the buffer, growing the buffer as needed.
+        The returned error is always empty, but is included to match [bufio.Writer]'s
         write_byte. If the buffer becomes too large, write_byte will panic with
-        [ERR_TOO_LARGE].
+        `ERR_TOO_LARGE`.
 
         Args:
             byte: The byte to write to the buffer.
@@ -204,10 +269,8 @@ struct Buffer(
         """Reports whether the unread portion of the buffer is empty."""
         return self._size <= self.offset
 
-    fn reset(inout self):
-        """Resets the buffer to be empty,
-        but it retains the underlying storage for use by future writes.
-        reset is the same as [buffer.truncate](0)."""
+    fn reset(inout self) -> None:
+        """Resets the buffer to be empty."""
         if self._data:
             self._data.free()
         self._data = UnsafePointer[UInt8]().alloc(self._capacity)
@@ -215,11 +278,12 @@ struct Buffer(
         self.offset = 0
         self.last_read = OP_INVALID
 
-    fn _read(inout self, inout dest: Span[UInt8], capacity: Int) -> (Int, Error):
+    fn _read(inout self, inout dest: UnsafePointer[UInt8], capacity: Int) -> (Int, Error):
         """Reads the next len(dest) bytes from the buffer or until the buffer
-        is drained. The return value n is the number of bytes read. If the
-        buffer has no data to return, err is io.EOF (unless len(dest) is zero);
-        otherwise it is nil.
+        is drained. The return value `bytes_read` is the number of bytes read.
+
+        If the buffer has no data to return, err is `io.EOF` (unless `len(dest)` is zero);
+        otherwise it is empty.
 
         Args:
             dest: The buffer to read into.
@@ -232,15 +296,14 @@ struct Buffer(
         if self.empty():
             # Buffer is empty, reset to recover space.
             self.reset()
-            # TODO: How to check if the span's pointer has 0 capacity? We want to return early if the span can't receive any data.
             if capacity == 0:
                 return 0, Error()
             return 0, io.EOF
 
         # Copy the data of the internal buffer from offset to len(buf) into the destination buffer at the given index.
         var bytes_to_read = self.as_bytes_slice()[self.offset :]
-        var bytes_read = copy(dest.unsafe_ptr(), bytes_to_read.unsafe_ptr(), source_length=len(bytes_to_read))
-        dest._len += bytes_read
+        var count = min(capacity, len(bytes_to_read))
+        var bytes_read = copy(dest, bytes_to_read.unsafe_ptr(), count)
         self.offset += bytes_read
 
         if bytes_read > 0:
@@ -248,11 +311,12 @@ struct Buffer(
 
         return bytes_read, Error()
 
-    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
+    fn read(inout self, inout dest: List[UInt8, True]) -> (Int, Error):
         """Reads the next len(dest) bytes from the buffer or until the buffer
-        is drained. The return value n is the number of bytes read. If the
-        buffer has no data to return, err is io.EOF (unless len(dest) is zero);
-        otherwise it is nil.
+        is drained. The return value `bytes_read` is the number of bytes read.
+
+        If the buffer has no data to return, err is `io.EOF` (unless `len(dest)` is zero);
+        otherwise it is empty.
 
         Args:
             dest: The buffer to read into.
@@ -260,18 +324,19 @@ struct Buffer(
         Returns:
             The number of bytes read from the buffer.
         """
-        var span = Span(dest)
-
+        var dest_ptr = dest.unsafe_ptr().offset(dest.size)
         var bytes_read: Int
         var err: Error
-        bytes_read, err = self._read(span, dest.capacity)
+        bytes_read, err = self._read(dest_ptr, dest.capacity - dest.size)
         dest.size += bytes_read
 
         return bytes_read, err
 
     fn read_byte(inout self) -> (UInt8, Error):
-        """Reads and returns the next byte from the buffer.
-        If no byte is available, it returns error io.EOF.
+        """Reads and returns the next byte from the buffer. If no byte is available, it returns error `io.EOF`.
+
+        Returns:
+            The next byte from the buffer.
         """
         if self.empty():
             # Buffer is empty, reset to recover space.
@@ -285,10 +350,11 @@ struct Buffer(
         return byte, Error()
 
     fn unread_byte(inout self) -> Error:
-        """Unreads the last byte returned by the most recent successful
-        read operation that read at least one byte. If a write has happened since
-        the last read, if the last read returned an error, or if the read read zero
-        bytes, unread_byte returns an error.
+        """Unreads the last byte returned by the most recent successful read operation that read at least one byte.
+
+        Returns:
+            If a write has happened since the last read, the last read returned an error, or if the read read zero
+            bytes, `unread_byte` returns an error.
         """
         if self.last_read == OP_INVALID:
             return Error("buffer.Buffer: unread_byte: previous operation was not a successful read")
@@ -299,38 +365,39 @@ struct Buffer(
 
         return Error()
 
-    fn read_bytes(inout self, delim: UInt8) -> (List[UInt8], Error):
-        """Reads until the first occurrence of delim in the input,
-        returning a slice containing the data up to and including the delimiter.
-        If read_bytes encounters an error before finding a delimiter,
-        it returns the data read before the error and the error itself (often io.EOF).
-        read_bytes returns err != nil if and only if the returned data does not end in
-        delim.
+    fn read_bytes(inout self, delim: UInt8) -> (List[UInt8, True], Error):
+        """Reads until the first occurrence of `delim` in the input,
+        returning a List copy containing the data up to and including the delimiter.
+
+        If `read_bytes` encounters an error before finding a delimiter,
+        it returns the data read before the error and the error itself (often `io.EOF`).
+        `read_bytes` returns an error if and only if the returned data does not end in
+        `delim`.
 
         Args:
             delim: The delimiter to read until.
 
         Returns:
-            A List[UInt8] struct containing the data up to and including the delimiter.
+            A list containing the data up to and including the delimiter.
         """
         var slice: Span[UInt8, __lifetime_of(self)]
         var err: Error
         slice, err = self.read_slice(delim)
 
-        var bytes = List[UInt8](capacity=len(slice) + 1)
+        var bytes = List[UInt8, True](capacity=len(slice) + 1)
         for byte in slice:
             bytes.append(byte[])
 
         return bytes, err
 
     fn read_slice(inout self, delim: UInt8) -> (Span[UInt8, __lifetime_of(self)], Error):
-        """Like read_bytes but returns a reference to internal buffer data.
+        """Like `read_bytes` but returns a reference to internal buffer data.
 
         Args:
             delim: The delimiter to read until.
 
         Returns:
-            A List[UInt8] struct containing the data up to and including the delimiter.
+            A span containing the data up to and including the delimiter.
         """
         var i = index_byte(bytes=self.as_bytes_slice(), delim=delim)
         var end = self.offset + i + 1
@@ -347,12 +414,13 @@ struct Buffer(
         return line, err
 
     fn read_string(inout self, delim: UInt8) -> (String, Error):
-        """Reads until the first occurrence of delim in the input,
+        """Reads until the first occurrence of `delim` in the input,
         returning a string containing the data up to and including the delimiter.
-        If read_string encounters an error before finding a delimiter,
-        it returns the data read before the error and the error itself (often io.EOF).
-        read_string returns err != nil if and only if the returned data does not end
-        in delim.
+
+        If `read_string` encounters an error before finding a delimiter,
+        it returns the data read before the error and the error itself (often `io.EOF`).
+        `read_string` returns an error if and only if the returned data does not end
+        in `delim`.
 
         Args:
             delim: The delimiter to read until.
@@ -360,18 +428,18 @@ struct Buffer(
         Returns:
             A string containing the data up to and including the delimiter.
         """
-        var bytes: List[UInt8]
+        var bytes: List[UInt8, True]
         var err: Error
         bytes, err = self.read_bytes(delim)
         bytes.append(0)
 
-        return String(bytes), err
+        return String(bytes^), err
 
     fn next(inout self, number_of_bytes: Int) -> Span[UInt8, __lifetime_of(self)]:
-        """Returns a slice containing the next n bytes from the buffer,
-        advancing the buffer as if the bytes had been returned by [Buffer.read].
-        If there are fewer than n bytes in the buffer, next returns the entire buffer.
-        The slice is only valid until the next call to a read or write method.
+        """Returns a Span containing the next n bytes from the buffer,
+        advancing the buffer as if the bytes had been returned by `Buffer.read`.
+
+        If there are fewer than n bytes in the buffer, `next` returns the entire buffer.
 
         Args:
             number_of_bytes: The number of bytes to read from the buffer.
@@ -394,8 +462,8 @@ struct Buffer(
         return data
 
     fn write_to[W: io.Writer](inout self, inout writer: W) -> (Int, Error):
-        """Writes data to w until the buffer is drained or an error occurs.
-        The return value n is the number of bytes written; Any error
+        """Writes data to `writer` until the buffer is drained or an error occurs.
+        The return value `total_bytes_written` is the number of bytes written; Any error
         encountered during the write is also returned.
 
         Args:
@@ -422,7 +490,7 @@ struct Buffer(
 
             # all bytes should have been written, by definition of write method in io.Writer
             if bytes_written != bytes_to_write:
-                return total_bytes_written, Error(ERR_SHORTwrite)
+                return total_bytes_written, Error(ERR_SHORT_WRITE)
 
         # Buffer is now empty; reset.
         self.reset()

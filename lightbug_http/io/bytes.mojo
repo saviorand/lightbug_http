@@ -7,14 +7,12 @@ alias Bytes = List[Byte, True]
 alias BytesView = Span[is_mutable=False, T=Byte, lifetime=ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
-    # This is currently null-terminated, which we don't want in HTTP responses
     var buf = String(s)._buffer
     if pop:
         _ = buf.pop()
     return buf
 
 fn bytes(s: String, pop: Bool = True) -> Bytes:
-    # This is currently null-terminated, which we don't want in HTTP responses
     var buf = s._buffer
     if pop:
         _ = buf.pop()

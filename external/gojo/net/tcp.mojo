@@ -53,7 +53,7 @@ struct TCPConnection(Movable):
     fn __moveinit__(inout self, owned existing: Self):
         self.socket = existing.socket^
 
-    fn _read(inout self, inout dest: Span[UInt8], capacity: Int) -> (Int, Error):
+    fn _read(inout self, inout dest: UnsafePointer[UInt8], capacity: Int) -> (Int, Error):
         """Reads data from the underlying file descriptor.
 
         Args:
@@ -72,7 +72,7 @@ struct TCPConnection(Movable):
 
         return bytes_read, err
 
-    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
+    fn read(inout self, inout dest: List[UInt8, True]) -> (Int, Error):
         """Reads data from the underlying file descriptor.
 
         Args:
@@ -81,11 +81,13 @@ struct TCPConnection(Movable):
         Returns:
             The number of bytes read, or an error if one occurred.
         """
-        var span = Span(dest)
+        if dest.size == dest.capacity:
+            return 0, Error("net.tcp.TCPConnection.read: no space left in destination buffer.")
 
+        var dest_ptr = dest.unsafe_ptr().offset(dest.size)
         var bytes_read: Int
         var err: Error
-        bytes_read, err = self._read(span, dest.capacity)
+        bytes_read, err = self._read(dest_ptr, dest.capacity - dest.size)
         dest.size += bytes_read
 
         return bytes_read, err

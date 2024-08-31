@@ -75,6 +75,15 @@ fn find_first_verb(s: String, verbs: List[String]) -> String:
 
 
 fn format_string(format: String, arg: String) -> String:
+    """Format a string argument.
+
+    Args:
+        format: The format string.
+        arg: The string argument.
+
+    Returns:
+        The formatted string.
+    """
     var verb = find_first_verb(format, List[String]("%s", "%q"))
     var arg_to_place = arg
     if verb == "%q":
@@ -84,6 +93,15 @@ fn format_string(format: String, arg: String) -> String:
 
 
 fn format_bytes(format: String, arg: List[UInt8, True]) -> String:
+    """Format a byte list argument.
+
+    Args:
+        format: The format string.
+        arg: The byte list argument.
+
+    Returns:
+        The formatted byte list.
+    """
     var argument = arg
     if argument[-1] != 0:
         argument.append(0)
@@ -92,6 +110,15 @@ fn format_bytes(format: String, arg: List[UInt8, True]) -> String:
 
 
 fn format_integer(format: String, arg: Int) -> String:
+    """Format an integer argument.
+
+    Args:
+        format: The format string.
+        arg: The integer argument.
+
+    Returns:
+        The formatted integer.
+    """
     var verb = find_first_verb(format, List[String]("%d", "%q"))
     var arg_to_place = str(arg)
     if verb == "%q":
@@ -101,10 +128,28 @@ fn format_integer(format: String, arg: Int) -> String:
 
 
 fn format_float(format: String, arg: Float64) -> String:
+    """Format a float argument.
+
+    Args:
+        format: The format string.
+        arg: The float argument.
+
+    Returns:
+        The formatted float.
+    """
     return replace_first(format, str("%f"), str(arg))
 
 
 fn format_boolean(format: String, arg: Bool) -> String:
+    """Format a boolean argument.
+
+    Args:
+        format: The format string.
+        arg: The boolean argument.
+
+    Returns:
+        The formatted boolean.
+    """
     var value: String = "False"
     if arg:
         value = "True"
@@ -112,17 +157,26 @@ fn format_boolean(format: String, arg: Bool) -> String:
     return replace_first(format, String("%t"), value)
 
 
-# If the number of arguments does not match the number of format specifiers
-alias BadArgCount = "(BAD ARG COUNT)"
+alias BAD_ARG_COUNT = "(BAD ARG COUNT)"
+"""If the number of arguments does not match the number of format specifiers."""
 
 
 fn sprintf(formatting: String, *args: Args) -> String:
+    """Format a string with the given arguments.
+
+    Args:
+        formatting: The format string.
+        args: The arguments to format the string with.
+
+    Returns:
+        The formatted string.
+    """
     var text = formatting
     var raw_percent_count = formatting.count("%%") * 2
     var formatter_count = formatting.count("%") - raw_percent_count
 
     if formatter_count != len(args):
-        return BadArgCount
+        return BAD_ARG_COUNT
 
     for i in range(len(args)):
         var argument = args[i]
@@ -142,6 +196,15 @@ fn sprintf(formatting: String, *args: Args) -> String:
 
 # TODO: temporary until we have arg packing.
 fn sprintf_str(formatting: String, args: List[String]) raises -> String:
+    """Format a string with the given arguments.
+
+    Args:
+        formatting: The format string.
+        args: The arguments to format the string with.
+
+    Returns:
+        The formatted string.
+    """
     var text = formatting
     var formatter_count = formatting.count("%")
 
@@ -157,6 +220,12 @@ fn sprintf_str(formatting: String, args: List[String]) raises -> String:
 
 
 fn printf(formatting: String, *args: Args) raises:
+    """Print a formatted string with the given arguments.
+
+    Args:
+        formatting: The format string.
+        args: The arguments to format the string with.
+    """
     var text = formatting
     var raw_percent_count = formatting.count("%%") * 2
     var formatter_count = formatting.count("%") - raw_percent_count
@@ -170,7 +239,7 @@ fn printf(formatting: String, *args: Args) raises:
         var argument = args[i]
         if argument.isa[String]():
             text = format_string(text, argument[String])
-        elif argument.isa[List[UInt8]]():
+        elif argument.isa[List[UInt8, True]]():
             text = format_bytes(text, argument[List[UInt8, True]])
         elif argument.isa[Int]():
             text = format_integer(text, argument[Int])

@@ -3,9 +3,18 @@ from ..builtins import copy
 
 
 struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
+    """FileWrapper wraps a file handle and implements the ReadWriteCloser and ByteReader traits."""
+
     var handle: FileHandle
+    """The file handle to read/write from/to."""
 
     fn __init__(inout self, path: String, mode: String) raises:
+        """Create a new FileWrapper instance.
+
+        Args:
+            path: The path to the file.
+            mode: The mode to open the file in.
+        """
         self.handle = open(path, mode)
 
     fn __moveinit__(inout self, owned existing: Self):
@@ -18,6 +27,7 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
             print(str(err))
 
     fn close(inout self) -> Error:
+        """Close the file handle."""
         try:
             self.handle.close()
         except e:
@@ -25,61 +35,58 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
 
         return Error()
 
-    fn _read(inout self, inout dest: Span[UInt8, _], capacity: Int) -> (Int, Error):
-        """Read from the file handle into dest's pointer.
+    fn _read(inout self, inout dest: UnsafePointer[UInt8], capacity: Int) -> (Int, Error):
+        """Read from the file handle into `dest`.
         Pretty hacky way to force the filehandle read into the defined trait, and it's unsafe since we're
         reading directly into the pointer.
+
+        Args:
+            dest: The buffer to read data into.
+            capacity: The capacity of the destination buffer.
+
+        Returns:
+            The number of bytes read, or an error if one occurred.
         """
-        # var bytes_to_read = dest.capacity - len(dest)
         var bytes_read: Int
-        var result: List[UInt8]
         try:
-            result = self.handle.read_bytes()
-            bytes_read = len(result)
-            # TODO: Need to raise an Issue for this. Reading with pointer does not return an accurate count of bytes_read :(
-            # bytes_read = int(self.handle.read(UnsafePointer[Scalar[DType.uint8]](dest.unsafe_ptr()) + dest.size))
+            bytes_read = int(self.handle.read(ptr=dest, size=capacity))
         except e:
             return 0, e
-
-        var count = 0
-        var target = dest.unsafe_ptr() + len(dest)
-        for i in range(len(result)):
-            target[i] = result[i]
-            count += 1
-        dest._len += count
 
         if bytes_read == 0:
             return bytes_read, io.EOF
 
         return bytes_read, Error()
 
-    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
-        """Read from the file handle into dest's pointer.
+    fn read(inout self, inout dest: List[UInt8, True]) -> (Int, Error):
+        """Read from the file handle into `dest`.
         Pretty hacky way to force the filehandle read into the defined trait, and it's unsafe since we're
         reading directly into the pointer.
+
+        Args:
+            dest: The buffer to read data into.
+
+        Returns:
+            The number of bytes read, or an error if one occurred.
         """
-        # var bytes_to_read = dest.capacity - len(dest)
+        var dest_ptr = dest.unsafe_ptr().offset(dest.size)
         var bytes_read: Int
-        var result: List[UInt8]
-        try:
-            result = self.handle.read_bytes()
-            bytes_read = len(result)
-            # TODO: Need to raise an Issue for this. Reading with pointer does not return an accurate count of bytes_read :(
-            # bytes_read = int(self.handle.read(UnsafePointer[Scalar[DType.uint8]](dest.unsafe_ptr()) + dest.size))
-        except e:
-            return 0, e
+        var err: Error
+        bytes_read, err = self._read(dest_ptr, dest.capacity - dest.size)
+        dest.size += bytes_read
 
-        _ = copy(dest, result, len(dest))
+        return bytes_read, err
 
-        if bytes_read == 0:
-            return bytes_read, io.EOF
+    fn read_all(inout self) -> (List[UInt8, True], Error):
+        """Read all data from the file handle.
 
-        return bytes_read, Error()
+        Returns:
+            The data read from the file handle, or an error if one occurred.
+        """
 
-    fn read_all(inout self) -> (List[UInt8], Error):
-        var bytes = List[UInt8](capacity=io.BUFFER_SIZE)
+        var bytes = List[UInt8, True](capacity=io.BUFFER_SIZE)
         while True:
-            var temp = List[UInt8](capacity=io.BUFFER_SIZE)
+            var temp = List[UInt8, True](capacity=io.BUFFER_SIZE)
             _ = self.read(temp)
 
             # If new bytes will overflow the result, resize it.
@@ -91,6 +98,11 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
                 return bytes, io.EOF
 
     fn read_byte(inout self) -> (UInt8, Error):
+        """Read a single byte from the file handle.
+
+        Returns:
+            The byte read from the file handle, or an error if one occurred.
+        """
         try:
             var bytes: List[UInt8]
             var err: Error
@@ -100,12 +112,30 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
             return UInt8(0), e
 
     fn read_bytes(inout self, size: Int = -1) raises -> (List[UInt8], Error):
+        """Read `size` bytes from the file handle.
+
+        Args:
+            size: The number of bytes to read. If -1, read all available bytes.
+
+        Returns:
+            The bytes read from the file handle, or an error if one occurred.
+        """
         try:
             return self.handle.read_bytes(size), Error()
         except e:
             return List[UInt8](), e
 
-    fn stream_until_delimiter(inout self, inout dest: List[UInt8], delimiter: UInt8, max_size: Int) -> Error:
+    fn stream_until_delimiter(inout self, inout dest: List[UInt8, True], delimiter: UInt8, max_size: Int) -> Error:
+        """Read from the file handle into `dest` until `delimiter` is reached.
+
+        Args:
+            dest: The buffer to read data into.
+            delimiter: The byte to stop reading at.
+            max_size: The maximum number of bytes to read.
+
+        Returns:
+            An error if one occurred.
+        """
         var byte: UInt8
         var err = Error()
         for _ in range(max_size):
@@ -119,6 +149,15 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
         return Error("Stream too long")
 
     fn seek(inout self, offset: Int, whence: Int = 0) -> (Int, Error):
+        """Seek to a new position in the file handle.
+
+        Args:
+            offset: The offset to seek to.
+            whence: The reference point for the offset.
+
+        Returns:
+            The new position in the file handle, or an error if one occurred.
+        """
         try:
             var position = self.handle.seek(UInt64(offset), whence)
             return int(position), Error()
@@ -126,6 +165,14 @@ struct FileWrapper(io.ReadWriteCloser, io.ByteReader):
             return 0, e
 
     fn write(inout self, src: Span[UInt8]) -> (Int, Error):
+        """Write data to the file handle.
+
+        Args:
+            src: The buffer to write data from.
+
+        Returns:
+            The number of bytes written, or an error if one occurred.
+        """
         if len(src) == 0:
             return 0, Error("No data to write")
 

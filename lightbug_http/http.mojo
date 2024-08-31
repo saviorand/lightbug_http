@@ -210,7 +210,7 @@ struct HTTPResponse(Response):
         self.laddr = TCPAddr()
     
     fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size - 1)
 
     fn get_body(self) -> Bytes:
         return self.body_raw
@@ -243,22 +243,22 @@ struct HTTPResponse(Response):
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
     )
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
     )
 
 fn OK(body: Bytes) -> HTTPResponse:
@@ -370,7 +370,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     if len(res.body_raw) > 0:
         _ = builder.write_string("Content-Length: ")
-        _ = builder.write_string(len(res.body_raw).__str__())
+        _ = builder.write_string((len(res.body_raw) + 1).__str__())
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
     else:
@@ -393,11 +393,11 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write_string(nChar)
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
-    
+ 
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
-    
-    return builder.render().as_bytes_slice()
+
+    return builder.as_string_slice().as_bytes_slice()
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)

@@ -1,7 +1,7 @@
 from sys import exit
 
 
-fn panic[T: Stringable](message: T, code: Int = 1):
+fn panic[T: Stringable](message: T, code: Int = 1) -> None:
     """Panics the program with the given message and exit code.
 
     Args:

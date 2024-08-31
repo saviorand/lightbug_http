@@ -4,6 +4,12 @@ alias Byte = UInt8
 
 
 fn equals[is_trivial: Bool](left: List[UInt8, is_trivial], right: List[UInt8, is_trivial]) -> Bool:
+    """Reports if `left` and `right` are equal.
+
+    Args:
+        left: The first list to compare.
+        right: The second list to compare.
+    """
     if len(left) != len(right):
         return False
     for i in range(len(left)):
@@ -13,14 +19,11 @@ fn equals[is_trivial: Bool](left: List[UInt8, is_trivial], right: List[UInt8, is
 
 
 fn has_prefix[is_trivial: Bool](bytes: List[Byte, is_trivial], prefix: List[Byte, is_trivial]) -> Bool:
-    """Reports whether the List[Byte] struct begins with prefix.
+    """Reports if the list begins with prefix.
 
     Args:
-        bytes: The List[Byte] struct to search.
+        bytes: The list to search.
         prefix: The prefix to search for.
-
-    Returns:
-        True if the List[Byte] struct begins with prefix; otherwise, False.
     """
     var len_comparison = len(bytes) >= len(prefix)
     var prefix_comparison = equals(bytes[0 : len(prefix)], prefix)
@@ -28,14 +31,11 @@ fn has_prefix[is_trivial: Bool](bytes: List[Byte, is_trivial], prefix: List[Byte
 
 
 fn has_suffix[is_trivial: Bool](bytes: List[Byte, is_trivial], suffix: List[Byte, is_trivial]) -> Bool:
-    """Reports whether the List[Byte] struct ends with suffix.
+    """Reports if the list ends with suffix.
 
     Args:
-        bytes: The List[Byte] struct to search.
-        suffix: The prefix to search for.
-
-    Returns:
-        True if the List[Byte] struct ends with suffix; otherwise, False.
+        bytes: The list struct to search.
+        suffix: The suffix to search for.
     """
     var len_comparison = len(bytes) >= len(suffix)
     var suffix_comparison = equals(bytes[len(bytes) - len(suffix) : len(bytes)], suffix)
@@ -43,14 +43,14 @@ fn has_suffix[is_trivial: Bool](bytes: List[Byte, is_trivial], suffix: List[Byte
 
 
 fn index_byte[is_trivial: Bool](bytes: List[Byte, is_trivial], delim: Byte) -> Int:
-    """Return the index of the first occurrence of the byte delim.
+    """Return the index of the first occurrence of the byte `delim`.
 
     Args:
-        bytes: The List[Byte] struct to search.
+        bytes: The list to search.
         delim: The byte to search for.
 
     Returns:
-        The index of the first occurrence of the byte delim.
+        The index of the first occurrence of the byte `delim`.
     """
     for i in range(len(bytes)):
         if bytes[i] == delim:
@@ -60,15 +60,15 @@ fn index_byte[is_trivial: Bool](bytes: List[Byte, is_trivial], delim: Byte) -> I
 
 
 fn index_byte(bytes: UnsafePointer[Scalar[DType.uint8]], size: Int, delim: Byte) -> Int:
-    """Return the index of the first occurrence of the byte delim.
+    """Return the index of the first occurrence of the byte `delim`.
 
     Args:
-        bytes: The DTypePointer[DType.int8] struct to search.
-        size: The size of the bytes pointer.
+        bytes: The list to search.
+        size: The number of elements stored at the pointer address.
         delim: The byte to search for.
 
     Returns:
-        The index of the first occurrence of the byte delim.
+        The index of the first occurrence of the byte `delim`.
     """
     for i in range(size):
         if UInt8(bytes[i]) == delim:
@@ -78,14 +78,14 @@ fn index_byte(bytes: UnsafePointer[Scalar[DType.uint8]], size: Int, delim: Byte)
 
 
 fn index_byte(bytes: Span[UInt8], delim: Byte) -> Int:
-    """Return the index of the first occurrence of the byte delim.
+    """Return the index of the first occurrence of the byte `delim`.
 
     Args:
         bytes: The Span to search.
         delim: The byte to search for.
 
     Returns:
-        The index of the first occurrence of the byte delim.
+        The index of the first occurrence of the byte `delim`.
     """
     for i in range(len(bytes)):
         if bytes[i] == delim:
@@ -95,13 +95,14 @@ fn index_byte(bytes: Span[UInt8], delim: Byte) -> Int:
 
 
 fn to_string[is_trivial: Bool](bytes: List[Byte, is_trivial]) -> String:
-    """Makes a deepcopy of the List[Byte] supplied and converts it to a string. If it's not null terminated, it will append a null byte.
+    """Makes a deep copy of the list supplied and converts it to a string.
+    If it's not null terminated, it will append a null byte.
 
     Args:
-        bytes: The List[Byte] struct to convert.
+        bytes: The list to convert.
 
     Returns:
-        The string representation of the List[Byte] struct.
+        A String built from the list of bytes.
     """
     var copy = List[Byte](bytes)
     if copy[-1] != 0:

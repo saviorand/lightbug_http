@@ -1,4 +1,4 @@
-from external.gojo.tests.wrapper import MojoTest
+import testing
 from external.morrow import Morrow
 from tests.utils import (
     default_server_conn_string,
@@ -20,7 +20,6 @@ def test_client():
 
 
 fn test_mojo_client_lightbug(client: MojoClient) raises:
-    var test = MojoTest("test_mojo_client_lightbug")
     var res = client.do(
         HTTPRequest(
             URI(default_server_conn_string),
@@ -28,7 +27,7 @@ fn test_mojo_client_lightbug(client: MojoClient) raises:
             RequestHeader(getRequest),
         )
     )
-    test.assert_equal(
+    testing.assert_equal(
         String(res.body_raw[0:112]),
         String(
             "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
@@ -38,19 +37,17 @@ fn test_mojo_client_lightbug(client: MojoClient) raises:
 
 
 fn test_mojo_client_lightbug_external_req(client: MojoClient) raises:
-    var test = MojoTest("test_mojo_client_lightbug_external_req")
     var req = HTTPRequest(
         URI("http://grandinnerastoundingspell.neverssl.com/online/"),
     )
     try:
         var res = client.do(req)
-        test.assert_equal(res.header.status_code(), 200)
+        testing.assert_equal(res.header.status_code(), 200)
     except e:
         print(e)
 
 
 fn test_python_client_lightbug(client: PythonClient) raises:
-    var test = MojoTest("test_python_client_lightbug")
     var res = client.do(
         HTTPRequest(
             URI(default_server_conn_string),
@@ -58,7 +55,7 @@ fn test_python_client_lightbug(client: PythonClient) raises:
             RequestHeader(getRequest),
         )
     )
-    test.assert_equal(
+    testing.assert_equal(
         String(res.body_raw[0:112]),
         String(
             "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"

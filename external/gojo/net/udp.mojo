@@ -50,7 +50,7 @@ struct UDPConnection(Movable):
     fn __moveinit__(inout self, owned existing: Self):
         self.socket = existing.socket^
 
-    fn read_from(inout self, inout dest: List[UInt8]) -> (Int, HostPort, Error):
+    fn read_from(inout self, inout dest: List[UInt8, True]) -> (Int, HostPort, Error):
         """Reads data from the underlying file descriptor.
 
         Args:

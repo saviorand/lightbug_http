@@ -4,7 +4,6 @@ from ..builtins import copy, panic
 
 
 @value
-# TODO: Uncomment write_to and write_buf once the bug with the trait's Span argument is fixed.
 struct Reader(
     Sized,
     io.Reader,
@@ -12,15 +11,18 @@ struct Reader(
     io.ByteReader,
     io.ByteScanner,
     io.Seeker,
-    # io.WriterTo,
+    io.WriterTo,
 ):
-    """A Reader that implements the [io.Reader], [io.ReaderAt], [io.ByteReader], [io.ByteScanner], [io.Seeker], and [io.WriterTo] traits
+    """A Reader that implements the `io.Reader`, `io.ReaderAt`, `io.ByteReader`, `io.ByteScanner`, `io.Seeker`, and `io.WriterTo` traits
     by reading from a string. The zero value for Reader operates like a Reader of an empty string.
     """
 
     var string: String
-    var read_pos: Int  # current reading index
-    var prev_rune: Int  # index of previous rune; or < 0
+    """Internal string to read from."""
+    var read_pos: Int
+    """Current reading index."""
+    var prev_rune: Int
+    """Index of previous rune; or < 0."""
 
     fn __init__(inout self, string: String = ""):
         self.string = string
@@ -36,7 +38,7 @@ struct Reader(
 
     fn size(self) -> Int:
         """Returns the original length of the underlying string.
-        size is the number of bytes available for reading via [Reader.read_at].
+        `size` is the number of bytes available for reading via `Reader.read_at`.
         The returned value is always the same and is not affected by calls
         to any other method.
 
@@ -45,13 +47,12 @@ struct Reader(
         """
         return len(self.string)
 
-    fn _read(inout self, inout dest: Span[UInt8], capacity: Int) -> (Int, Error):
-        """Reads from the underlying string into the provided List[UInt8] object.
-        Implements the [io.Reader] trait.
+    fn _read(inout self, inout dest: UnsafePointer[UInt8], capacity: Int) -> (Int, Error):
+        """Reads from the underlying string into the provided `dest` buffer.
 
         Args:
-            dest: The destination List[UInt8] object to read into.
-            capacity: The capacity of the destination List[UInt8] object.
+            dest: The destination buffer to read into.
+            capacity: The capacity of the destination buffer.
 
         Returns:
             The number of bytes read into dest.
@@ -61,41 +62,44 @@ struct Reader(
 
         self.prev_rune = -1
         var bytes_to_read = self.string.as_bytes_slice()[self.read_pos :]
-        var bytes_written = copy(dest.unsafe_ptr(), bytes_to_read.unsafe_ptr(), len(bytes_to_read))
-        dest._len += bytes_written
+        if len(bytes_to_read) > capacity:
+            return 0, Error("strings.Reader._read: no space left in destination buffer.")
+
+        var bytes_written = copy(dest, bytes_to_read.unsafe_ptr(), len(bytes_to_read))
         self.read_pos += bytes_written
         return bytes_written, Error()
 
-    fn read(inout self, inout dest: List[UInt8]) -> (Int, Error):
-        """Reads from the underlying string into the provided List[UInt8] object.
-        Implements the [io.Reader] trait.
+    fn read(inout self, inout dest: List[UInt8, True]) -> (Int, Error):
+        """Reads from the underlying string into the provided `dest` buffer.
 
         Args:
-            dest: The destination List[UInt8] object to read into.
+            dest: The destination buffer to read into.
 
         Returns:
             The number of bytes read into dest.
         """
-        var span = Span(dest)
+        if dest.size == dest.capacity:
+            return 0, Error("strings.Reader.read: no space left in destination buffer.")
+
+        var dest_ptr = dest.unsafe_ptr().offset(dest.size)
 
         var bytes_read: Int
         var err: Error
-        bytes_read, err = self._read(span, dest.capacity)
+        bytes_read, err = self._read(dest_ptr, dest.capacity - dest.size)
         dest.size += bytes_read
 
         return bytes_read, err
 
     fn _read_at(self, inout dest: Span[UInt8], off: Int, capacity: Int) -> (Int, Error):
-        """Reads from the Reader into the dest List[UInt8] starting at the offset off.
-        It returns the number of bytes read into dest and an error if any.
+        """Reads from the Reader into the `dest` buffer starting at the offset `off`.
 
         Args:
-            dest: The destination List[UInt8] object to read into.
+            dest: The destination buffer to read into.
             off: The byte offset to start reading from.
-            capacity: The capacity of the destination List[UInt8] object.
+            capacity: The capacity of the destination buffer.
 
         Returns:
-            The number of bytes read into dest.
+            It returns the number of bytes read into `dest` and an error if any.
         """
         # cannot modify state - see io.ReaderAt
         if off < 0:
@@ -113,12 +117,12 @@ struct Reader(
 
         return copied_elements_count, error
 
-    fn read_at(self, inout dest: List[UInt8], off: Int) -> (Int, Error):
-        """Reads from the Reader into the dest List[UInt8] starting at the offset off.
+    fn read_at(self, inout dest: List[UInt8, True], off: Int) -> (Int, Error):
+        """Reads from the Reader into the `dest` buffer starting at the offset off.
         It returns the number of bytes read into dest and an error if any.
 
         Args:
-            dest: The destination List[UInt8] object to read into.
+            dest: The destination buffer to read into.
             off: The byte offset to start reading from.
 
         Returns:
@@ -185,7 +189,7 @@ struct Reader(
 
         Args:
             offset: The offset to seek to.
-            whence: The seek mode. It can be one of [io.SEEK_START], [io.SEEK_CURRENT], or [io.SEEK_END].
+            whence: The seek mode. It can be one of `io.SEEK_START`, `io.SEEK_CURRENT`, or `io.SEEK_END`.
 
         Returns:
             The new position in the string.
@@ -208,32 +212,31 @@ struct Reader(
         self.read_pos = position
         return position, Error()
 
-    # fn write_to[W: io.Writer](inout self, inout writer: W) -> (Int, Error):
-    #     """Writes the remaining portion of the underlying string to the provided writer.
-    #     Implements the [io.WriterTo] trait.
+    fn write_to[W: io.Writer](inout self, inout writer: W) -> (Int, Error):
+        """Writes the remaining portion of the underlying string to the provided writer.
 
-    #     Args:
-    #         writer: The writer to write the remaining portion of the string to.
+        Args:
+            writer: The writer to write the remaining portion of the string to.
 
-    #     Returns:
-    #         The number of bytes written to the writer.
-    #     """
-    #     self.prev_rune = -1
-    #     var err = Error()
-    #     if self.read_pos >= len(self.string):
-    #         return Int(0), err
+        Returns:
+            The number of bytes written to the writer.
+        """
+        self.prev_rune = -1
+        var err = Error()
+        if self.read_pos >= len(self.string):
+            return Int(0), err
 
-    #     var chunk_to_write = self.string.as_bytes_slice()[self.read_pos :]
-    #     var bytes_written: Int
-    #     bytes_written, err = writer.write(chunk_to_write)
-    #     if bytes_written > len(chunk_to_write):
-    #         panic("strings.Reader.write_to: invalid write_string count")
+        var chunk_to_write = self.string.as_bytes_slice()[self.read_pos :]
+        var bytes_written: Int
+        bytes_written, err = writer.write(chunk_to_write)
+        if bytes_written > len(chunk_to_write):
+            panic("strings.Reader.write_to: invalid write_string count")
 
-    #     self.read_pos += bytes_written
-    #     if bytes_written != len(chunk_to_write) and not err:
-    #         err = Error(io.ERR_SHORT_WRITE)
+        self.read_pos += bytes_written
+        if bytes_written != len(chunk_to_write) and not err:
+            err = str(io.ERR_SHORT_WRITE)
 
-    #     return bytes_written, err
+        return bytes_written, err
 
     # # TODO: How can I differentiate between the two write_to methods when the writer implements both traits?
     # fn write_to[W: io.StringWriter](inout self, inout writer: W) raises -> Int:

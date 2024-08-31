@@ -57,6 +57,15 @@ struct BaseAddr:
 
 
 fn resolve_internet_addr(network: String, address: String) -> (TCPAddr, Error):
+    """Resolve an address to a TCPAddr.
+
+    Args:
+        network: The network type.
+        address: The address to resolve.
+
+    Returns:
+        A TCPAddr struct representing the resolved address.
+    """
     var host: String = ""
     var port: String = ""
     var portnum: Int = 0
