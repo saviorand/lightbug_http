@@ -296,7 +296,7 @@ struct RequestHeader:
     fn parse_headers(inout self, buf: Bytes) raises -> None:
         _ = self.set_content_length(-2)
         var s = headerScanner()
-        s.set_b(buf)
+        s.body = buf
 
         while s.next():
             if len(s.key()) > 0:
@@ -673,7 +673,7 @@ struct ResponseHeader:
     fn parse_headers(inout self, buf: Bytes) raises -> None:
         _ = self.set_content_length(-2)
         var s = headerScanner()
-        s.set_b(buf)
+        s.body = buf
 
         while s.next():
             if len(s.key()) > 0:
@@ -742,7 +742,7 @@ struct ResponseHeader:
                 return n
 
 struct headerScanner:
-    var __b: Bytes
+    var body: Bytes
     var __key: Bytes
     var __value: Bytes
     var __subslice_len: Int
@@ -752,7 +752,7 @@ struct headerScanner:
     var __initialized: Bool
 
     fn __init__(inout self) -> None:
-        self.__b = Bytes()
+        self.body = Bytes()
         self.__key = Bytes()
         self.__value = Bytes()
         self.__subslice_len = 0
@@ -760,12 +760,6 @@ struct headerScanner:
         self.__next_colon = 0
         self.__next_line = 0
         self.__initialized = False
-
-    fn b(self) -> Bytes:
-        return self.__b
-
-    fn set_b(inout self, b: Bytes) -> None:
-        self.__b = b    
 
     fn key(self) -> Bytes:
         return self.__key
@@ -809,15 +803,15 @@ struct headerScanner:
             self.set_next_line(-1)
             self.set_initialized()
         
-        var b_len = len(self.b())
+        var b_len = len(self.body)
 
-        if b_len >= 2 and (self.b()[0] == bytes(rChar, pop=False)[0]) and (self.b()[1] == bytes(nChar, pop=False)[0]):
-            self.set_b(self.b()[2:])
+        if b_len >= 2 and (self.body[0] == bytes(rChar, pop=False)[0]) and (self.body[1] == bytes(nChar, pop=False)[0]):
+            self.body = self.body[2:]
             self.set_subslice_len(2)
             return False
         
-        if b_len >= 1 and (self.b()[0] == bytes(nChar, pop=False)[0]):
-            self.set_b(self.b()[1:])
+        if b_len >= 1 and (self.body[0] == bytes(nChar, pop=False)[0]):
+            self.body = self.body[1:]
             self.set_subslice_len(self.subslice_len() + 1)
             return False
         
@@ -826,8 +820,8 @@ struct headerScanner:
             colon = self.next_colon()
             self.set_next_colon(-1)
         else:
-            colon = index_byte(self.b(), bytes(colonChar, pop=False)[0])
-            var newline = index_byte(self.b(), bytes(nChar, pop=False)[0])
+            colon = index_byte(self.body, bytes(colonChar, pop=False)[0])
+            var newline = index_byte(self.body, bytes(nChar, pop=False)[0])
             if newline < 0:
                 raise Error("Invalid header, did not find a newline at the end of the header")
             if newline < colon:
@@ -836,27 +830,27 @@ struct headerScanner:
             raise Error("Invalid header, did not find a colon")
         
         var jump_to = colon + 1
-        self.set_key(self.b()[:jump_to])
+        self.set_key(self.body[:jump_to])
 
-        while len(self.b()) > jump_to and (self.b()[jump_to] == bytes(whitespace, pop=False)[0]):
+        while len(self.body) > jump_to and (self.body[jump_to] == bytes(whitespace, pop=False)[0]):
             jump_to += 1
             self.set_next_line(self.next_line() - 1)
         
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.set_b(self.b()[jump_to:])
+        self.body = self.body[jump_to:]
 
         if self.next_line() >= 0:
             jump_to = self.next_line()
             self.set_next_line(-1)
         else:
-            jump_to = index_byte(self.b(), bytes(nChar, pop=False)[0])
+            jump_to = index_byte(self.body, bytes(nChar, pop=False)[0])
         if jump_to < 0:
             raise Error("Invalid header, did not find a newline")
         
         jump_to += 1
-        self.set_value(self.b()[:jump_to])
+        self.set_value(self.body[:jump_to])
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.set_b(self.b()[jump_to:])
+        self.body = self.body[jump_to:]
 
         if jump_to > 0 and (self.value()[jump_to-1] == bytes(rChar, pop=False)[0]):
             jump_to -= 1
