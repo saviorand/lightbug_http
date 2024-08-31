@@ -1,10 +1,11 @@
 from time import now
 from utils.string_slice import StringSlice
+from utils import Span
 from external.morrow import Morrow
 from gojo.strings.builder import StringBuilder
 from gojo.bufio import Reader
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes, BytesView, bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
@@ -124,8 +125,8 @@ struct HTTPRequest(Request):
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+    fn get_body_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.body_raw)
 
     fn set_body_bytes(inout self, body: Bytes) -> Self:
         self.body_raw = body
@@ -209,8 +210,8 @@ struct HTTPResponse(Response):
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
     
-    fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size - 1)
+    fn get_body_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.body_raw)
 
     fn get_body(self) -> Bytes:
         return self.body_raw
@@ -281,7 +282,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest) raises -> StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest) -> Bytes:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -329,10 +330,10 @@ fn encode(req: HTTPRequest) raises -> StringSlice[is_mutable=False, lifetime=Imm
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
-    return StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.__len__())
+    return str(builder).as_bytes()
 
 
-fn encode(res: HTTPResponse) raises -> Bytes:
+fn encode(res: HTTPResponse) -> Bytes:
     # var current_time = String()
     # try:
     #     current_time = Morrow.utcnow().__str__()
@@ -370,7 +371,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     if len(res.body_raw) > 0:
         _ = builder.write_string("Content-Length: ")
-        _ = builder.write_string((len(res.body_raw) + 1).__str__())
+        _ = builder.write_string(str(len(res.body_raw)))
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
     else:
@@ -397,7 +398,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
 
-    return builder.as_string_slice().as_bytes_slice()
+    return str(builder).as_bytes()
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)

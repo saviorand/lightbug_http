@@ -1,3 +1,4 @@
+from utils import Span
 from gojo.bufio import Reader
 from lightbug_http.strings import (
     strHttp11,
@@ -10,7 +11,7 @@ from lightbug_http.strings import (
     whitespace,
     tab
 )
-from lightbug_http.io.bytes import Bytes, Byte, BytesView, bytes_equal, bytes, index_byte, compare_case_insensitive, next_line, last_index_byte
+from lightbug_http.io.bytes import Bytes, Byte, bytes_equal, bytes, index_byte, compare_case_insensitive, next_line, last_index_byte
 
 alias statusOK = 200
 
@@ -119,8 +120,8 @@ struct RequestHeader:
         self.__content_type = content_type
         return self
 
-    fn content_type(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__content_type.unsafe_ptr(), len=self.__content_type.size)
+    fn content_type(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__content_type)
 
     fn set_host(inout self, host: String) -> Self:
         self.__host = bytes(host)
@@ -130,8 +131,8 @@ struct RequestHeader:
         self.__host = host
         return self
 
-    fn host(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__host.unsafe_ptr(), len=self.__host.size)
+    fn host(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__host)
 
     fn set_user_agent(inout self, user_agent: String) -> Self:
         self.__user_agent = bytes(user_agent)
@@ -141,8 +142,8 @@ struct RequestHeader:
         self.__user_agent = user_agent
         return self
 
-    fn user_agent(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__user_agent.unsafe_ptr(), len=self.__user_agent.size)
+    fn user_agent(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__user_agent)
 
     fn set_method(inout self, method: String) -> Self:
         self.__method = bytes(method)
@@ -152,10 +153,10 @@ struct RequestHeader:
         self.__method = method
         return self
 
-    fn method(self) -> BytesView:
+    fn method(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__method) == 0:
-            return strMethodGet.as_bytes_slice()
-        return BytesView(unsafe_ptr=self.__method.unsafe_ptr(), len=self.__method.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strMethodGet.unsafe_ptr(), len=len(strMethodGet))
+        return Span[UInt8, __lifetime_of(self)](self.__method)
     
     fn set_protocol(inout self, proto: String) -> Self:
         self.no_http_1_1 = False # hardcoded until HTTP/2 is supported
@@ -172,10 +173,10 @@ struct RequestHeader:
             return strHttp11
         return String(self.proto)
 
-    fn protocol(self) -> BytesView:
+    fn protocol(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.proto) == 0:
-            return strHttp11.as_bytes_slice()
-        return BytesView(unsafe_ptr=self.proto.unsafe_ptr(), len=self.proto.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strHttp11.unsafe_ptr(), len=len(strHttp11))
+        return Span[UInt8, __lifetime_of(self)](self.proto)
     
     fn content_length(self) -> Int:
         return self.__content_length
@@ -196,10 +197,10 @@ struct RequestHeader:
         self.__request_uri = request_uri
         return self
 
-    fn request_uri(self) -> BytesView:
+    fn request_uri(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__request_uri) <= 1:
-            return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
-        return BytesView(unsafe_ptr=self.__request_uri.unsafe_ptr(), len=self.__request_uri.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strSlash.unsafe_ptr(), len=len(strSlash))
+        return Span[UInt8, __lifetime_of(self)](self.__request_uri)
 
     fn set_transfer_encoding(inout self, transfer_encoding: String) -> Self:
         self.__transfer_encoding = bytes(transfer_encoding)
@@ -209,8 +210,8 @@ struct RequestHeader:
         self.__transfer_encoding = transfer_encoding
         return self
     
-    fn transfer_encoding(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__transfer_encoding.unsafe_ptr(), len=self.__transfer_encoding.size)
+    fn transfer_encoding(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__transfer_encoding)
 
     fn set_trailer(inout self, trailer: String) -> Self:
         self.__trailer = bytes(trailer)
@@ -220,8 +221,8 @@ struct RequestHeader:
         self.__trailer = trailer
         return self
     
-    fn trailer(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__trailer.unsafe_ptr(), len=self.__trailer.size)
+    fn trailer(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__trailer)
     
     fn trailer_str(self) -> String:
         return String(self.__trailer)
@@ -522,14 +523,14 @@ struct ResponseHeader:
         self.__status_message = message
         return self
     
-    fn status_message(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__status_message.unsafe_ptr(), len=self.__status_message.size)
+    fn status_message(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__status_message)
     
     fn status_message_str(self) -> String:
         return String(self.status_message())
 
-    fn content_type(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__content_type.unsafe_ptr(), len=self.__content_type.size)
+    fn content_type(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__content_type)
 
     fn set_content_type(inout self, content_type: String) -> Self:
         self.__content_type = bytes(content_type)
@@ -539,8 +540,8 @@ struct ResponseHeader:
         self.__content_type = content_type
         return self
 
-    fn content_encoding(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__content_encoding.unsafe_ptr(), len=self.__content_encoding.size)
+    fn content_encoding(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__content_encoding)
 
     fn set_content_encoding(inout self, content_encoding: String) -> Self:
         self.__content_encoding = bytes(content_encoding)
@@ -561,8 +562,8 @@ struct ResponseHeader:
         self.__content_length_bytes = content_length
         return self
 
-    fn server(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__server.unsafe_ptr(), len=self.__server.size)
+    fn server(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__server)
 
     fn set_server(inout self, server: String) -> Self:
         self.__server = bytes(server)
@@ -587,10 +588,10 @@ struct ResponseHeader:
             return strHttp11
         return String(self.__protocol)
     
-    fn protocol(self) -> BytesView:
+    fn protocol(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__protocol) == 0:
-            return BytesView(unsafe_ptr=strHttp11.as_bytes_slice().unsafe_ptr(), len=8)
-        return BytesView(unsafe_ptr=self.__protocol.unsafe_ptr(), len=self.__protocol.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strHttp11.unsafe_ptr(), len=len(strHttp11))
+        return Span[UInt8, __lifetime_of(self)](self.__protocol)
 
     fn set_trailer(inout self, trailer: String) -> Self:
         self.__trailer = bytes(trailer)
@@ -600,8 +601,8 @@ struct ResponseHeader:
         self.__trailer = trailer
         return self
     
-    fn trailer(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__trailer.unsafe_ptr(), len=self.__trailer.size)
+    fn trailer(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__trailer)
 
     fn trailer_str(self) -> String:
         return String(self.trailer())

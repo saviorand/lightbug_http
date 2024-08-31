@@ -1,4 +1,5 @@
-from lightbug_http.io.bytes import Bytes, BytesView, bytes_equal, bytes
+from utils import Span
+from lightbug_http.io.bytes import Bytes, bytes_equal, bytes
 from lightbug_http.strings import (
     strSlash,
     strHttp11,
@@ -110,8 +111,8 @@ struct URI:
         self.__username = username
         self.__password = password
 
-    fn path_original(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__path_original.unsafe_ptr(), len=self.__path_original.size)
+    fn path_original(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__path_original)
 
     fn set_path(inout self, path: String) -> Self:
         self.__path = normalise_path(bytes(path), self.__path_original)
@@ -126,10 +127,10 @@ struct URI:
             return strSlash
         return String(self.__path)
     
-    fn path_bytes(self) -> BytesView:
+    fn path_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__path) == 0:
-            return BytesView(unsafe_ptr=strSlash.as_bytes_slice().unsafe_ptr(), len=2)
-        return BytesView(unsafe_ptr=self.__path.unsafe_ptr(), len=self.__path.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strSlash.unsafe_ptr(), len=len(strSlash))
+        return Span[UInt8, __lifetime_of(self)](self.__path)
 
     fn set_scheme(inout self, scheme: String) -> Self:
         self.__scheme = bytes(scheme)
@@ -139,15 +140,15 @@ struct URI:
         self.__scheme = scheme
         return self
 
-    fn scheme(self) -> BytesView:
+    fn scheme(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__scheme) == 0:
-            return BytesView(unsafe_ptr=strHttp.as_bytes_slice().unsafe_ptr(), len=5)
-        return BytesView(unsafe_ptr=self.__scheme.unsafe_ptr(), len=self.__scheme.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strHttp.unsafe_ptr(), len=len(strHttp))
+        return Span[UInt8, __lifetime_of(self)](self.__scheme)
 
-    fn http_version(self) -> BytesView:
+    fn http_version(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__http_version) == 0:
-            return BytesView(unsafe_ptr=strHttp11.as_bytes_slice().unsafe_ptr(), len=9)
-        return BytesView(unsafe_ptr=self.__http_version.unsafe_ptr(), len=self.__http_version.size)
+            return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strHttp11.unsafe_ptr(), len=len(strHttp11))
+        return Span[UInt8, __lifetime_of(self)](self.__http_version)
 
     fn http_version_str(self) -> String:
         return self.__http_version
@@ -180,8 +181,8 @@ struct URI:
         self.__request_uri = request_uri
         return self
     
-    fn request_uri(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__request_uri.unsafe_ptr(), len=self.__request_uri.size)
+    fn request_uri(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__request_uri)
 
     fn set_query_string(inout self, query_string: String) -> Self:
         self.__query_string = bytes(query_string)
@@ -191,8 +192,8 @@ struct URI:
         self.__query_string = query_string
         return self
     
-    fn query_string(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__query_string.unsafe_ptr(), len=self.__query_string.size)
+    fn query_string(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__query_string)
 
     fn set_hash(inout self, hash: String) -> Self:
         self.__hash = bytes(hash)
@@ -202,8 +203,8 @@ struct URI:
         self.__hash = hash
         return self
 
-    fn hash(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__hash.unsafe_ptr(), len=self.__hash.size)
+    fn hash(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__hash)
 
     fn set_host(inout self, host: String) -> Self:
         self.__host = bytes(host)
@@ -213,14 +214,14 @@ struct URI:
         self.__host = host
         return self
 
-    fn host(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__host.unsafe_ptr(), len=self.__host.size)
+    fn host(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__host)
     
     fn host_str(self) -> String:
         return self.__host
 
-    fn full_uri(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__full_uri.unsafe_ptr(), len=self.__full_uri.size)
+    fn full_uri(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__full_uri)
 
     fn set_username(inout self, username: String) -> Self:
         self.__username = bytes(username)
@@ -230,8 +231,8 @@ struct URI:
         self.__username = username
         return self
     
-    fn username(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__username.unsafe_ptr(), len=self.__username.size)
+    fn username(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__username)
 
     fn set_password(inout self, password: String) -> Self:
         self.__password = bytes(password)
@@ -241,8 +242,8 @@ struct URI:
         self.__password = password
         return self
     
-    fn password(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__password.unsafe_ptr(), len=self.__password.size)
+    fn password(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__password)
 
     fn parse(inout self) raises -> None:
         var raw_uri = String(self.__full_uri)
