@@ -238,9 +238,8 @@ struct HTTPResponse(Response):
         _ = r.discard(header_len)
 
         var body_buf_result = r.peek(r.buffered())
-        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(body_buf)
+        _ = self.set_body_bytes(body_buf_result[0])
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(

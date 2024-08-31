@@ -1,4 +1,4 @@
-from utils import Span
+from utils import Span, StringSlice
 from lightbug_http.io.bytes import Bytes, bytes_equal, bytes
 from lightbug_http.strings import (
     strSlash,
@@ -151,7 +151,7 @@ struct URI:
         return Span[UInt8, __lifetime_of(self)](self.__http_version)
 
     fn http_version_str(self) -> String:
-        return self.__http_version
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.http_version().unsafe_ptr(), len=len(self.__http_version))
 
     fn set_http_version(inout self, http_version: String) -> Self:
         self.__http_version = bytes(http_version)
@@ -218,7 +218,7 @@ struct URI:
         return Span[UInt8, __lifetime_of(self)](self.__host)
     
     fn host_str(self) -> String:
-        return self.__host
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.__host.unsafe_ptr(), len=len(self.__host))
 
     fn full_uri(self) -> Span[UInt8, __lifetime_of(self)]:
         return Span[UInt8, __lifetime_of(self)](self.__full_uri)

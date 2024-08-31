@@ -1,4 +1,4 @@
-from utils import Span
+from utils import Span, StringSlice
 from gojo.bufio import Reader
 from lightbug_http.strings import (
     strHttp11,
@@ -169,9 +169,8 @@ struct RequestHeader:
         return self
 
     fn protocol_str(self) -> String:
-        if len(self.proto) == 0:
-            return strHttp11
-        return String(self.proto)
+        var protocol = self.protocol()
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=protocol.unsafe_ptr(), len=len(protocol))
 
     fn protocol(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.proto) == 0:
@@ -225,7 +224,7 @@ struct RequestHeader:
         return Span[UInt8, __lifetime_of(self)](self.__trailer)
     
     fn trailer_str(self) -> String:
-        return String(self.__trailer)
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.__trailer.unsafe_ptr(), len=len(self.__trailer))
 
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
@@ -527,7 +526,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__status_message)
     
     fn status_message_str(self) -> String:
-        return String(self.status_message())
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.__status_message.unsafe_ptr(), len=len(self.__status_message))
 
     fn content_type(self) -> Span[UInt8, __lifetime_of(self)]:
         return Span[UInt8, __lifetime_of(self)](self.__content_type)
@@ -584,9 +583,8 @@ struct ResponseHeader:
         return self
 
     fn protocol_str(self) -> String:
-        if len(self.__protocol) == 0:
-            return strHttp11
-        return String(self.__protocol)
+        var protocol = self.protocol()
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=protocol.unsafe_ptr(), len=len(protocol))
     
     fn protocol(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__protocol) == 0:
@@ -605,7 +603,7 @@ struct ResponseHeader:
         return Span[UInt8, __lifetime_of(self)](self.__trailer)
 
     fn trailer_str(self) -> String:
-        return String(self.trailer())
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.__trailer.unsafe_ptr(), len=len(self.__trailer))
     
     fn set_connection_close(inout self) -> Self:
         self.__connection_close = True
