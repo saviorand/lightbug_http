@@ -27,11 +27,9 @@ def test_parse_request_header():
     testing.assert_equal(header.connection_close(), True)
 
 def test_parse_response_header():
-    var headers_str = bytes('''HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+    var headers_str = 'HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n'
     var header = ResponseHeader()
-    var b = Bytes(headers_str)
-    var buf = buffer.Buffer(b^)
-    var reader = Reader(buf^)
+    var reader = Reader(buffer.Buffer(headers_str))
     _ = header.parse_raw(reader)
     testing.assert_equal(String(header.protocol()), "HTTP/1.1")
     testing.assert_equal(header.no_http_1_1, False)

@@ -1,3 +1,4 @@
+from utils import StringSlice
 import testing
 from lightbug_http.uri import URI
 from lightbug_http.strings import empty_string
@@ -17,8 +18,9 @@ def test_uri():
 
 def test_uri_no_parse_defaults():
     var uri = URI("http://example.com")
-    print(String(uri.scheme()), chr(int(uri.scheme()[-1])))
-    testing.assert_equal(String(uri.full_uri()), "http://example.com")
+    var full_uri = List[UInt8, True](uri.full_uri())
+    full_uri.append(0)
+    testing.assert_equal(String(full_uri), "http://example.com")
     testing.assert_equal(String(uri.scheme()), "http")
     testing.assert_equal(uri.path(), "/")
 
