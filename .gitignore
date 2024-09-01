@@ -1,4 +1,5 @@
 *.📦
+*.mojopkg
 .DS_Store
 .mojoenv
 install_id

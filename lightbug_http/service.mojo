@@ -56,7 +56,6 @@ struct ExampleRouter(HTTPService):
 @value
 struct TechEmpowerRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        # var body = req.body_raw
         var uri = req.uri()
 
         if uri.path() == "/plaintext":

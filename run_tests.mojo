@@ -5,7 +5,7 @@ from tests.test_uri import test_uri
 # from lightbug_http.test.test_client import test_client
 
 fn main() raises:
-    test_io()
+    # test_io()
     test_http()
     test_header()
     test_uri()

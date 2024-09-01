@@ -1,5 +1,5 @@
-from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from external.gojo.bytes import buffer
+from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
+from gojo.bytes import buffer
 from external.libc import (
     c_int,
     AF_INET,
@@ -102,7 +102,7 @@ struct MojoClient(Client):
         if bytes_recv == 0:
             conn.close()
 
-        var buf = buffer.new_buffer(new_buf^)
+        var buf = buffer.Buffer(new_buf^)
         var reader = Reader(buf^)
 
         var error = Error()

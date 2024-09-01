@@ -1,3 +1,4 @@
+from sys.info import sizeof
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration

@@ -1,7 +1,8 @@
 from time import now
+from utils.string_slice import StringSlice
 from external.morrow import Morrow
-from external.gojo.strings.builder import StringBuilder
-from external.gojo.bufio import Reader
+from gojo.strings.builder import StringBuilder
+from gojo.bufio import Reader
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -171,10 +172,10 @@ struct HTTPRequest(Request):
 
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
+        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(bytes(body_buf))        
+        _ = self.set_body_bytes(body_buf)
 
 @value
 struct HTTPResponse(Response):
@@ -209,7 +210,7 @@ struct HTTPResponse(Response):
         self.laddr = TCPAddr()
     
     fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size - 1)
 
     fn get_body(self) -> Bytes:
         return self.body_raw
@@ -235,29 +236,29 @@ struct HTTPResponse(Response):
     fn read_body(inout self, inout r: Reader, header_len: Int) raises -> None:
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
+        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(bytes(body_buf)) 
+        _ = self.set_body_bytes(body_buf)
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
     )
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body, pop=False),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body, pop=False),
     )
 
 fn OK(body: Bytes) -> HTTPResponse:
@@ -280,7 +281,7 @@ fn NotFound(path: String) -> HTTPResponse:
         ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
     )
 
-fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest) raises -> StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime]:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -328,16 +329,16 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    return StringSlice[is_mutable=False, lifetime=ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.__len__())
 
 
 fn encode(res: HTTPResponse) raises -> Bytes:
-    var current_time = String()
-    try:
-        current_time = Morrow.utcnow().__str__()
-    except e:
-        print("Error getting current time: " + str(e))
-        current_time = str(now())
+    # var current_time = String()
+    # try:
+    #     current_time = Morrow.utcnow().__str__()
+    # except e:
+    #     print("Error getting current time: " + str(e))
+    #     current_time = str(now())
 
     var builder = StringBuilder()
 
@@ -369,7 +370,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     if len(res.body_raw) > 0:
         _ = builder.write_string("Content-Length: ")
-        _ = builder.write_string(len(res.body_raw).__str__())
+        _ = builder.write_string((len(res.body_raw) + 1).__str__())
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
     else:
@@ -385,18 +386,18 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
-    _ = builder.write_string("Date: ")
-    _ = builder.write_string(current_time)
+    # _ = builder.write_string("Date: ")
+    # _ = builder.write_string(current_time)
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
-    
+ 
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
-    
-    return builder.render().as_bytes_slice()
+
+    return builder.as_string_slice().as_bytes_slice()
 
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
     var request = String(buf)
