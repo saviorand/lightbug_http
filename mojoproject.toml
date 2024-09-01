@@ -1,6 +1,6 @@
 [project]
 authors = ["saviorand"]
-channels = ["conda-forge", "https://conda.modular.com/max"]
+channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo"]
 description = "Simple and fast HTTP framework for Mojo!"
 name = "lightbug_http"
 platforms = ["osx-arm64"]
@@ -10,6 +10,4 @@ version = "0.1.0"
 
 [dependencies]
 max = ">=24.4.0,<25"
-
-[pypi-dependencies]
-magic_test = { git = "https://github.com/saviorand/testmagic", rev="main"}
+gojo = "0.1.1"
