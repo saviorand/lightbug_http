@@ -1,4 +1,4 @@
-from external.gojo.bufio import Reader
+from gojo.bufio import Reader
 from lightbug_http.strings import (
     strHttp11,
     strHttp10,

@@ -1,6 +1,6 @@
 import testing
-from external.gojo.bytes import buffer
-from external.gojo.bufio import Reader
+from gojo.bytes import buffer
+from gojo.bufio import Reader
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import empty_string 

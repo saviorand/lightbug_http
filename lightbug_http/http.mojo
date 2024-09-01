@@ -1,8 +1,8 @@
 from time import now
 from utils.string_slice import StringSlice
 from external.morrow import Morrow
-from external.gojo.strings.builder import StringBuilder
-from external.gojo.bufio import Reader
+from gojo.strings.builder import StringBuilder
+from gojo.bufio import Reader
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, BytesView, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader

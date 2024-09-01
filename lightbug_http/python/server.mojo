@@ -1,5 +1,5 @@
-from external.gojo.bufio import Reader, Scanner
-from external.gojo.bytes.buffer import Buffer
+from gojo.bufio import Reader, Scanner
+from gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
 from lightbug_http.http import HTTPRequest, encode, split_http_string

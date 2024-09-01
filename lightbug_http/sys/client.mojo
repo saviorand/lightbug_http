@@ -1,5 +1,5 @@
-from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from external.gojo.bytes import buffer
+from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
+from gojo.bytes import buffer
 from external.libc import (
     c_int,
     AF_INET,
