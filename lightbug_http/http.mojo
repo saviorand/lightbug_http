@@ -1,7 +1,7 @@
 from time import now
 from utils.string_slice import StringSlice
 from utils import Span
-from external.morrow import Morrow
+# from external.morrow import Morrow
 from gojo.strings.builder import StringBuilder
 from gojo.bufio import Reader
 from lightbug_http.uri import URI

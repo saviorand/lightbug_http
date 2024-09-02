@@ -15,7 +15,7 @@ from lightbug_http.net import (
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
-from external.libc import (
+from ..libc import (
     c_void,
     c_int,
     c_uint,

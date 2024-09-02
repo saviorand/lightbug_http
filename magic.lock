@@ -4,13 +4,13 @@ environments:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
     - url: https://conda.modular.com/max-nightly/
-    - url: https://repo.prefix.dev/mojo/
+    - url: https://repo.prefix.dev/mojo-community/
     packages:
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h99b78c6_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ca-certificates-2024.8.30-hf0a4a13_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.1.7-unix_pyh707e725_0.conda
-      - conda: https://repo.prefix.dev/mojo/osx-arm64/gojo-0.1.1-h60d57d3_0.conda
+      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/gojo-0.1.2-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.4.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_metadata-8.4.0-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.2-pyhd8ed1ab_0.conda
@@ -100,16 +100,18 @@ packages:
   timestamp: 1692311973840
 - kind: conda
   name: gojo
-  version: 0.1.1
+  version: 0.1.2
   build: h60d57d3_0
   subdir: osx-arm64
-  url: https://repo.prefix.dev/mojo/osx-arm64/gojo-0.1.1-h60d57d3_0.conda
-  sha256: 953870531ebdaf0e8157d3d37b1a42c2ffa30c4ba50aa5e5fb53589caf4c57d5
+  url: https://repo.prefix.dev/mojo-community/osx-arm64/gojo-0.1.2-h60d57d3_0.conda
+  sha256: a89ed3ddab2eaa01d1474b2a22effdd93e9d6fb98206c8f2f27e10f6e155d2bb
+  depends:
+  - max >=24.5.0.dev2024083105
   arch: arm64
   platform: osx
   license: MIT
-  size: 922579
-  timestamp: 1725160308285
+  size: 922618
+  timestamp: 1725311250495
 - kind: conda
   name: importlib-metadata
   version: 8.4.0
