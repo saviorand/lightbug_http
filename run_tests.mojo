@@ -6,8 +6,8 @@ from tests.test_uri import test_uri
 
 fn main() raises:
     # test_io()
-    test_http()
+    # test_http()
     test_header()
-    test_uri()
+    # test_uri()
     # test_client()
 

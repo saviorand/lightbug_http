@@ -260,6 +260,8 @@ struct RequestHeader:
 
         var header_len = self.read_raw_headers(buf[end_of_first_line:])
 
+        print(List[UInt8, True](buf[end_of_first_line:]).__str__())
+        print(String(buf[end_of_first_line:]))
         self.parse_headers(buf[end_of_first_line:])
         
         return end_of_first_line + header_len
@@ -811,15 +813,15 @@ struct headerScanner:
             self.set_next_line(-1)
             self.set_initialized()
         
-        var b_len = len(self.b())
+        var b_len = len(self.__b)
 
-        if b_len >= 2 and (self.b()[0] == rChar.as_bytes_slice()[0]) and (self.b()[1] == nChar.as_bytes_slice()[0]):
-            self.set_b(self.b()[2:])
+        if b_len >= 2 and (self.__b[0] == rChar.as_bytes_slice()[0]) and (self.__b[1] == nChar.as_bytes_slice()[0]):
+            self.set_b(self.__b[2:])
             self.set_subslice_len(2)
             return False
         
-        if b_len >= 1 and (self.b()[0] == nChar.as_bytes_slice()[0]):
-            self.set_b(self.b()[1:])
+        if b_len >= 1 and (self.__b[0] == nChar.as_bytes_slice()[0]):
+            self.set_b(self.__b[1:])
             self.set_subslice_len(self.subslice_len() + 1)
             return False
         
@@ -828,8 +830,8 @@ struct headerScanner:
             colon = self.next_colon()
             self.set_next_colon(-1)
         else:
-            colon = index_byte(self.b(), colonChar.as_bytes_slice()[0])
-            var newline = index_byte(self.b(), nChar.as_bytes_slice()[0])
+            colon = index_byte(self.__b, colonChar.as_bytes_slice()[0])
+            var newline = index_byte(self.__b, nChar.as_bytes_slice()[0])
             if newline < 0:
                 raise Error("Invalid header, did not find a newline at the end of the header")
             if newline < colon:
@@ -838,27 +840,27 @@ struct headerScanner:
             raise Error("Invalid header, did not find a colon")
         
         var jump_to = colon + 1
-        self.set_key(self.b()[:jump_to])
+        self.set_key(self.__b[:jump_to])
 
-        while len(self.b()) > jump_to and (self.b()[jump_to] == whitespace.as_bytes_slice()[0]):
+        while len(self.__b) > jump_to and (self.__b[jump_to] == whitespace.as_bytes_slice()[0]):
             jump_to += 1
             self.set_next_line(self.next_line() - 1)
         
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.set_b(self.b()[jump_to:])
+        self.set_b(self.__b[jump_to:])
 
         if self.next_line() >= 0:
             jump_to = self.next_line()
             self.set_next_line(-1)
         else:
-            jump_to = index_byte(self.b(), nChar.as_bytes_slice()[0])
+            jump_to = index_byte(self.__b, nChar.as_bytes_slice()[0])
         if jump_to < 0:
             raise Error("Invalid header, did not find a newline")
         
         jump_to += 1
-        self.set_value(self.b()[:jump_to])
+        self.set_value(self.__b[:jump_to-2]) # -2 to exclude the \r\n
         self.set_subslice_len(self.subslice_len() + jump_to)
-        self.set_b(self.b()[jump_to:])
+        self.set_b(self.__b[jump_to:])
 
         if jump_to > 0 and (self.value()[jump_to-1] == rChar.as_bytes_slice()[0]):
             jump_to -= 1
