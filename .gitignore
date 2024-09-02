@@ -3,3 +3,13 @@
 .DS_Store
 .mojoenv
 install_id
+
+# pixi environments
+.pixi
+*.egg-info
+
+# magic environments
+.magic
+
+# Rattler
+output
