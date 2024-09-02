@@ -30,6 +30,10 @@ struct RequestHeader:
     var __transfer_encoding: Bytes
     var raw_headers: Bytes
     var __trailer: Bytes
+    var __upgrade: Bytes
+    var __connection_upgrade: Bool
+    var __sec_websocket_key: Bytes
+    var __sec_websocket_version: Bytes
 
     fn __init__(inout self) -> None:
         self.disable_normalization = False
@@ -46,6 +50,10 @@ struct RequestHeader:
         self.__transfer_encoding = Bytes()
         self.raw_headers = Bytes()
         self.__trailer = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_key = Bytes()
+        self.__sec_websocket_version = Bytes()
 
     fn __init__(inout self, host: String) -> None:
         self.disable_normalization = False
@@ -62,6 +70,10 @@ struct RequestHeader:
         self.__transfer_encoding = Bytes()
         self.raw_headers = Bytes()
         self.__trailer = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_key = Bytes()
+        self.__sec_websocket_version = Bytes()
 
     fn __init__(inout self, rawheaders: Bytes) -> None:
         self.disable_normalization = False
@@ -78,6 +90,10 @@ struct RequestHeader:
         self.__transfer_encoding = Bytes()
         self.raw_headers = rawheaders
         self.__trailer = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_key = Bytes()
+        self.__sec_websocket_version = Bytes()
 
     fn __init__(
         inout self,
@@ -110,6 +126,50 @@ struct RequestHeader:
         self.__transfer_encoding = transfer_encoding
         self.raw_headers = raw_headers
         self.__trailer = trailer
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_key = Bytes()
+        self.__sec_websocket_version = Bytes()
+    
+    fn __init__(
+        inout self,
+        disable_normalization: Bool,
+        no_http_1_1: Bool,
+        connection_close: Bool,
+        content_length: Int,
+        content_length_bytes: Bytes,
+        method: Bytes,
+        request_uri: Bytes,
+        proto: Bytes,
+        host: Bytes,
+        content_type: Bytes,
+        user_agent: Bytes,
+        transfer_encoding: Bytes,
+        raw_headers: Bytes,
+        trailer: Bytes,
+        upgrade: Bytes,
+        connection_upgrade: Bool,
+        sec_websocket_key: Bytes,
+        sec_websocket_version: Bytes,
+    ) -> None:
+        self.disable_normalization = disable_normalization
+        self.no_http_1_1 = no_http_1_1
+        self.__connection_close = connection_close
+        self.__content_length = content_length
+        self.__content_length_bytes = content_length_bytes
+        self.__method = method
+        self.__request_uri = request_uri
+        self.proto = proto
+        self.__host = host
+        self.__content_type = content_type
+        self.__user_agent = user_agent
+        self.__transfer_encoding = transfer_encoding
+        self.raw_headers = raw_headers
+        self.__trailer = trailer
+        self.__upgrade = upgrade
+        self.__connection_upgrade = connection_upgrade
+        self.__sec_websocket_key = sec_websocket_key
+        self.__sec_websocket_version = sec_websocket_version
 
     fn set_content_type(inout self, content_type: String) -> Self:
         self.__content_type = bytes(content_type)
@@ -239,6 +299,34 @@ struct RequestHeader:
 
     fn connection_close(self) -> Bool:
         return self.__connection_close
+
+    fn set_upgrade(inout self, upgrade: Bytes) -> Self:
+        self.__upgrade = upgrade
+        return self
+    
+    fn upgrade(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__upgrade.unsafe_ptr(), len=self.__upgrade.size)
+    
+    fn set_connection_upgrade(inout self, connection_upgrade: Bool) -> Self:
+        self.__connection_upgrade = connection_upgrade
+        return self
+    
+    fn connection_upgrade(self) -> Bool:
+        return self.__connection_upgrade
+    
+    fn set_sec_websocket_key(inout self, sec_websocket_key: Bytes) -> Self:
+        self.__sec_websocket_key = sec_websocket_key
+        return self
+    
+    fn sec_websocket_key(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__sec_websocket_key.unsafe_ptr(), len=self.__sec_websocket_key.size)
+    
+    fn set_sec_websocket_version(inout self, sec_websocket_version: Bytes) -> Self:
+        self.__sec_websocket_version = sec_websocket_version
+        return self
+    
+    fn sec_websocket_version(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__sec_websocket_version.unsafe_ptr(), len=self.__sec_websocket_version.size)
 
     fn headers(self) -> String:
         return String(self.raw_headers)
@@ -382,6 +470,9 @@ struct ResponseHeader:
     var __server: Bytes
     var __trailer: Bytes
     var raw_headers: Bytes
+    var __upgrade: Bytes
+    var __connection_upgrade: Bool
+    var __sec_websocket_accept: Bytes
 
     fn __init__(
         inout self,
@@ -399,6 +490,9 @@ struct ResponseHeader:
         self.__server = Bytes()
         self.__trailer = Bytes()
         self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
     
     fn __init__(
         inout self,
@@ -417,6 +511,9 @@ struct ResponseHeader:
         self.__server = Bytes()
         self.__trailer = Bytes()
         self.raw_headers = raw_headers
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
 
     fn __init__(
         inout self,
@@ -437,6 +534,9 @@ struct ResponseHeader:
         self.__server = Bytes()
         self.__trailer = Bytes()
         self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
     
     fn __init__(
         inout self,
@@ -458,6 +558,9 @@ struct ResponseHeader:
         self.__server = Bytes()
         self.__trailer = Bytes()
         self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
 
     fn __init__(
         inout self,
@@ -479,6 +582,9 @@ struct ResponseHeader:
         self.__server = Bytes()
         self.__trailer = Bytes()
         self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
 
     fn __init__(
         inout self,
@@ -508,6 +614,47 @@ struct ResponseHeader:
         self.__server = server
         self.__trailer = trailer
         self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
+    
+    fn __init__(
+        inout self,
+        disable_normalization: Bool,
+        no_http_1_1: Bool,
+        connection_close: Bool,
+        status_code: Int,
+        status_message: Bytes,
+        protocol: Bytes,
+        content_length: Int,
+        content_length_bytes: Bytes,
+        content_type: Bytes,
+        content_encoding: Bytes,
+        server: Bytes,
+        trailer: Bytes,
+        upgrade: Bytes,
+        connection_upgrade: Bool,
+        sec_websocket_accept: Bytes,
+    ) -> None:
+        self.disable_normalization = disable_normalization
+        self.no_http_1_1 = no_http_1_1
+        self.__connection_close = connection_close
+        self.__status_code = status_code
+        self.__status_message = status_message
+        self.__protocol = protocol
+        self.__content_length = content_length
+        self.__content_length_bytes = content_length_bytes
+        self.__content_type = content_type
+        self.__content_encoding = content_encoding
+        self.__server = server
+        self.__trailer = trailer
+        self.raw_headers = Bytes()
+        self.__upgrade = Bytes()
+        self.__connection_upgrade = False
+        self.__sec_websocket_accept = Bytes()
+        self.__upgrade = upgrade
+        self.__connection_upgrade = connection_upgrade
+        self.__sec_websocket_accept = sec_websocket_accept
 
     fn set_status_code(inout self, code: Int) -> Self:
         self.__status_code = code
@@ -619,6 +766,27 @@ struct ResponseHeader:
 
     fn connection_close(self) -> Bool:
         return self.__connection_close
+    
+    fn set_upgrade(inout self, upgrade: Bytes) -> Self:
+        self.__upgrade = upgrade
+        return self
+    
+    fn upgrade(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__upgrade.unsafe_ptr(), len=self.__upgrade.size)
+    
+    fn set_connection_upgrade(inout self, connection_upgrade: Bool) -> Self:
+        self.__connection_upgrade = connection_upgrade
+        return self
+    
+    fn connection_upgrade(self) -> Bool:
+        return self.__connection_upgrade
+    
+    fn set_sec_websocket_accept(inout self, sec_websocket_accept: Bytes) -> Self:
+        self.__sec_websocket_accept = sec_websocket_accept
+        return self
+    
+    fn sec_websocket_accept(self) -> BytesView:
+        return BytesView(unsafe_ptr=self.__sec_websocket_accept.unsafe_ptr(), len=self.__sec_websocket_accept.size)
 
     fn headers(self) -> String:
         return String(self.raw_headers)

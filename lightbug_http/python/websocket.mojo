@@ -1,6 +1,10 @@
 from collections import Dict, Optional
 from python import Python, PythonObject
 from time import sleep
+from base64 import b64encode
+from lightbug_http.io.bytes import bytes_equal, bytes
+from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader, ResponseUpgrade
+from lightbug_http.net import Connection
 
 # This is a "magic" GUID (Globally Unique Identifier) string that is concatenated 
 # with the value of the Sec-WebSocket-Key header in order to securely conduct the websocket handshake
@@ -16,101 +20,65 @@ alias BYTE_1_SIZE_ONE_BYTE:UInt8 = 125
 alias BYTE_1_SIZE_TWO_BYTES:UInt8 = 126
 alias BYTE_1_SIZE_EIGHT_BYTES:UInt8 = 127
 
-fn websocket[
-    host: StringLiteral = "127.0.0.1", 
-    port: Int = 8000
-]()->Optional[PythonObject]:
+@value
+struct WebSocketUpgrade(ResponseUpgrade):
     """
-    1. Open server
-    2. Upgrade first HTTP client to websocket
-    3. Close server 
-    4. return the websocket.
+    Upgrades an HTTP connection to a WebSocket connection and returns the response.
     """
+    fn upgrade(inout self) -> Connection:
+        var connection = Connection()
+        return connection
 
-    var client = PythonObject(None)
-    try:
-        var py_socket = Python.import_module("socket")
-        var py_base64 = Python.import_module("base64")
-        var py_sha1 = Python.import_module("hashlib").sha1
-        var server = py_socket.socket(py_socket.AF_INET, py_socket.SOCK_STREAM)
-        server.setsockopt(py_socket.SOL_SOCKET, py_socket.SO_REUSEADDR, 1)
-        server.bind((host, port))
-        server.listen(1)
-        print("ws://"+str(host)+":"+str(port))
-        
-        client = server.accept()
-        # Only localhost !
-        if client[1][0] != '127.0.0.1': 
-            print("Exit, request from: "+str(client[1][0]))
-            client.close()
-            server.close()
-            return None
-        
-        # Close server
-        server.close()
-        
-        # Get request
-        var request = client[0].recv(1024).decode()
-        var request_header = Dict[String,String]()
-        print(request.__repr__())
-        
-        var end_header = int(request.find("\r\n\r\n"))
-        if end_header == -1:
-            raise "end_header == -1, no \\r\\n\\r\\n"
-        var request_split = str(request)[:end_header].split("\r\n")
-        if len(request_split) == 0: 
-            raise "error: len(request_split) == 0"
-        if request_split[0] != "GET / HTTP/1.1":
-            raise "request_split[0] not GET / HTTP/1.1"
-        _ = request_split.pop(0)
+@value
+struct WebSocketService(HTTPService):
+    """
+    Upgrades an HTTP connection to a WebSocket connection and returns the response.
+    """
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        if not req.header.connection_upgrade():
+            raise Error("Request headers do not contain an upgrade header")
 
-        if len(request_split) == 0: 
-            raise "error: no headers"
-        
-        for e in request_split: 
-            var header_pos = e[].find(":")
-            if header_pos == -1:
-                raise "header_pos == -1"
-            if len(e[]) == header_pos+2:
-                raise "len(e[]) == header_pos+2"
-            var k = e[][:header_pos]
-            var v = e[][header_pos+2:]
-            request_header[k^]=v^
-        
-        for h in request_header:
-            print(h[], request_header[h[]])
-        
-        #Upgrade to websocket
-        if "Upgrade" not in request_header:
-            raise "Not upgrade to websocket"
+        if not bytes_equal(req.header.upgrade(), String("websocket").as_bytes()):
+            raise Error("Request upgrade do not contain an upgrade to websocket")
 
-        if request_header["Upgrade"] != "websocket":
-            raise "Not an upgrade to websocket"
-        
-        if "Sec-WebSocket-Key" not in request_header:
-            raise "No Sec-WebSocket-Key for upgrading to websocket"
-        
-        var accept = PythonObject(request_header["Sec-WebSocket-Key"])
-        accept += PythonObject(MAGIC_CONSTANT)
-        accept = accept.encode()
-        accept = py_base64.b64encode(py_sha1(accept).digest())
-        
-        var response = String("HTTP/1.1 101 Switching Protocols\r\n")
-        response += "Upgrade: websocket\r\n"
-        response += "Connection: Upgrade\r\n"
-        response += "Sec-WebSocket-Accept: "
-        response += str(accept.decode("utf-8")) 
-        response += String("\r\n\r\n")
-        
-        print(response)
-        
-        client[0].send(PythonObject(response).encode())
-        return client^
+        if not req.header.sec_websocket_key():
+            raise Error("No Sec-WebSocket-Key for upgrading to websocket")
 
-    except e:
-        print(e)
-    
-    return None
+        var accept = String(req.header.sec_websocket_key()) + MAGIC_CONSTANT
+        # var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
+        var accept_encoded = b64encode(accept)
+
+        # var client = PythonObject(None)
+        # var py_socket = Python.import_module("socket")
+        # var py_base64 = Python.import_module("base64")
+        # var py_sha1 = Python.import_module("hashlib").sha1
+        # var server = py_socket.socket(py_socket.AF_INET, py_socket.SOCK_STREAM)
+        # server.setsockopt(py_socket.SOL_SOCKET, py_socket.SO_REUSEADDR, 1)
+        # server.bind((host, port))
+        # server.listen(1)
+        # print("ws://"+str(host)+":"+str(port))
+        
+        # client = server.accept()
+        # # Only localhost !
+        # if client[1][0] != '127.0.0.1': 
+        #     print("Exit, request from: "+str(client[1][0]))
+        #     client.close()
+        #     server.close()
+        #     return None
+        
+        # # Close server
+        # server.close()
+
+        var header = ResponseHeader(101, bytes("Switching Protocols"), bytes("text/plain"))
+
+        _ = header.set_upgrade(bytes("websocket"))
+        _ = header.set_connection_upgrade(True)
+        # var accept_encoded_utf = str(accept.decode("utf-8"))
+        _ = header.set_sec_websocket_accept(bytes(accept_encoded))
+
+        var response = HTTPResponse(header, bytes(""))
+                
+        return response
 
 fn read_byte(inout ws: PythonObject)raises->UInt8:
     return UInt8(int(ws[0].recv(1)[0]))
