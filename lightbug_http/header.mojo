@@ -653,9 +653,8 @@ struct ResponseHeader:
             raise Error("Failed to read response header, empty buffer")
 
         var end_of_first_line = self.parse_first_line(buf)
-
+        # TODO: Use Span instead of list here
         var header_len = self.read_raw_headers(buf[end_of_first_line:])
-
         self.parse_headers(buf[end_of_first_line:])
         
         return end_of_first_line + header_len
@@ -731,7 +730,8 @@ struct ResponseHeader:
             if compare_case_insensitive(key, TRAILER_HEADER):
                 _ = self.set_trailer_bytes(value)
     
-    fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
+    # TODO: Can probably use a non-owning Span here, instead of slicing a new List to pass to this function.
+    fn read_raw_headers(inout self, owned buf: Bytes) raises -> Int:
         var n = index_byte(buf, nChar_byte)
         
         if n == -1:
@@ -743,16 +743,15 @@ struct ResponseHeader:
             return n + 1
         
         n += 1
-        var b = buf
         var m = n
         while True:
-            b = b[m:]
-            m = index_byte(b, nChar_byte)
+            buf = buf[m:]
+            m = index_byte(buf, nChar_byte)
             if m == -1:
                 raise Error("Failed to find a newline in headers")
             m += 1
             n += m
-            if m == 2 and (b[0] == rChar_byte) or m == 1:
+            if m == 2 and (buf[0] == rChar_byte) or m == 1:
                 self.raw_headers = self.raw_headers + buf[:n]
                 return n
 

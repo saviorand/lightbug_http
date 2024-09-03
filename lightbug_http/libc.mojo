@@ -687,14 +687,7 @@ fn send(
         flags: Flags to control the behaviour of the function.
     Returns: The number of bytes sent or -1 in case of failure.
     """
-    return external_call[
-        "send",
-        c_ssize_t,  # FnName, RetType
-        c_int,
-        UnsafePointer[c_void],
-        c_size_t,
-        c_int,  # Args
-    ](socket, buffer, length, flags)
+    return external_call["send", c_ssize_t](socket, buffer, length, flags)
 
 
 fn shutdown(socket: c_int, how: c_int) -> c_int:

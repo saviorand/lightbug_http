@@ -12,7 +12,7 @@ from lightbug_http.net import (
     default_tcp_keep_alive,
     get_peer_name,
 )
-from lightbug_http.strings import NetworkType
+from lightbug_http.strings import NetworkType, to_string
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
 from ..libc import (
@@ -48,6 +48,7 @@ from ..libc import (
 )
 from sys.info import os_is_macos
 from time import sleep
+
 
 trait AnAddrInfo:
     fn get_ip_address(self, host: String) raises -> in_addr:
@@ -238,15 +239,19 @@ struct SysConnection(Connection):
             return bytes_recv
         return bytes_recv
 
-    fn write(self, msg: String) raises -> Int:
-        if send(self.fd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
+    fn write(self, owned msg: String) raises -> Int:
+        var bytes_sent = send(self.fd, msg.unsafe_ptr(), len(msg), 0)
+        if bytes_sent == -1:
             print("Failed to send response")
-        return len(msg)
+        return bytes_sent
     
     fn write(self, buf: Bytes) raises -> Int:
-        if send(self.fd, to_char_ptr(buf).bitcast[c_void](), len(buf), 0) == -1:
+        var content = to_string(buf)
+        var bytes_sent = send(self.fd, content.unsafe_ptr(), len(content), 0)
+        if bytes_sent == -1:
             print("Failed to send response")
-        return len(buf)
+        _ = content
+        return bytes_sent
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)

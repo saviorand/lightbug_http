@@ -392,7 +392,7 @@ fn encode(res: HTTPResponse) -> Bytes:
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
-    # _ = builder.write_string("Date: ")
+    _ = builder.write_string("Date: 12345")
     # _ = builder.write_string(current_time)
 
     _ = builder.write_string(rChar)
