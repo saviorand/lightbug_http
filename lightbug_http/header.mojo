@@ -6,10 +6,24 @@ from lightbug_http.strings import (
     strSlash,
     strMethodGet,
     rChar,
+    rChar_byte,
     nChar,
+    nChar_byte,
     colonChar,
+    colonChar_byte,
     whitespace,
-    tab
+    whitespace_byte,
+    tab,
+    tab_byte,
+    h_byte,
+    H_byte,
+    c_byte,
+    C_byte,
+    u_byte,
+    U_byte,
+    t_byte,
+    T_byte,
+    to_string
 )
 from lightbug_http.io.bytes import Bytes, Byte, bytes_equal, bytes, index_byte, compare_case_insensitive, next_line, last_index_byte
 
@@ -260,8 +274,6 @@ struct RequestHeader:
 
         var header_len = self.read_raw_headers(buf[end_of_first_line:])
 
-        print(List[UInt8, True](buf[end_of_first_line:]).__str__())
-        print(String(buf[end_of_first_line:]))
         self.parse_headers(buf[end_of_first_line:])
         
         return end_of_first_line + header_len
@@ -275,25 +287,24 @@ struct RequestHeader:
             except e:
                 raise Error("Failed to read first line from request, " + e.__str__())
         
-        var first_whitespace = index_byte(b, whitespace.as_bytes_slice()[0])
+        var first_whitespace = index_byte(b, whitespace_byte)
         if first_whitespace <= 0:
-            raise Error("Could not find HTTP request method in request line: " + String(b))
+            raise Error("Could not find HTTP request method in request line: " + to_string(b))
         
+        # Method is the start of the first line up to the first whitespace
         _ = self.set_method_bytes(b[:first_whitespace])
 
-        var last_whitespace = last_index_byte(b, whitespace.as_bytes_slice()[0]) + 1
-
+        # TODO: I don't think this is handling the trailing \r\n correctly
+        var last_whitespace = last_index_byte(b, whitespace_byte) + 1
         if last_whitespace < 0:
-            raise Error("Could not find request target or HTTP version in request line: " + String(b))
+            raise Error("Could not find request target or HTTP version in request line: " + to_string(b))
         elif last_whitespace == 0:
-            raise Error("Request URI is empty: " + String(b))
-        var proto = b[last_whitespace :-1] # TODO: Trying -1 for now, it includes the trailing \r
+            raise Error("Request URI is empty: " + to_string(b))
+        var proto = b[last_whitespace:-1] # -1 to shave off trailing \r
         if len(proto) != len(strHttp11):
-            print(len(proto), len(strHttp11))
-            proto.append(0)
-            raise Error("Invalid protocol, HTTP version not supported: " + String(proto))
+            raise Error("Invalid protocol, HTTP version not supported: " + to_string(proto))
         _ = self.set_protocol_bytes(proto)
-        _ = self.set_request_uri_bytes(b[first_whitespace+1:last_whitespace])
+        _ = self.set_request_uri_bytes(b[first_whitespace+1:last_whitespace-1]) # -1 shave off trailing \r
         
         return len(buf) - len(b_next)
        
@@ -307,26 +318,25 @@ struct RequestHeader:
                 self.parse_header(s.key(), s.value())
     
     fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
-        if index_byte(key, colonChar.as_bytes_slice()[0]) == -1 or index_byte(key, tab.as_bytes_slice()[0]) != -1:
-            raise Error("Invalid header key: " + String(key))
+        if index_byte(key, tab_byte) != -1:
+            raise Error("Invalid header key: " + to_string(key))
 
         var key_first = key[0].__xor__(0x20)
-
-        if key_first == "h".as_bytes_slice()[0] or key_first == "H".as_bytes_slice()[0]:
+        if key_first == h_byte or key_first == H_byte:
             if compare_case_insensitive(key, "host".as_bytes_slice()):
                 _ = self.set_host_bytes(value)
                 return
-        elif key_first == "u".as_bytes_slice()[0] or key_first == "U".as_bytes_slice()[0]:
+        elif key_first == u_byte or key_first == U_byte:
             if compare_case_insensitive(key, "user-agent".as_bytes_slice()):
                 _ = self.set_user_agent_bytes(value)
                 return
-        elif key_first == "c".as_bytes_slice()[0] or key_first == "C".as_bytes_slice()[0]:
+        elif key_first == c_byte or key_first == C_byte:
             if compare_case_insensitive(key, "content-type".as_bytes_slice()):
                 _ = self.set_content_type_bytes(value)
                 return
             if compare_case_insensitive(key, "content-length".as_bytes_slice()):
                 if self.content_length() != -1:
-                    _ = self.set_content_length(atol(value))
+                    _ = self.set_content_length(atol(to_string(value)))
                 return
             if compare_case_insensitive(key, "connection".as_bytes_slice()):
                 if compare_case_insensitive(value, "close".as_bytes_slice()):
@@ -334,7 +344,7 @@ struct RequestHeader:
                 else:
                     _ = self.reset_connection_close()
                 return
-        elif key_first == "t".as_bytes_slice()[0] or key_first == "T".as_bytes_slice()[0]:
+        elif key_first == t_byte or key_first == T_byte:
             if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
                 _ = self.set_transfer_encoding_bytes(value)
                 return
@@ -346,12 +356,12 @@ struct RequestHeader:
         return
 
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
-        var n = index_byte(buf, nChar.as_bytes_slice()[0])
+        var n = index_byte(buf, nChar_byte)
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
             raise Error("Failed to find a newline in headers")
         
-        if n == 0 or (n == 1 and (buf[0] == rChar.as_bytes_slice()[0])):
+        if n == 0 or (n == 1 and (buf[0] == rChar_byte)):
             # empty line -> end of headers
             return n + 1
         
@@ -360,15 +370,14 @@ struct RequestHeader:
         var m = n
         while True:
             b = b[m:]
-            m = index_byte(b, nChar.as_bytes_slice()[0])
+            m = index_byte(b, nChar_byte)
             if m == -1:
                 raise Error("Failed to find a newline in headers")
             m += 1
             n += m
-            if m == 2 and (b[0] == rChar.as_bytes_slice()[0]) or m == 1:
+            if m == 2 and (b[0] == rChar_byte) or m == 1:
                 self.raw_headers = self.raw_headers + buf[:n]
                 return n
-
 
 
 @value
@@ -512,6 +521,10 @@ struct ResponseHeader:
         self.__server = server
         self.__trailer = trailer
         self.raw_headers = Bytes()
+    
+    fn set_status_code_bytes(inout self, owned code: Bytes) raises -> Self:
+        self.__status_code = atol(to_string(code^))
+        return self
 
     fn set_status_code(inout self, code: Int) -> Self:
         self.__status_code = code
@@ -522,7 +535,7 @@ struct ResponseHeader:
             return statusOK
         return self.__status_code
 
-    fn set_status_message(inout self, message: Bytes) -> Self:
+    fn set_status_message_bytes(inout self, message: Bytes) -> Self:
         self.__status_message = message
         return self
     
@@ -657,20 +670,22 @@ struct ResponseHeader:
             except e:
                 raise Error("Failed to read first line from response, " + e.__str__())
         
-        var first_whitespace = index_byte(b, whitespace.as_bytes_slice()[0])
+        var first_whitespace = index_byte(b, whitespace_byte)
         if first_whitespace <= 0:
-            raise Error("Could not find HTTP version in response line: " + String(b))
-            
-        _ = self.set_protocol(b[:first_whitespace+2])
+            raise Error("Could not find HTTP version in response line: " + to_string(b))
         
-        var end_of_status_code = first_whitespace+5 # status code is always 3 digits, this calculation includes null terminator
+        # Up to the first whitespace is the protocol
+        _ = self.set_protocol_bytes(b[:first_whitespace])
+        
+        # From first whitespace + 1 to first whitespace + 4 is the status code (status code is always 3 digits)
+        var end_of_status_code = first_whitespace + 4
+        _ = self.set_status_code_bytes(b[first_whitespace + 1 : end_of_status_code])
 
-        var status_code = atol(b[first_whitespace+1:end_of_status_code])
-        _ = self.set_status_code(status_code)
-
-        var status_text = b[end_of_status_code :]
+        # Status message is from the end of the status code + 1 (next whitespace)
+        # to the end of the line -1 to shave off the trailing \r.
+        var status_text = b[end_of_status_code+1:-1]
         if len(status_text) > 1:
-            _ = self.set_status_message(status_text)   
+            _ = self.set_status_message_bytes(status_text)   
 
         return len(buf) - len(b_next)
 
@@ -684,12 +699,11 @@ struct ResponseHeader:
                 self.parse_header(s.key(), s.value())
     
     fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
-        if index_byte(key, colonChar.as_bytes_slice()[0]) == -1 or index_byte(key, tab.as_bytes_slice()[0]) != -1:
-            raise Error("Invalid header key: " + String(key))
+        if index_byte(key, tab_byte) != -1:
+            raise Error("Invalid header key: " + to_string(key))
         
         var key_first = key[0].__xor__(0x20)
-
-        if key_first == "c".as_bytes_slice()[0] or key_first == "C".as_bytes_slice()[0]:
+        if key_first == c_byte or key_first == C_byte:
             if compare_case_insensitive(key, "content-type".as_bytes_slice()):
                 _ = self.set_content_type_bytes(value)
                 return
@@ -698,9 +712,7 @@ struct ResponseHeader:
                 return
             if compare_case_insensitive(key, "content-length".as_bytes_slice()):
                 if self.content_length() != -1:
-                    var content_length = value
-                    _ = self.set_content_length(atol(content_length))
-                    _ = self.set_content_length_bytes(content_length)
+                    _ = self.set_content_length(atol(to_string(value)))
                 return
             if compare_case_insensitive(key, "connection".as_bytes_slice()):
                 if compare_case_insensitive(value, "close".as_bytes_slice()):
@@ -712,7 +724,7 @@ struct ResponseHeader:
             if compare_case_insensitive(key, "server".as_bytes_slice()):
                 _ = self.set_server_bytes(value)
                 return
-        elif key_first == "t".as_bytes_slice()[0] or key_first == "T".as_bytes_slice()[0]:
+        elif key_first == t_byte or key_first == T_byte:
             if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
                 if not compare_case_insensitive(value, "identity".as_bytes_slice()):
                     _ = self.set_content_length(-1)
@@ -721,13 +733,13 @@ struct ResponseHeader:
                 _ = self.set_trailer_bytes(value)
     
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:
-        var n = index_byte(buf, nChar.as_bytes_slice()[0])
+        var n = index_byte(buf, nChar_byte)
         
         if n == -1:
             self.raw_headers = self.raw_headers[:0]
             raise Error("Failed to find a newline in headers")
         
-        if n == 0 or (n == 1 and (buf[0] == rChar.as_bytes_slice()[0])):
+        if n == 0 or (n == 1 and (buf[0] == rChar_byte)):
             # empty line -> end of headers
             return n + 1
         
@@ -736,12 +748,12 @@ struct ResponseHeader:
         var m = n
         while True:
             b = b[m:]
-            m = index_byte(b, nChar.as_bytes_slice()[0])
+            m = index_byte(b, nChar_byte)
             if m == -1:
                 raise Error("Failed to find a newline in headers")
             m += 1
             n += m
-            if m == 2 and (b[0] == rChar.as_bytes_slice()[0]) or m == 1:
+            if m == 2 and (b[0] == rChar_byte) or m == 1:
                 self.raw_headers = self.raw_headers + buf[:n]
                 return n
 
@@ -815,12 +827,12 @@ struct headerScanner:
         
         var b_len = len(self.__b)
 
-        if b_len >= 2 and (self.__b[0] == rChar.as_bytes_slice()[0]) and (self.__b[1] == nChar.as_bytes_slice()[0]):
+        if b_len >= 2 and (self.__b[0] == rChar_byte) and (self.__b[1] == nChar_byte):
             self.set_b(self.__b[2:])
             self.set_subslice_len(2)
             return False
         
-        if b_len >= 1 and (self.__b[0] == nChar.as_bytes_slice()[0]):
+        if b_len >= 1 and (self.__b[0] == nChar_byte):
             self.set_b(self.__b[1:])
             self.set_subslice_len(self.subslice_len() + 1)
             return False
@@ -830,8 +842,8 @@ struct headerScanner:
             colon = self.next_colon()
             self.set_next_colon(-1)
         else:
-            colon = index_byte(self.__b, colonChar.as_bytes_slice()[0])
-            var newline = index_byte(self.__b, nChar.as_bytes_slice()[0])
+            colon = index_byte(self.__b, colonChar_byte)
+            var newline = index_byte(self.__b, nChar_byte)
             if newline < 0:
                 raise Error("Invalid header, did not find a newline at the end of the header")
             if newline < colon:
@@ -840,9 +852,9 @@ struct headerScanner:
             raise Error("Invalid header, did not find a colon")
         
         var jump_to = colon + 1
-        self.set_key(self.__b[:jump_to])
+        self.set_key(self.__b[:colon])
 
-        while len(self.__b) > jump_to and (self.__b[jump_to] == whitespace.as_bytes_slice()[0]):
+        while len(self.__b) > jump_to and (self.__b[jump_to] == whitespace_byte):
             jump_to += 1
             self.set_next_line(self.next_line() - 1)
         
@@ -853,7 +865,7 @@ struct headerScanner:
             jump_to = self.next_line()
             self.set_next_line(-1)
         else:
-            jump_to = index_byte(self.__b, nChar.as_bytes_slice()[0])
+            jump_to = index_byte(self.__b, nChar_byte)
         if jump_to < 0:
             raise Error("Invalid header, did not find a newline")
         
@@ -862,9 +874,9 @@ struct headerScanner:
         self.set_subslice_len(self.subslice_len() + jump_to)
         self.set_b(self.__b[jump_to:])
 
-        if jump_to > 0 and (self.value()[jump_to-1] == rChar.as_bytes_slice()[0]):
+        if jump_to > 0 and (self.value()[jump_to-1] == rChar_byte):
             jump_to -= 1
-        while jump_to > 0 and (self.value()[jump_to-1] == whitespace.as_bytes_slice()[0]):
+        while jump_to > 0 and (self.value()[jump_to-1] == whitespace_byte):
             jump_to -= 1
         self.set_value(self.value()[:jump_to])
         

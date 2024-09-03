@@ -1,3 +1,4 @@
+from utils import Span
 from lightbug_http.io.bytes import Bytes
 
 alias strSlash = "/"
@@ -11,12 +12,26 @@ alias strHttp10 = "HTTP/1.0"
 alias strMethodGet = "GET"
 
 alias rChar = "\r"
+alias rChar_byte = ord(rChar)
 alias nChar = "\n"
+alias nChar_byte = ord(nChar)
 alias colonChar = ":"
+alias colonChar_byte = ord(colonChar)
+
+alias h_byte = ord("h")
+alias H_byte = ord("H")
+alias c_byte = ord("c")
+alias C_byte = ord("C")
+alias u_byte = ord("u")
+alias U_byte = ord("U")
+alias t_byte = ord("t")
+alias T_byte = ord("T")
 
 alias empty_string = ""
 alias whitespace = " "
+alias whitespace_byte = ord(whitespace)
 alias tab = "\t"
+alias tab_byte = ord(tab)
 
 @value
 struct NetworkType:
@@ -74,3 +89,26 @@ struct Message:
 
     alias empty = Message("")
     alias http_start = Message("http.response.start")
+
+
+fn to_string(b: Span[UInt8]) -> String:
+    """Creates a String from a copy of the provided Span of bytes.
+
+    Args:
+        b: The Span of bytes to convert to a String.
+    """
+    var bytes = List[UInt8, True](b)
+    bytes.append(0)
+    return String(bytes^)
+
+
+fn to_string(owned bytes: List[UInt8, True]) -> String:
+    """Creates a String from the provided List of bytes.
+    If you do not transfer ownership of the List, the List will be copied.
+    
+    Args:
+        bytes: The List of bytes to convert to a String.
+    """
+    if bytes[-1] != 0:
+        bytes.append(0)
+    return String(bytes^)
