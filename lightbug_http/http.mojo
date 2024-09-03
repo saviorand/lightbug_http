@@ -15,6 +15,7 @@ from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rCha
 alias OK_MESSAGE = String("OK").as_bytes()
 alias NOT_FOUND_MESSAGE = String("Not Found").as_bytes()
 alias TEXT_PLAIN_CONTENT_TYPE = String("text/plain").as_bytes()
+alias OCTET_STREAM_CONTENT_TYPE = String("application/octet-stream").as_bytes()
 
 trait Request:
     fn __init__(inout self, uri: URI):
@@ -197,7 +198,7 @@ struct HTTPResponse(Response):
         self.header = ResponseHeader(
             200,
             OK_MESSAGE,
-            "application/octet-stream".as_bytes_slice(),
+            OCTET_STREAM_CONTENT_TYPE,
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
