@@ -1,10 +1,8 @@
 from python import PythonObject
-from utils.span import Span
 from lightbug_http.strings import nChar, rChar
 
 alias Byte = UInt8
 alias Bytes = List[Byte, True]
-alias BytesView = Span[is_mutable=False, T=Byte, lifetime=ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
     var buf = String(s)._buffer
