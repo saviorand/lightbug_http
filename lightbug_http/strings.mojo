@@ -26,6 +26,8 @@ alias u_byte = ord("u")
 alias U_byte = ord("U")
 alias t_byte = ord("t")
 alias T_byte = ord("T")
+alias s_byte = ord("s")
+alias S_byte = ord("S")
 
 alias empty_string = ""
 alias whitespace = " "

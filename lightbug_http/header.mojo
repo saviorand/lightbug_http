@@ -23,11 +23,25 @@ from lightbug_http.strings import (
     U_byte,
     t_byte,
     T_byte,
+    s_byte,
+    S_byte,
     to_string
 )
 from lightbug_http.io.bytes import Bytes, Byte, bytes_equal, bytes, index_byte, compare_case_insensitive, next_line, last_index_byte
 
 alias statusOK = 200
+alias CONTENT_TYPE_HEADER = String("content-type").as_bytes()
+alias CONTENT_LENGTH_HEADER = String("content-length").as_bytes()
+alias CONTENT_ENCODING_HEADER = String("content-encoding").as_bytes()
+alias CONNECTION_HEADER = String("connection").as_bytes()
+alias HOST_HEADER = String("host").as_bytes()
+alias USER_AGENT_HEADER = String("user-agent").as_bytes()
+alias CLOSE_HEADER = String("close").as_bytes()
+alias TRANSFER_ENCODING_HEADER = String("transfer-encoding").as_bytes()
+alias TRAILER_HEADER = String("trailer").as_bytes()
+alias SERVER_HEADER = String("server").as_bytes()
+alias IDENTITY_HEADER = String("identity").as_bytes()
+
 
 @value
 struct RequestHeader:
@@ -35,7 +49,6 @@ struct RequestHeader:
     var no_http_1_1: Bool
     var __connection_close: Bool
     var __content_length: Int
-    var __content_length_bytes: Bytes
     var __method: Bytes
     var __request_uri: Bytes
     var proto: Bytes
@@ -51,7 +64,6 @@ struct RequestHeader:
         self.no_http_1_1 = False
         self.__connection_close = False
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -67,7 +79,6 @@ struct RequestHeader:
         self.no_http_1_1 = False
         self.__connection_close = False
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -83,7 +94,6 @@ struct RequestHeader:
         self.no_http_1_1 = False
         self.__connection_close = False
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__method = Bytes()
         self.__request_uri = Bytes()
         self.proto = Bytes()
@@ -100,7 +110,6 @@ struct RequestHeader:
         no_http_1_1: Bool,
         connection_close: Bool,
         content_length: Int,
-        content_length_bytes: Bytes,
         method: Bytes,
         request_uri: Bytes,
         proto: Bytes,
@@ -115,7 +124,6 @@ struct RequestHeader:
         self.no_http_1_1 = no_http_1_1
         self.__connection_close = connection_close
         self.__content_length = content_length
-        self.__content_length_bytes = content_length_bytes
         self.__method = method
         self.__request_uri = request_uri
         self.proto = proto
@@ -198,8 +206,8 @@ struct RequestHeader:
         self.__content_length = content_length
         return self
 
-    fn set_content_length_bytes(inout self, content_length: Bytes) -> Self:
-        self.__content_length_bytes = content_length
+    fn set_content_length_bytes(inout self, owned content_length: Bytes) raises -> Self:
+        self.__content_length = atol(to_string(content_length^))
         return self
 
     fn set_request_uri(inout self, request_uri: String) -> Self:
@@ -271,9 +279,7 @@ struct RequestHeader:
             raise Error("Failed to read request header, empty buffer")
         
         var end_of_first_line = self.parse_first_line(buf)
-
         var header_len = self.read_raw_headers(buf[end_of_first_line:])
-
         self.parse_headers(buf[end_of_first_line:])
         
         return end_of_first_line + header_len
@@ -323,32 +329,32 @@ struct RequestHeader:
 
         var key_first = key[0].__xor__(0x20)
         if key_first == h_byte or key_first == H_byte:
-            if compare_case_insensitive(key, "host".as_bytes_slice()):
+            if compare_case_insensitive(key, HOST_HEADER):
                 _ = self.set_host_bytes(value)
                 return
         elif key_first == u_byte or key_first == U_byte:
-            if compare_case_insensitive(key, "user-agent".as_bytes_slice()):
+            if compare_case_insensitive(key, USER_AGENT_HEADER):
                 _ = self.set_user_agent_bytes(value)
                 return
         elif key_first == c_byte or key_first == C_byte:
-            if compare_case_insensitive(key, "content-type".as_bytes_slice()):
+            if compare_case_insensitive(key, CONTENT_TYPE_HEADER):
                 _ = self.set_content_type_bytes(value)
                 return
-            if compare_case_insensitive(key, "content-length".as_bytes_slice()):
+            if compare_case_insensitive(key, CONTENT_LENGTH_HEADER):
                 if self.content_length() != -1:
-                    _ = self.set_content_length(atol(to_string(value)))
+                    _ = self.set_content_length_bytes(value)
                 return
-            if compare_case_insensitive(key, "connection".as_bytes_slice()):
-                if compare_case_insensitive(value, "close".as_bytes_slice()):
+            if compare_case_insensitive(key, CONNECTION_HEADER):
+                if compare_case_insensitive(value, CLOSE_HEADER):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
         elif key_first == t_byte or key_first == T_byte:
-            if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
+            if compare_case_insensitive(key, TRANSFER_ENCODING_HEADER):
                 _ = self.set_transfer_encoding_bytes(value)
                 return
-            if compare_case_insensitive(key, "trailer".as_bytes_slice()):
+            if compare_case_insensitive(key, TRAILER_HEADER):
                 _ = self.set_trailer_bytes(value)
                 return
         if self.content_length() < 0:
@@ -389,7 +395,6 @@ struct ResponseHeader:
     var __status_message: Bytes
     var __protocol: Bytes
     var __content_length: Int
-    var __content_length_bytes: Bytes
     var __content_type: Bytes
     var __content_encoding: Bytes
     var __server: Bytes
@@ -406,7 +411,6 @@ struct ResponseHeader:
         self.__status_message = Bytes()
         self.__protocol = Bytes()
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__content_type = Bytes()
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -424,7 +428,6 @@ struct ResponseHeader:
         self.__status_message = Bytes()
         self.__protocol = Bytes()
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__content_type = Bytes()
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -444,7 +447,6 @@ struct ResponseHeader:
         self.__status_message = status_message
         self.__protocol = Bytes()
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__content_type = content_type
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -465,7 +467,6 @@ struct ResponseHeader:
         self.__status_message = status_message
         self.__protocol = Bytes()
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__content_type = content_type
         self.__content_encoding = content_encoding
         self.__server = Bytes()
@@ -486,7 +487,6 @@ struct ResponseHeader:
         self.__status_message = status_message
         self.__protocol = Bytes()
         self.__content_length = 0
-        self.__content_length_bytes = Bytes()
         self.__content_type = content_type
         self.__content_encoding = Bytes()
         self.__server = Bytes()
@@ -515,7 +515,6 @@ struct ResponseHeader:
         self.__status_message = status_message
         self.__protocol = protocol
         self.__content_length = content_length
-        self.__content_length_bytes = content_length_bytes
         self.__content_type = content_type
         self.__content_encoding = content_encoding
         self.__server = server
@@ -574,8 +573,8 @@ struct ResponseHeader:
         self.__content_length = content_length
         return self
     
-    fn set_content_length_bytes(inout self, content_length: Bytes) -> Self:
-        self.__content_length_bytes = content_length
+    fn set_content_length_bytes(inout self, owned content_length: Bytes) raises -> Self:
+        self.__content_length = atol(to_string(content_length^))
         return self
 
     fn server(self) -> Span[UInt8, __lifetime_of(self)]:
@@ -672,7 +671,7 @@ struct ResponseHeader:
         
         var first_whitespace = index_byte(b, whitespace_byte)
         if first_whitespace <= 0:
-            raise Error("Could not find HTTP version in response line: " + to_string(b))
+            raise Error("Could not find HTTP version in response line: " + to_string(b^))
         
         # Up to the first whitespace is the protocol
         _ = self.set_protocol_bytes(b[:first_whitespace])
@@ -698,38 +697,38 @@ struct ResponseHeader:
             if len(s.key()) > 0:
                 self.parse_header(s.key(), s.value())
     
-    fn parse_header(inout self, key: Bytes, value: Bytes) raises -> None:
+    fn parse_header(inout self, owned key: Bytes, owned value: Bytes) raises -> None:
         if index_byte(key, tab_byte) != -1:
-            raise Error("Invalid header key: " + to_string(key))
+            raise Error("Invalid header key: " + to_string(key^))
         
         var key_first = key[0].__xor__(0x20)
         if key_first == c_byte or key_first == C_byte:
-            if compare_case_insensitive(key, "content-type".as_bytes_slice()):
+            if compare_case_insensitive(key, CONTENT_TYPE_HEADER):
                 _ = self.set_content_type_bytes(value)
                 return
-            if compare_case_insensitive(key, "content-encoding".as_bytes_slice()):
+            if compare_case_insensitive(key, CONTENT_ENCODING_HEADER):
                 _ = self.set_content_encoding_bytes(value)
                 return
-            if compare_case_insensitive(key, "content-length".as_bytes_slice()):
+            if compare_case_insensitive(key, CONTENT_LENGTH_HEADER):
                 if self.content_length() != -1:
-                    _ = self.set_content_length(atol(to_string(value)))
+                    _ = self.set_content_length(atol(to_string(value^)))
                 return
-            if compare_case_insensitive(key, "connection".as_bytes_slice()):
-                if compare_case_insensitive(value, "close".as_bytes_slice()):
+            if compare_case_insensitive(key, CONNECTION_HEADER):
+                if compare_case_insensitive(value, CLOSE_HEADER):
                     _ = self.set_connection_close()
                 else:
                     _ = self.reset_connection_close()
                 return
-        elif key_first == "s".as_bytes_slice()[0] or key_first == "S".as_bytes_slice()[0]:
-            if compare_case_insensitive(key, "server".as_bytes_slice()):
+        elif key_first == s_byte or key_first == S_byte:
+            if compare_case_insensitive(key, SERVER_HEADER):
                 _ = self.set_server_bytes(value)
                 return
         elif key_first == t_byte or key_first == T_byte:
-            if compare_case_insensitive(key, "transfer-encoding".as_bytes_slice()):
-                if not compare_case_insensitive(value, "identity".as_bytes_slice()):
+            if compare_case_insensitive(key, TRANSFER_ENCODING_HEADER):
+                if not compare_case_insensitive(value, IDENTITY_HEADER):
                     _ = self.set_content_length(-1)
                 return
-            if compare_case_insensitive(key, "trailer".as_bytes_slice()):
+            if compare_case_insensitive(key, TRAILER_HEADER):
                 _ = self.set_trailer_bytes(value)
     
     fn read_raw_headers(inout self, buf: Bytes) raises -> Int:

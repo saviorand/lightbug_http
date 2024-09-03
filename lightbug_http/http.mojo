@@ -11,6 +11,11 @@ from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
 from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar
 
+
+alias OK_MESSAGE = String("OK").as_bytes()
+alias NOT_FOUND_MESSAGE = String("Not Found").as_bytes()
+alias TEXT_PLAIN_CONTENT_TYPE = String("text/plain").as_bytes()
+
 trait Request:
     fn __init__(inout self, uri: URI):
         ...
@@ -191,7 +196,7 @@ struct HTTPResponse(Response):
     fn __init__(inout self, body_bytes: Bytes):
         self.header = ResponseHeader(
             200,
-            "OK".as_bytes_slice(),
+            OK_MESSAGE,
             "application/octet-stream".as_bytes_slice(),
         )
         self.stream_immediate_header_flush = False
@@ -243,42 +248,42 @@ struct HTTPResponse(Response):
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body.as_bytes_slice(),
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body.as_bytes_slice(),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body.as_bytes_slice(),
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body.as_bytes_slice(),
     )
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body.as_bytes(),
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body.as_bytes(),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body.as_bytes(),
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body.as_bytes(),
     )
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), "text/plain".as_bytes_slice()), body,
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body,
     )
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes()), body,
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body,
     )
 
 fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, "OK".as_bytes_slice(), content_type.as_bytes(), content_encoding.as_bytes()), body,
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes(), content_encoding.as_bytes()), body,
     )
 
 fn NotFound(path: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(404, "Not Found".as_bytes_slice(), "text/plain".as_bytes_slice()), ("path " + path + " not found").as_bytes(),
+        ResponseHeader(404, NOT_FOUND_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), ("path " + path + " not found").as_bytes(),
     )
 
 fn encode(req: HTTPRequest) -> Bytes:
@@ -329,6 +334,7 @@ fn encode(req: HTTPRequest) -> Bytes:
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
+    # TODO: Might want to avoid creating a string then copying the bytes
     return str(builder).as_bytes()
 
 
@@ -397,9 +403,13 @@ fn encode(res: HTTPResponse) -> Bytes:
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
 
+    # TODO: Might want to avoid creating a string then copying the bytes
     return str(builder).as_bytes()
 
+
+# TODO: Maybe remove this function? Not being used.
 fn split_http_string(buf: Bytes) raises -> (String, String, String):
+    
     var request = String(buf)
     
     var request_first_line_headers_body = request.split("\r\n\r\n")
