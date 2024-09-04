@@ -223,9 +223,7 @@ struct SysServer:
             if not self.tcp_keep_alive:
                 _ = res.set_connection_close()
             
-            var res_encoded = encode(res)
-
-            _ = conn.write(res_encoded)
+            _ = conn.write(encode(res))
 
             if not self.tcp_keep_alive:
                 conn.close()

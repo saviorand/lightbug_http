@@ -57,4 +57,4 @@ struct PythonClient(Client):
         var res = self.socket.recv(1024).decode()
         _ = self.socket.close()
 
-        return HTTPResponse(bytes(res))
+        return HTTPResponse(bytes(str(res)))
