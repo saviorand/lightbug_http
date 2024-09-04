@@ -1,10 +1,8 @@
 from python import PythonObject
-from utils.span import Span
-from lightbug_http.strings import nChar, rChar
+from lightbug_http.strings import nChar, rChar, nChar_byte, rChar_byte
 
 alias Byte = UInt8
 alias Bytes = List[Byte, True]
-alias BytesView = Span[is_mutable=False, T=Byte, lifetime=ImmutableStaticLifetime]
 
 fn bytes(s: StringLiteral, pop: Bool = True) -> Bytes:
     var buf = String(s)._buffer
@@ -42,11 +40,11 @@ fn compare_case_insensitive(a: Bytes, b: Bytes) -> Bool:
     return True
 
 fn next_line(b: Bytes) raises -> (Bytes, Bytes):
-    var n_next = index_byte(b, bytes(nChar, pop=False)[0])
+    var n_next = index_byte(b, nChar_byte)
     if n_next < 0:
         raise Error("next_line: newline not found")
     var n = n_next
-    if n > 0 and (b[n-1] == bytes(rChar, pop=False)[0]):
+    if n > 0 and (b[n-1] == rChar_byte):
         n -= 1
     return (b[:n+1], b[n_next+1:])
 

@@ -38,7 +38,8 @@ def test_encode_http_request():
         )
 
     var req_encoded = encode(req)
-    testing.assert_equal(String(req_encoded), "GET / HTTP/1.1\r\nContent-Length: 12\r\nConnection: keep-alive\r\n\r\nHello world!")
+    req_encoded.append(0)
+    testing.assert_equal(String(req_encoded^), "GET / HTTP/1.1\r\nContent-Length: 12\r\nConnection: keep-alive\r\n\r\nHello world!")
 
 def test_encode_http_response():
     var res = HTTPResponse(
@@ -46,13 +47,14 @@ def test_encode_http_response():
     )
 
     var res_encoded = encode(res)
-    var res_str = String(res_encoded)
+    res_encoded.append(0)
+    var res_str = String(res_encoded^)
     
     # Since we cannot compare the exact date, we will only compare the headers until the date and the body
     var expected_full = "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type: application/octet-stream\r\nContent-Length: 13\r\nConnection: keep-alive\r\nDate: 2024-06-02T13:41:50.766880+00:00\r\n\r\nHello, World!"
     
     var expected_headers_len = 124
-    var hello_world_len = len(String("Hello, World!")) - 1 # -1 for the null terminator
+    var hello_world_len = len(String("Hello, World!"))
     var date_header_len = len(String("Date: 2024-06-02T13:41:50.766880+00:00"))
     
     var expected_split = String(expected_full).split("\r\n\r\n")
