@@ -19,23 +19,3 @@ def main():
     var server = SysServer[WebSocketServer[WebSocketPrinter]](ws)
     var handshake = WebSocketHandshake()
     server.listen_and_serve("0.0.0.0:8080", handshake)
-
-    # var handler = WebSocketUpgrade()
-    # server.listen_and_serve("0.0.0.0:8080", handler)
-
-    # var select = Python.import_module("select").select
-    # var ws = websocket()
-    # if ws:
-    #     for _ in range(32):
-    #         var res = select([ws.value()[0]],[],[],0)[0]
-    #         while len(res) == 0:
-    #             _ = send_message(ws.value(), "server waiting")
-    #             res = select([ws.value()[0]],[],[],0)[0]
-    #             print("\nwait\n")
-    #             sleep(1)
-    #         m = receive_message(ws.value())
-    #         if m:
-    #             _ = send_message(ws.value(),m.value())
-
-    # _ = ws^
-    # _ = select^
