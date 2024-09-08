@@ -2,11 +2,11 @@ from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
 from gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
-from lightbug_http.http import HTTPRequest, encode, split_http_string
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
-from lightbug_http.service import HTTPService
+from lightbug_http.service import HTTPService, UpgradeServer, NoUpgrade
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
@@ -15,12 +15,12 @@ from lightbug_http.strings import NetworkType
 alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 @value
-struct SysServer:
+struct SysServer[T: UpgradeServer = NoUpgrade]:
     """
     A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
-
     var error_handler: ErrorHandler
+    var upgrade_handler: T
 
     var name: String
     var __address: String
@@ -90,6 +90,17 @@ struct SysServer:
         self.max_requests_per_connection = 0
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
+        self.ln = SysListener()
+    
+    fn __init__(inout self, upgrade: T) raises:
+        self.error_handler = ErrorHandler()
+        self.upgrade_handler = upgrade
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = default_max_request_body_size
+        self.tcp_keep_alive = False
         self.ln = SysListener()
     
     fn address(self) -> String:

@@ -61,7 +61,7 @@ trait Request:
 
 
 trait Response:
-    fn __init__(inout self, header: ResponseHeader, body: Bytes) raises:
+    fn __init__(inout self, header: ResponseHeader, body: Bytes):
         ...
 
     fn set_status_code(inout self, status_code: Int) -> Self:
@@ -74,10 +74,6 @@ trait Response:
         ...
 
     fn connection_close(self) -> Bool:
-        ...
-
-trait ResponseUpgrade():
-    fn upgrade(inout self) -> Connection:
         ...
 
 @value
@@ -198,11 +194,11 @@ struct HTTPResponse(Response):
     var skip_reading_writing_body: Bool
     var raddr: TCPAddr
     var laddr: TCPAddr
-    var conn: SysConnection # should accept structs implementing the Connection trait
+    # var conn: SysConnection # should accept structs implementing the Connection trait
     var __is_upgrade: Bool
     var __upgrade: WebSocketUpgrade # only websocket for now, should accept any struct implementing the ResponseUpgrade trait
 
-    fn __init__(inout self, body_bytes: Bytes) raises:
+    fn __init__(inout self, body_bytes: Bytes):
         self.header = ResponseHeader(
             200,
             OK_MESSAGE,
@@ -214,11 +210,11 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        self.conn = SysConnection(TCPAddr(), TCPAddr())
+        # self.conn = SysConnection(TCPAddr(), TCPAddr())
         self.__is_upgrade = False
         self.__upgrade = WebSocketUpgrade()
 
-    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes) raises:
+    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes):
         self.header = header
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -226,11 +222,11 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        self.conn = SysConnection(TCPAddr(), TCPAddr())
+        # self.conn = SysConnection(TCPAddr(), TCPAddr())
         self.__is_upgrade = False
         self.__upgrade = WebSocketUpgrade()
     
-    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes, is_upgrade: Bool, upgrade: WebSocketUpgrade, conn: SysConnection) raises:
+    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes, is_upgrade: Bool, upgrade: WebSocketUpgrade, conn: SysConnection):
         self.header = header
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -238,7 +234,7 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        self.conn = conn
+        # self.conn = conn
         self.__is_upgrade = is_upgrade
         self.__upgrade = upgrade
     
@@ -273,12 +269,12 @@ struct HTTPResponse(Response):
         
         _ = self.set_body_bytes(body_buf_result[0])
     
-    fn set_connection(inout self, conn: SysConnection) -> Self:
-        self.conn = conn
-        return self
+    # fn set_connection(inout self, conn: SysConnection) -> Self:
+    #     self.conn = conn
+    #     return self
     
-    fn connection(self) -> SysConnection:
-        return self.conn
+    # fn connection(self) -> SysConnection:
+    #     return self.conn
 
     fn set_is_upgrade(inout self, is_upgrade: Bool) -> Self:
         self.__is_upgrade = is_upgrade
