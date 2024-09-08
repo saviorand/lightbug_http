@@ -40,70 +40,30 @@ struct WebSocketHandshake(HTTPService):
     """
     Upgrades an HTTP connection to a WebSocket connection and returns the response.
     """
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        ...
-        # initial upgrade, handshake:
-        
-        # 1) check if the request is a websocket upgrade
-        
-        # 2) if hasUpgrade {
-                  # h, ok := resp.(http.Hijacker)
-                  # c, _, err := h.Hijack()
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:        
+        if not req.header.connection_upgrade():
+            raise Error("Request headers do not contain an upgrade header")
 
-                  # 3) set status switching protocols, key etc
-                  # 4) _, err = rs.WriteTo(c)
+        if not bytes_equal(req.header.upgrade(), String("websocket").as_bytes()):
+            raise Error("Request upgrade do not contain an upgrade to websocket")
 
-                  # 5) conn := acquireConn(c)
-                  # conn.ctx = ctx
-                  # if s.openHandler != nil {
-                  #    s.openHandler(conn)
-                  #   }
-                  # 6) s.serveConn(conn)
-        
-        # if not req.header.connection_upgrade():
-        #     raise Error("Request headers do not contain an upgrade header")
+        if not req.header.sec_websocket_key():
+            raise Error("No Sec-WebSocket-Key for upgrading to websocket")
 
-        # if not bytes_equal(req.header.upgrade(), String("websocket").as_bytes()):
-        #     raise Error("Request upgrade do not contain an upgrade to websocket")
+        var accept = String(req.header.sec_websocket_key()) + MAGIC_CONSTANT
+        # var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
+        var accept_encoded = b64encode(accept)
 
-        # if not req.header.sec_websocket_key():
-        #     raise Error("No Sec-WebSocket-Key for upgrading to websocket")
+        var header = ResponseHeader(101, bytes("Switching Protocols"), bytes("text/plain"))
 
-        # var accept = String(req.header.sec_websocket_key()) + MAGIC_CONSTANT
-        # # var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
-        # var accept_encoded = b64encode(accept)
+        _ = header.set_upgrade(bytes("websocket"))
+        _ = header.set_connection_upgrade(True)
+        # var accept_encoded_utf = str(accept.decode("utf-8"))
+        _ = header.set_sec_websocket_accept(bytes(accept_encoded))
 
-        # # var client = PythonObject(None)
-        # # var py_socket = Python.import_module("socket")
-        # # var py_base64 = Python.import_module("base64")
-        # # var py_sha1 = Python.import_module("hashlib").sha1
-        # # var server = py_socket.socket(py_socket.AF_INET, py_socket.SOCK_STREAM)
-        # # server.setsockopt(py_socket.SOL_SOCKET, py_socket.SO_REUSEADDR, 1)
-        # # server.bind((host, port))
-        # # server.listen(1)
-        # # print("ws://"+str(host)+":"+str(port))
-        
-        # # client = server.accept()
-        # # # Only localhost !
-        # # if client[1][0] != '127.0.0.1': 
-        # #     print("Exit, request from: "+str(client[1][0]))
-        # #     client.close()
-        # #     server.close()
-        # #     return None
-        
-        # # # Close server
-        # # server.close()
-
-        # var header = ResponseHeader(101, bytes("Switching Protocols"), bytes("text/plain"))
-
-        # _ = header.set_upgrade(bytes("websocket"))
-        # _ = header.set_connection_upgrade(True)
-        # # var accept_encoded_utf = str(accept.decode("utf-8"))
-        # _ = header.set_sec_websocket_accept(bytes(accept_encoded))
-
-        # var response = HTTPResponse(header, bytes(""))
+        var response = HTTPResponse(header, bytes(""))
                 
-        # return response
+        return response
 
 fn read_byte(inout ws: PythonObject)raises->UInt8:
     return UInt8(int(ws[0].recv(1)[0]))
