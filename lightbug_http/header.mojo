@@ -222,6 +222,9 @@ struct RequestHeader:
         if len(self.__request_uri) <= 1:
             return Span[UInt8, __lifetime_of(self)](unsafe_ptr=strSlash.unsafe_ptr(), len=len(strSlash))
         return Span[UInt8, __lifetime_of(self)](self.__request_uri)
+    
+    fn request_uri_str(self) -> String:
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8=self.request_uri())
 
     fn set_transfer_encoding(inout self, transfer_encoding: String) -> Self:
         self.__transfer_encoding = transfer_encoding.as_bytes()
