@@ -10,12 +10,15 @@ trait WebSocketService(Copyable):
         ...
 
 trait UpgradeServer(Copyable):
+    fn func(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
+        ...
+
     fn can_upgrade(self) -> Bool: # temporary until we can assert trait types
         ...
 
 @value
 struct NoUpgrade(UpgradeServer):
-    fn on_message(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
+    fn func(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
         ...
     
     fn can_upgrade(self) -> Bool:

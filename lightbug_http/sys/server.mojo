@@ -230,11 +230,16 @@ struct SysServer[T: UpgradeServer = NoUpgrade]:
                 error = Error("Failed to read request body: " + e.__str__())
             
             var res = handler.func(request)
+
+            var can_upgrade = self.upgrade_handler.can_upgrade()
             
-            if not self.tcp_keep_alive:
+            if not self.tcp_keep_alive and not can_upgrade:
                 _ = res.set_connection_close()
             
             _ = conn.write(encode(res))
+
+            if can_upgrade:
+                self.upgrade_handler.func(conn, res.is_binary(), res.body())
 
             if not self.tcp_keep_alive:
                 conn.close()

@@ -10,7 +10,7 @@ from lightbug_http.python.websocket import WebSocketServer, WebSocketHandshake, 
 @value
 struct WebSocketPrinter(WebSocketService):
     fn on_message(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
-        ...
+        print(String(data))
 
 
 def main():
