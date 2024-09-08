@@ -1,16 +1,5 @@
-from python import Python
-from time import sleep
 from lightbug_http.sys.server import SysServer
-from lightbug_http.service import HTTPService
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.http import HTTPRequest, HTTPResponse, Connection, OK
-from lightbug_http.python.websocket import WebSocketServer, WebSocketHandshake, WebSocketService, send_message, receive_message
-
-
-@value
-struct WebSocketPrinter(WebSocketService):
-    fn on_message(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
-        print(String(data))
+from lightbug_http.python.websocket import WebSocketServer, WebSocketHandshake, WebSocketPrinter, send_message, receive_message
 
 
 def main():

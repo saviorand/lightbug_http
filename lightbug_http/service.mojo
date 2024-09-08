@@ -1,16 +1,17 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, Connection, OK, NotFound
 from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.sys.net import SysConnection
 
 trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         ...
     
 trait WebSocketService(Copyable):
-    fn on_message(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
+    fn on_message(inout self, conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         ...
 
 trait UpgradeServer(Copyable):
-    fn func(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
+    fn func(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         ...
 
     fn can_upgrade(self) -> Bool: # temporary until we can assert trait types
@@ -18,7 +19,7 @@ trait UpgradeServer(Copyable):
 
 @value
 struct NoUpgrade(UpgradeServer):
-    fn func(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
+    fn func(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         ...
     
     fn can_upgrade(self) -> Bool:

@@ -4,8 +4,9 @@ from lightbug_http.io.bytes import Bytes, bytes
 from time import sleep
 from base64 import b64encode
 from lightbug_http.io.bytes import bytes_equal, bytes
-from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader, SysConnection
-from lightbug_http.net import Connection
+from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.net import Connection, default_buffer_size
+from lightbug_http.sys.net import SysConnection
 from lightbug_http.service import WebSocketService, UpgradeServer
 
 # This is a "magic" GUID (Globally Unique Identifier) string that is concatenated 
@@ -24,12 +25,31 @@ alias BYTE_1_SIZE_EIGHT_BYTES:UInt8 = 127
 
 
 @value
+struct WebSocketPrinter(WebSocketService):
+    fn on_message(inout self, conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
+        print(String(data))
+
+
+@value
 struct WebSocketServer[T: WebSocketService](UpgradeServer):
     var handler: T
 
-    fn func(inout self, conn: Connection, is_binary: Bool, data: Bytes) -> None:
-        # TODO: add a loop?
-        self.handler.on_message(conn, is_binary, data)
+    fn func(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
+        try:
+            var select = Python.import_module("select").select
+            while True:
+                for _ in range(32):
+                    var b = Bytes(capacity=default_buffer_size)
+                    var bytes_recv = conn.read(b)
+                    if bytes_recv == 0:
+                        print("bytes_recv == 0")
+                        conn.close()
+                        break
+                    res = select([b[0]],[],[],0)[0]
+                    print("\nwait\n")
+                    sleep(1)
+        except e:
+            print("Error in WebSocketServer", e)
     
     fn can_upgrade(self) -> Bool:
         return True
@@ -65,19 +85,14 @@ struct WebSocketHandshake(HTTPService):
                 
         return response
 
-fn read_byte(inout ws: PythonObject)raises->UInt8:
-    return UInt8(int(ws[0].recv(1)[0]))
-
 fn receive_message[
     maximum_default_capacity:Int = 1<<16
-](inout ws: PythonObject)->Optional[String]:
+](inout ws: PythonObject, b: Bytes)->Optional[String]:
     #limit to 64kb by default!
     var res = String("")
     
     try:
-        _ = read_byte(ws) #not implemented yet
-        var b = read_byte(ws)
-        if (b&BYTE_1_FRAME_IS_MASKED) == 0:
+        if (len(b) != 0 and b[0] != BYTE_1_FRAME_IS_MASKED) == 0:
             # if client send non-masked frame, connection must be closed
             # https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#format
             ws[0].close()

@@ -239,7 +239,7 @@ struct SysServer[T: UpgradeServer = NoUpgrade]:
             _ = conn.write(encode(res))
 
             if can_upgrade:
-                self.upgrade_handler.func(conn, res.is_binary(), res.body())
+                self.upgrade_handler.func(conn, False, res.get_body()) # TODO: is_binary is now hardcoded to = False
 
             if not self.tcp_keep_alive:
                 conn.close()

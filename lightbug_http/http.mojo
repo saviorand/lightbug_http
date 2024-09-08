@@ -259,13 +259,6 @@ struct HTTPResponse(Response):
         var body_buf_result = r.peek(r.buffered())
         
         _ = self.set_body_bytes(body_buf_result[0])
-    
-    # fn set_connection(inout self, conn: SysConnection) -> Self:
-    #     self.conn = conn
-    #     return self
-    
-    # fn connection(self) -> SysConnection:
-    #     return self.conn
 
     fn set_is_upgrade(inout self, is_upgrade: Bool) -> Self:
         self.__is_upgrade = is_upgrade
