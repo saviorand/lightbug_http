@@ -267,9 +267,9 @@ struct URI:
         var host_and_port: String
         var request_uri: String
         if path_start >= 0:
-            host_and_port = remainder_uri[:path_start+1]
+            host_and_port = remainder_uri[:path_start]
             request_uri = remainder_uri[path_start:]
-            _ = self.set_host(host_and_port[:path_start+1])
+            _ = self.set_host(host_and_port[:path_start])
         else:
             host_and_port = remainder_uri
             request_uri = strSlash
