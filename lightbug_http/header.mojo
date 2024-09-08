@@ -179,7 +179,6 @@ struct RequestHeader:
         self.no_http_1_1 = no_http_1_1
         self.__connection_close = connection_close
         self.__content_length = content_length
-        self.__content_length_bytes = content_length_bytes
         self.__method = method
         self.__request_uri = request_uri
         self.proto = proto
@@ -326,8 +325,8 @@ struct RequestHeader:
         self.__upgrade = upgrade
         return self
     
-    fn upgrade(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__upgrade.unsafe_ptr(), len=self.__upgrade.size)
+    fn upgrade(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__upgrade)
     
     fn set_connection_upgrade(inout self, connection_upgrade: Bool) -> Self:
         self.__connection_upgrade = connection_upgrade
@@ -340,15 +339,15 @@ struct RequestHeader:
         self.__sec_websocket_key = sec_websocket_key
         return self
     
-    fn sec_websocket_key(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__sec_websocket_key.unsafe_ptr(), len=self.__sec_websocket_key.size)
+    fn sec_websocket_key(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__sec_websocket_key)
     
     fn set_sec_websocket_version(inout self, sec_websocket_version: Bytes) -> Self:
         self.__sec_websocket_version = sec_websocket_version
         return self
     
-    fn sec_websocket_version(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__sec_websocket_version.unsafe_ptr(), len=self.__sec_websocket_version.size)
+    fn sec_websocket_version(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__sec_websocket_version)
 
     fn headers(self) -> String:
         return String(self.raw_headers)
@@ -655,7 +654,6 @@ struct ResponseHeader:
         self.__status_message = status_message
         self.__protocol = protocol
         self.__content_length = content_length
-        self.__content_length_bytes = content_length_bytes
         self.__content_type = content_type
         self.__content_encoding = content_encoding
         self.__server = server
@@ -786,8 +784,8 @@ struct ResponseHeader:
         self.__upgrade = upgrade
         return self
     
-    fn upgrade(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__upgrade.unsafe_ptr(), len=self.__upgrade.size)
+    fn upgrade(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__upgrade)
     
     fn set_connection_upgrade(inout self, connection_upgrade: Bool) -> Self:
         self.__connection_upgrade = connection_upgrade
@@ -800,8 +798,8 @@ struct ResponseHeader:
         self.__sec_websocket_accept = sec_websocket_accept
         return self
     
-    fn sec_websocket_accept(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.__sec_websocket_accept.unsafe_ptr(), len=self.__sec_websocket_accept.size)
+    fn sec_websocket_accept(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.__sec_websocket_accept)
 
     fn headers(self) -> String:
         return String(self.raw_headers)

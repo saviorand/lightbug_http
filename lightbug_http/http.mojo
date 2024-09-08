@@ -10,7 +10,6 @@ from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr, Connection
 from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar
-from lightbug_http.python.websocket import WebSocketUpgrade
 from lightbug_http.sys.net import SysConnection
 
 
@@ -194,9 +193,7 @@ struct HTTPResponse(Response):
     var skip_reading_writing_body: Bool
     var raddr: TCPAddr
     var laddr: TCPAddr
-    # var conn: SysConnection # should accept structs implementing the Connection trait
     var __is_upgrade: Bool
-    var __upgrade: WebSocketUpgrade # only websocket for now, should accept any struct implementing the ResponseUpgrade trait
 
     fn __init__(inout self, body_bytes: Bytes):
         self.header = ResponseHeader(
@@ -210,9 +207,7 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        # self.conn = SysConnection(TCPAddr(), TCPAddr())
         self.__is_upgrade = False
-        self.__upgrade = WebSocketUpgrade()
 
     fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes):
         self.header = header
@@ -222,11 +217,9 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        # self.conn = SysConnection(TCPAddr(), TCPAddr())
         self.__is_upgrade = False
-        self.__upgrade = WebSocketUpgrade()
     
-    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes, is_upgrade: Bool, upgrade: WebSocketUpgrade, conn: SysConnection):
+    fn __init__(inout self, header: ResponseHeader, body_bytes: Bytes, is_upgrade: Bool):
         self.header = header
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -234,9 +227,7 @@ struct HTTPResponse(Response):
         self.skip_reading_writing_body = False
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
-        # self.conn = conn
         self.__is_upgrade = is_upgrade
-        self.__upgrade = upgrade
     
     fn get_body_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
         return Span[UInt8, __lifetime_of(self)](self.body_raw)
@@ -282,13 +273,6 @@ struct HTTPResponse(Response):
     
     fn is_upgrade(self) -> Bool:
         return self.__is_upgrade
-    
-    fn set_upgrade(inout self, upgrade: WebSocketUpgrade) -> Self:
-        self.__upgrade = upgrade
-        return self
-    
-    fn upgrade(inout self) -> Connection:
-        return self.__upgrade.upgrade()
         
 
 fn OK(body: StringLiteral) -> HTTPResponse:
