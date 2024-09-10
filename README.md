@@ -35,19 +35,12 @@ Lightbug currently has the following features:
  - [x] Craft HTTP requests and responses with built-in primitives
  - [x] Everything is fully typed, with no `def` functions used
 
+ ### Check Out These Mojo Libraries:
 
-We're working on support for the following (contributors welcome!):
- - [ ] [SSL/HTTPS support](https://github.com/saviorand/lightbug_http/issues/20)
- - [ ] UDP support
- - [ ] [Better error handling](https://github.com/saviorand/lightbug_http/issues/3), [improved form/multipart and JSON support](https://github.com/saviorand/lightbug_http/issues/4)
- - [ ] [Multiple simultaneous connections](https://github.com/saviorand/lightbug_http/issues/5), [parallelization and performance optimizations](https://github.com/saviorand/lightbug_http/issues/6)
- - [ ] [WebSockets](https://github.com/saviorand/lightbug_http/issues/7), [HTTP 2.0/3.0 support](https://github.com/saviorand/lightbug_http/issues/8)
- - [ ] [ASGI spec conformance](https://github.com/saviorand/lightbug_http/issues/17)
-
-The test coverage is also something we're working on.
-
-The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
-
+- Bound Logger - [@toasty/stump](https://github.com/thatstoasty/stump)
+- Terminal text styling - [@toasty/mog](https://github.com/thatstoasty/mog)
+- CLI Library - [@toasty/prism](https://github.com/thatstoasty/prism)
+- Date/Time - [@mojoto/morrow](https://github.com/mojoto/morrow.mojo)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -83,16 +76,22 @@ Once you have Mojo set up locally,
    ```
    For example, to make a `Printer` service that simply prints the request to console:
    ```mojo
+   from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK
+   from lightbug_http.strings import to_string
+
    @value
    struct Printer(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
          var body = req.body_raw
-         print(String(body))
+         print(to_string(body))
 
          return OK(body)
    ```
    Routing is not in scope for this library, but you can easily set up routes yourself:
    ```mojo
+   from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK
+   from lightbug_http.strings import to_string
+
    @value
    struct ExampleRouter(HTTPService):
       fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -106,22 +105,20 @@ Once you have Mojo set up locally,
          elif uri.path() == "/second":
                print("I'm on /second!")
          elif uri.path() == "/echo":
-               print(String(body))
+               print(to_string(body))
 
          return OK(body)
    ```
    
-   We plan to add routing in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
+   We plan to add more advanced routing functionality in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
 3. Run `mojo lightbug.🔥`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo
-   from lightbug_http.sys.server import SysServer
-   from lightbug_http.service import Printer
-
+   from lightbug_http import *
 
    fn main() raises:
-      var server = SysServer()
-      var handler = Printer()
-      server.listen_and_serve("0.0.0.0:8080", handler)
+       var server = SysServer()
+       var handler = Welcome()
+       server.listen_and_serve("0.0.0.0:8080", handler)
    ```
    Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
@@ -132,6 +129,9 @@ Once you have Mojo set up locally,
 The default welcome screen shows an example of how to serve files like images or HTML using Lightbug. Mojo has built-in `open`, `read` and `read_bytes` methods that you can use to read files from e.g. a `static` directory and serve them on a route:
 
 ```mojo
+from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK, NotFound
+from lightbug_http.io.bytes import Bytes
+
 @value
 struct Welcome(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -157,25 +157,30 @@ struct Welcome(HTTPService):
 Create a file, e.g `client.mojo` with the following code. Run `mojo client.mojo` to execute the request to a given URL.
 
 ```mojo
+from lightbug_http.http import HTTPRequest
+from lightbug_http.uri import URI
+from lightbug_http.sys.client import MojoClient
+
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI("http://httpbin.org/status/404")
+    try:
+        uri.parse()
+    except e:
+        print("error parsing uri: " + e.__str__())
+
     var request = HTTPRequest(uri)
     var response = client.do(request)
 
-    # print status code
-    print("Response:", response.header.status_code())
+    print("Status Code:", response.header.status_code())
 
-    # print raw headers
-    # print("Headers:", response.header.headers())
-
-    # print parsed headers (only some are parsed for now)
+    # print parsed headers (only selected headers are parsed for now)
     print("Content-Type:", String(response.header.content_type()))
     print("Content-Length", response.header.content_length())
-    print("Connection:", response.header.connection_close())
     print("Server:", String(response.header.server()))
+    print("Is connection set to connection-close? ", response.header.connection_close())
 
     # print body
-    print(String(response.get_body()))
+    print(String(response.get_body_bytes()))
 ```
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.
@@ -193,6 +198,18 @@ You can then use all the regular server commands in the same way as with the def
 <div align="center">
     <img src="static/roadmap.png" alt="Logo" width="695" height="226">
 </div>
+
+We're working on support for the following (contributors welcome!):
+
+-  [ ] [WebSocket Support](https://github.com/saviorand/lightbug_http/pull/57)
+ - [ ] [SSL/HTTPS support](https://github.com/saviorand/lightbug_http/issues/20)
+ - [ ] UDP support
+ - [ ] [Better error handling](https://github.com/saviorand/lightbug_http/issues/3), [improved form/multipart and JSON support](https://github.com/saviorand/lightbug_http/issues/4)
+ - [ ] [Multiple simultaneous connections](https://github.com/saviorand/lightbug_http/issues/5), [parallelization and performance optimizations](https://github.com/saviorand/lightbug_http/issues/6)
+ - [ ] [HTTP 2.0/3.0 support](https://github.com/saviorand/lightbug_http/issues/8)
+ - [ ] [ASGI spec conformance](https://github.com/saviorand/lightbug_http/issues/17)
+
+The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
 
 Our vision is to develop three libraries, with `lightbug_http` (this repo) as a starting point: 
  - `lightbug_http` - HTTP infrastructure and basic API development

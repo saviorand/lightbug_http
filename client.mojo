@@ -1,5 +1,4 @@
-from lightbug_http.http import HTTPRequest, encode
-from lightbug_http.header import RequestHeader
+from lightbug_http.http import HTTPRequest
 from lightbug_http.uri import URI
 from lightbug_http.sys.client import MojoClient
 
