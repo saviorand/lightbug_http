@@ -1,5 +1,6 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
 from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.strings import to_string
 
 trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -10,7 +11,7 @@ trait HTTPService:
 struct Printer(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         var body = req.body_raw
-        print(String(body))
+        print(to_string(body))
 
         return OK(body)
 
@@ -48,7 +49,7 @@ struct ExampleRouter(HTTPService):
         elif uri.path() == "/second":
             print("I'm on /second!")
         elif uri.path() == "/echo":
-            print(String(body))
+            print(to_string(body))
 
         return OK(body)
 

@@ -123,8 +123,7 @@ struct URI:
         return self
 
     fn path(self) -> String:
-        var b = self.path_bytes()
-        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=b.unsafe_ptr(), len=len(b))
+        return StringSlice(unsafe_from_utf8=self.path_bytes())
     
     fn path_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
         if len(self.__path) == 0:
@@ -217,14 +216,13 @@ struct URI:
         return Span[UInt8, __lifetime_of(self)](self.__host)
     
     fn host_str(self) -> String:
-        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=self.__host.unsafe_ptr(), len=len(self.__host))
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8=self.host())
 
     fn full_uri(self) -> Span[UInt8, __lifetime_of(self)]:
         return Span[UInt8, __lifetime_of(self)](self.__full_uri)
     
     fn full_uri_str(self) -> String:
-        var full_uri = self.full_uri()
-        return StringSlice[__lifetime_of(self)](unsafe_from_utf8_ptr=full_uri.unsafe_ptr(), len=len(full_uri))
+        return StringSlice[__lifetime_of(self)](unsafe_from_utf8=self.full_uri())
 
     fn set_username(inout self, username: String) -> Self:
         self.__username = username.as_bytes()

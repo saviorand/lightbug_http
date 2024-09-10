@@ -197,7 +197,7 @@ struct SysServer:
             except e:
                 error = Error("Failed to parse request headers: " + e.__str__())
 
-            var uri = URI(self.address() + String(header.request_uri()))
+            var uri = URI(self.address() + header.request_uri_str())
             try:
                 uri.parse()
             except e:
