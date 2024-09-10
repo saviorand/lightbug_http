@@ -637,24 +637,6 @@ fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen
         "connect", c_int, c_int, UnsafePointer[sockaddr], socklen_t  # FnName, RetType  # Args
     ](socket, address, address_len)
 
-
-# fn recv(
-#     socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int
-# ) -> c_ssize_t:
-#     """Libc POSIX `recv` function
-#     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
-#     Fn signature: ssize_t recv(int socket, void *buffer, size_t length, int flags).
-#     """
-#     return external_call[
-#         "recv",
-#         c_ssize_t,  # FnName, RetType
-#         c_int,
-#         UnsafePointer[c_void],
-#         c_size_t,
-#         c_int,  # Args
-#     ](socket, buffer, length, flags)
-
-
 fn recv(
     socket: c_int,
     buffer: UnsafePointer[UInt8],
@@ -830,10 +812,6 @@ fn write(fildes: c_int, buf: UnsafePointer[c_void], nbyte: c_size_t) -> c_int:
         fildes, buf, nbyte
     )
 
-
-# --- ( Testing Functions ) ----------------------------------------------------
-
-
 fn __test_getaddrinfo__():
     var ip_addr = "127.0.0.1"
     var port = 8083
@@ -845,7 +823,6 @@ fn __test_getaddrinfo__():
     hints.ai_family = AF_INET
     hints.ai_socktype = SOCK_STREAM
     hints.ai_flags = AI_PASSIVE
-    # var hints_ptr =
 
     var status = getaddrinfo(
         to_char_ptr(ip_addr),
@@ -859,128 +836,3 @@ fn __test_getaddrinfo__():
     )
     var msg = c_charptr_to_string(msg_ptr)
     print("getaddrinfo satus: " + msg)
-
-
-# fn __test_socket_client__():
-#     var ip_addr = "127.0.0.1"  # The server's hostname or IP address
-#     var port = 8080  # The port used by the server
-#     var address_family = AF_INET
-
-#     var ip_buf = UnsafePointer[c_void].alloc(4)
-#     var conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
-#     var raw_ip = ip_buf.bitcast[c_uint]()
-
-#     print("inet_pton: " + raw_ip.__str__() + " :: status: " + conv_status.__str__())
-
-#     var bin_port = htons(UInt16(port))
-#     print("htons: " + "\n" + bin_port.__str__())
-
-#     var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
-#     var ai_ptr = UnsafePointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
-
-#     var sockfd = socket(address_family, SOCK_STREAM, 0)
-#     if sockfd == -1:
-#         print("Socket creation error")
-#     print("sockfd: " + "\n" + sockfd.__str__())
-
-#     if connect(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
-#         _ = shutdown(sockfd, SHUT_RDWR)
-#         print("Connection error")
-#         return  # Ensure to exit if connection fails
-
-#     var msg = to_char_ptr("Hello, world Server")
-#     var bytes_sent = send(sockfd, msg, strlen(msg), 0)
-#     if bytes_sent == -1:
-#         print("Failed to send message")
-#     else:
-#         print("Message sent")
-#     var buf_size = 1024
-#     var buf = UnsafePointer[UInt8]().alloc(buf_size)
-#     var bytes_recv = recv(sockfd, buf, buf_size, 0)
-#     if bytes_recv == -1:
-#         print("Failed to receive message")
-#     else:
-#         print("Received Message: ")
-#         print(String(buf.bitcast[UInt8](), bytes_recv))
-
-#     _ = shutdown(sockfd, SHUT_RDWR)
-#     var close_status = close(sockfd)
-#     if close_status == -1:
-#         print("Failed to close socket")
-
-
-# fn __test_socket_server__() raises:
-#     var ip_addr = "127.0.0.1"
-#     var port = 8083
-
-#     var address_family = AF_INET
-#     var ip_buf_size = 4
-#     if address_family == AF_INET6:
-#         ip_buf_size = 16
-
-#     var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-#     var conv_status = inet_pton(address_family, to_char_ptr(ip_addr), ip_buf)
-#     var raw_ip = ip_buf.bitcast[c_uint]()
-#     print("inet_pton: " + raw_ip.__str__() + " :: status: " + conv_status.__str__())
-
-#     var bin_port = htons(UInt16(port))
-#     print("htons: " + "\n" + bin_port.__str__())
-
-#     var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
-#     var ai_ptr = UnsafePointer[sockaddr_in].address_of(ai).bitcast[sockaddr]()
-
-#     var sockfd = socket(address_family, SOCK_STREAM, 0)
-#     if sockfd == -1:
-#         print("Socket creation error")
-#     print("sockfd: " + "\n" + sockfd.__str__())
-
-#     var yes: Int = 1
-#     if (
-#         setsockopt(
-#             sockfd,
-#             SOL_SOCKET,
-#             SO_REUSEADDR,
-#             UnsafePointer[Int].address_of(yes).bitcast[c_void](),
-#             sizeof[Int](),
-#         )
-#         == -1
-#     ):
-#         print("set socket options failed")
-
-#     if bind(sockfd, ai_ptr, sizeof[sockaddr_in]()) == -1:
-#         # close(sockfd)
-#         _ = shutdown(sockfd, SHUT_RDWR)
-#         print("Binding socket failed. Wait a few seconds and try again?")
-
-#     if listen(sockfd, c_int(128)) == -1:
-#         print("Listen failed.\n on sockfd " + sockfd.__str__())
-
-#     print(
-#         "server: started at "
-#         + ip_addr
-#         + ":"
-#         + port.__str__()
-#         + " on sockfd "
-#         + sockfd.__str__()
-#         + "Waiting for connections..."
-#     )
-
-#     var their_addr_ptr = UnsafePointer[sockaddr].alloc(1)
-#     var sin_size = socklen_t(sizeof[socklen_t]())
-#     var new_sockfd = accept(
-#         sockfd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
-#     )
-#     if new_sockfd == -1:
-#         print("Accept failed")
-#         # close(sockfd)
-#         _ = shutdown(sockfd, SHUT_RDWR)
-
-#     var msg = "Hello, Mojo!"
-#     if send(new_sockfd, to_char_ptr(msg).bitcast[c_void](), len(msg), 0) == -1:
-#         print("Failed to send response")
-#     print("Message sent succesfully")
-#     _ = shutdown(sockfd, SHUT_RDWR)
-
-#     var close_status = close(new_sockfd)
-#     if close_status == -1:
-#         print("Failed to close new_sockfd")

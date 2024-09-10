@@ -1,5 +1,5 @@
 from python import PythonObject
-from lightbug_http.strings import nChar, rChar, nChar_byte, rChar_byte
+from lightbug_http.strings import nChar, rChar, nChar_byte, rChar_byte, to_string
 
 alias Byte = UInt8
 alias Bytes = List[Byte, True]
@@ -17,7 +17,7 @@ fn bytes(s: String, pop: Bool = True) -> Bytes:
     return buf
 
 fn bytes_equal(a: Bytes, b: Bytes) -> Bool:
-    return String(a) == String(b)
+    return to_string(a) == to_string(b)
 
 fn index_byte(buf: Bytes, c: Byte) -> Int:
     for i in range(len(buf)):
