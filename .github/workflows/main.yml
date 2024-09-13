@@ -11,18 +11,12 @@ permissions:
   contents: write
 
 jobs:
-  setup:
-    name: Setup environment
+  test:
+    name: Run tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-  
-  test:
-    name: Run tests
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
       - name: Run the test suite
         run: |
           curl -ssL https://magic.modular.com | bash
@@ -31,9 +25,10 @@ jobs:
 
   package:
     name: Create package
-    needs: setup
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Run the package command
         run: |
           curl -ssL https://magic.modular.com | bash
