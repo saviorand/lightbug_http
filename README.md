@@ -62,7 +62,7 @@ Once you have Mojo set up locally,
    ```
    then run:
    ```sh
-   mojo lightbug.🔥
+   magic run mojo lightbug.🔥
    ```
    
    Open `localhost:8080` in your browser. You should see a welcome screen. 
@@ -111,7 +111,7 @@ Once you have Mojo set up locally,
    ```
    
    We plan to add more advanced routing functionality in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
-3. Run `mojo lightbug.🔥`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
+3. Run `magic run mojo lightbug.🔥`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
    ```mojo
    from lightbug_http import *
 
@@ -154,7 +154,7 @@ struct Welcome(HTTPService):
 
 ### Using the client
 
-Create a file, e.g `client.mojo` with the following code. Run `mojo client.mojo` to execute the request to a given URL.
+Create a file, e.g `client.mojo` with the following code. Run `magic run mojo client.mojo` to execute the request to a given URL.
 
 ```mojo
 from lightbug_http.http import HTTPRequest

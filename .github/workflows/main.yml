@@ -33,7 +33,7 @@ jobs:
     needs: setup
     steps:
       - name: Run the test suite
-        run: mojo run_tests.mojo
+        run: magic run mojo run_tests.mojo
   
   package:
     name: Create package
@@ -41,7 +41,7 @@ jobs:
     needs: setup
     steps:
       - name: Run the package command
-        run: mojo package lightbug_http -o lightbug_http.mojopkg
+        run: magic run mojo package lightbug_http -o lightbug_http.mojopkg
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
         with:

@@ -12,7 +12,7 @@ from ..libc import (
 )
 from lightbug_http.client import Client
 from lightbug_http.net import default_buffer_size
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode, split_http_string
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import ResponseHeader
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes

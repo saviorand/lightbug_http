@@ -2,7 +2,7 @@ from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
 from gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
-from lightbug_http.http import HTTPRequest, encode, split_http_string
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
