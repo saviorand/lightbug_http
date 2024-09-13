@@ -13,16 +13,7 @@ permissions:
 jobs:
   test:
     name: Run tests
-    strategy:
-      matrix:
-        include:
-          - { target: linux-64, os: ubuntu-latest }
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
-    defaults:
-      run:
-        shell: bash
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,16 +25,7 @@ jobs:
 
   package:
     name: Create package
-    strategy:
-      matrix:
-        include:
-          - { target: linux-64, os: ubuntu-latest }
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
-    defaults:
-      run:
-        shell: bash
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -3,7 +3,7 @@ authors = ["saviorand"]
 channels = ["conda-forge", "https://conda.modular.com/max-nightly", "https://repo.prefix.dev/mojo-community"]
 description = "Simple and fast HTTP framework for Mojo!"
 name = "lightbug_http"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
