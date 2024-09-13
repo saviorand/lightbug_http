@@ -31,7 +31,6 @@ jobs:
           if [ ! -d ~/.modular ]; then
             curl -ssL https://magic.modular.com | bash
           fi
-          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
           source $HOME/.bash_profile
 
   test:
@@ -50,11 +49,10 @@ jobs:
 
       - name: Setup Magic PATH
         run: |
-          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
           source $HOME/.bash_profile
 
       - name: Run the test suite
-        run: mojo run run_tests.mojo
+        run: magic run mojo run_tests.mojo
   
   package:
     name: Create package
@@ -72,11 +70,10 @@ jobs:
 
       - name: Setup Magic PATH
         run: |
-          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
           source $HOME/.bash_profile
 
       - name: Run the package command
-        run: mojo package lightbug_http -o lightbug_http.mojopkg
+        run: magic run mojo package lightbug_http -o lightbug_http.mojopkg
 
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
