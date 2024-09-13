@@ -13,22 +13,69 @@ permissions:
   contents: write
 
 jobs:
-  build-test-package:
-    name: Build, Test, and Package
+  setup:
+    name: Setup environment and install dependencies
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Magic installation
+        uses: actions/cache@v3
+        with:
+          path: ~/.modular
+          key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
+
       - name: Install Magic
         run: |
-          curl -ssL https://magic.modular.com | bash
+          if [ ! -d ~/.modular ]; then
+            curl -ssL https://magic.modular.com | bash
+          fi
           echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
-      
-      - name: Run tests
+          source $HOME/.bash_profile
+
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore Magic installation
+        uses: actions/cache@v3
+        with:
+          path: ~/.modular
+          key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
+
+      - name: Setup Magic PATH
+        run: |
+          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
+          source $HOME/.bash_profile
+
+      - name: Run the test suite
         run: mojo run run_tests.mojo
   
-      - name: Create package
+  package:
+    name: Create package
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Restore Magic installation
+        uses: actions/cache@v3
+        with:
+          path: ~/.modular
+          key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
+
+      - name: Setup Magic PATH
+        run: |
+          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
+          source $HOME/.bash_profile
+
+      - name: Run the package command
         run: mojo package lightbug_http -o lightbug_http.mojopkg
 
       - name: Upload package to release
