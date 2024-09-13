@@ -23,9 +23,6 @@ jobs:
       - name: Install Magic
         run: |
           curl -ssL https://magic.modular.com | bash
-
-      - name: Install Mojo
-        run: modular install mojo
       
       - name: Add to PATH
         run: source $HOME/.bash_profile
