@@ -30,7 +30,7 @@ jobs:
           curl -ssL https://magic.modular.com | bash
       
       - name: Source the bash profile
-        run: source $HOME/.bash_profile
+        run: source /home/runner/.bash_profile
       
       - name: Run the test suite
         run: magic run mojo run_tests.mojo
@@ -46,7 +46,7 @@ jobs:
           source $HOME/.bash_profile
       
       - name: Source the bash profile
-        run: source $HOME/.bash_profile
+        run: source /home/runner/.bash_profile
       
       - name: Run the package command
         run: magic run mojo package lightbug_http -o lightbug_http.mojopkg
