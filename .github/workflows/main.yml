@@ -17,42 +17,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Install Magic
-        run: |
-          curl -ssL https://magic.modular.com | bash
-          echo "$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
-          source $HOME/.bash_profile
-          echo "MAGIC_PATH=$HOME/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_ENV
-      
-      - name: Verify Magic installation
-        run: $MAGIC_PATH/magic --version
-
+  
   test:
     name: Run tests
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Run the test suite
         run: |
+          curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
-          $MAGIC_PATH/magic run mojo run_tests.mojo
+          magic run mojo run_tests.mojo
 
   package:
     name: Create package
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Run the package command
         run: |
+          curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
-          $MAGIC_PATH/magic run mojo package lightbug_http -o lightbug_http.mojopkg
+          magic run mojo package lightbug_http -o lightbug_http.mojopkg
       
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
