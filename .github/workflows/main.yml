@@ -1,9 +1,13 @@
-name: Main pipeline
+name: Default pipeline
 
 on:
   push:
+    branches: # all branches
+      - '*'
+  workflow_dispatch:
+  pull_request:
     branches:
-      - main
+      - '*'
 
 permissions:
   contents: write
@@ -14,15 +18,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Install modular
+        uses: actions/checkout@v4
+
+      - name: Install Magic
         run: |
-          curl -s https://get.modular.com | sh -
-          modular auth examples
+          curl -ssL https://magic.modular.com | bash
+
       - name: Install Mojo
         run: modular install mojo
+      
       - name: Add to PATH
-        run: echo "/home/runner/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
+        run: source $HOME/.bash_profile
+  
   test:
     name: Run tests
     runs-on: ubuntu-latest
@@ -30,6 +37,7 @@ jobs:
     steps:
       - name: Run the test suite
         run: mojo run_tests.mojo
+  
   package:
     name: Create package
     runs-on: ubuntu-latest
