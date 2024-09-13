@@ -1,6 +1,6 @@
 [project]
 authors = ["saviorand"]
-channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo-community"]
+channels = ["conda-forge", "https://conda.modular.com/max", "https://conda.modular.com/max-nightly", "https://repo.prefix.dev/mojo-community"]
 description = "Simple and fast HTTP framework for Mojo!"
 name = "lightbug_http"
 platforms = ["osx-arm64", "linux-64"]
@@ -10,5 +10,5 @@ version = "0.1.0"
 build = "MODULAR_MOJO_NIGHTLY_IMPORT_PATH=$CONDA_PREFIX/lib/mojo rattler-build build --no-include-recipe"
 
 [dependencies]
-max = ">=24.6,<24.7"
+max = ">=24.6.0<=24.6.0.dev2024090605"
 gojo = ">=0.1.2"
