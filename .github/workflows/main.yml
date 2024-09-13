@@ -11,6 +11,19 @@ permissions:
   contents: write
 
 jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { target: linux-64, os: ubuntu-latest }
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        shell: bash
   test:
     name: Run tests
     runs-on: ubuntu-latest
