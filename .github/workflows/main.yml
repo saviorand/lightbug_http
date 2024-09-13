@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  MODULAR_HOME: /home/runner/.modular
+
 jobs:
   setup:
     name: Setup environment and install dependencies
@@ -23,15 +26,16 @@ jobs:
       - name: Cache Magic installation
         uses: actions/cache@v3
         with:
-          path: ~/.modular
+          path: ${{ env.MODULAR_HOME }}
           key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
 
       - name: Install Magic
         run: |
-          if [ ! -d ~/.modular ]; then
+          if [ ! -d ${{ env.MODULAR_HOME }} ]; then
             curl -ssL https://magic.modular.com | bash
           fi
-          source $HOME/.bash_profile
+          echo "${{ env.MODULAR_HOME }}/pkg/magic/bin" >> $GITHUB_PATH
+          echo "MODULAR_HOME=${{ env.MODULAR_HOME }}" >> $GITHUB_ENV
 
   test:
     name: Run tests
@@ -44,12 +48,13 @@ jobs:
       - name: Restore Magic installation
         uses: actions/cache@v3
         with:
-          path: ~/.modular
+          path: ${{ env.MODULAR_HOME }}
           key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
 
       - name: Setup Magic PATH
         run: |
-          source $HOME/.bash_profile
+          echo "${{ env.MODULAR_HOME }}/pkg/magic/bin" >> $GITHUB_PATH
+          echo "MODULAR_HOME=${{ env.MODULAR_HOME }}" >> $GITHUB_ENV
 
       - name: Run the test suite
         run: magic run mojo run_tests.mojo
@@ -65,12 +70,13 @@ jobs:
       - name: Restore Magic installation
         uses: actions/cache@v3
         with:
-          path: ~/.modular
+          path: ${{ env.MODULAR_HOME }}
           key: ${{ runner.os }}-magic-${{ hashFiles('**/lockfiles') }}
 
       - name: Setup Magic PATH
         run: |
-          source $HOME/.bash_profile
+          echo "${{ env.MODULAR_HOME }}/pkg/magic/bin" >> $GITHUB_PATH
+          echo "MODULAR_HOME=${{ env.MODULAR_HOME }}" >> $GITHUB_ENV
 
       - name: Run the package command
         run: magic run mojo package lightbug_http -o lightbug_http.mojopkg
