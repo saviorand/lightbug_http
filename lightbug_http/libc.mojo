@@ -1,8 +1,8 @@
-from . import c_char, c_int, c_ushort, c_uint, c_size_t, c_ssize_t
-from .types import strlen
-from .file import O_CLOEXEC, O_NONBLOCK
-from utils.static_tuple import StaticTuple
-
+from utils import StaticTuple
+from sys.ffi import external_call
+from sys.info import sizeof
+from memory import memcpy
+from lightbug_http.io.bytes import Bytes
 alias IPPROTO_IPV6 = 41
 alias IPV6_V6ONLY = 26
 alias EPROTONOSUPPORT = 93
@@ -16,7 +16,30 @@ alias FD_STDERR: c_int = 2
 alias SUCCESS = 0
 alias GRND_NONBLOCK: UInt8 = 1
 
-alias char_pointer = DTypePointer[DType.uint8]
+alias char_UnsafePointer = UnsafePointer[c_char]
+
+# Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
+# C types
+alias c_void = UInt8
+alias c_char = UInt8
+alias c_schar = Int8
+alias c_uchar = UInt8
+alias c_short = Int16
+alias c_ushort = UInt16
+alias c_int = Int32
+alias c_uint = UInt32
+alias c_long = Int64
+alias c_ulong = UInt64
+alias c_float = Float32
+alias c_double = Float64
+
+# `Int` is known to be machine's width
+alias c_size_t = Int
+alias c_ssize_t = Int
+
+alias ptrdiff_t = Int64
+alias intptr_t = Int64
+alias uintptr_t = UInt64
 
 
 # --- ( error.h Constants )-----------------------------------------------------
@@ -57,16 +80,21 @@ alias ERANGE = 34
 alias EWOULDBLOCK = EAGAIN
 
 
-fn to_char_ptr(s: String) -> DTypePointer[DType.uint8]:
+fn to_char_ptr(s: String) -> UnsafePointer[c_char]:
     """Only ASCII-based strings."""
-    var ptr = DTypePointer[DType.uint8]().alloc(len(s))
+    var ptr = UnsafePointer[c_char]().alloc(len(s))
     for i in range(len(s)):
-        ptr.store(i, ord(s[i]))
+        ptr[i] = ord(s[i])
     return ptr
 
+fn to_char_ptr(s: Bytes) -> UnsafePointer[c_char]:
+    var ptr = UnsafePointer[c_char]().alloc(len(s))
+    for i in range(len(s)):
+        ptr[i] = int(s[i])
+    return ptr
 
-fn c_charptr_to_string(s: DTypePointer[DType.uint8]) -> String:
-    return String(s, strlen(s))
+fn c_charptr_to_string(s: UnsafePointer[c_char]) -> String:
+    return String(s.bitcast[UInt8](), strlen(s))
 
 
 fn cftob(val: c_int) -> Bool:
@@ -126,7 +154,6 @@ alias AF_KCM = 41
 alias AF_QIPCRTR = 42
 alias AF_MAX = 43
 
-# Protocol family constants
 alias PF_UNSPEC = AF_UNSPEC
 alias PF_UNIX = AF_UNIX
 alias PF_LOCAL = AF_LOCAL
@@ -187,9 +214,9 @@ alias SOCK_NONBLOCK = O_NONBLOCK
 alias AI_PASSIVE = 1
 alias AI_CANONNAME = 2
 alias AI_NUMERICHOST = 4
-alias AI_V4MAPPED = 2048
-alias AI_ALL = 256
-alias AI_ADDRCONFIG = 1024
+alias AI_V4MAPPED = 8
+alias AI_ALL = 16
+alias AI_ADDRCONFIG = 32
 alias AI_IDN = 64
 
 alias INET_ADDRSTRLEN = 16
@@ -199,35 +226,31 @@ alias SHUT_RD = 0
 alias SHUT_WR = 1
 alias SHUT_RDWR = 2
 
-alias SOL_SOCKET = 65535
+alias SOL_SOCKET = 1
 
-# Socket Options
 alias SO_DEBUG = 1
-alias SO_REUSEADDR = 4
-alias SO_TYPE = 4104
-alias SO_ERROR = 4103
-alias SO_DONTROUTE = 16
-alias SO_BROADCAST = 32
-alias SO_SNDBUF = 4097
-alias SO_RCVBUF = 4098
-alias SO_KEEPALIVE = 8
-alias SO_OOBINLINE = 256
-alias SO_LINGER = 128
-alias SO_REUSEPORT = 512
-alias SO_RCVLOWAT = 4100
-alias SO_SNDLOWAT = 4099
-alias SO_RCVTIMEO = 4102
-alias SO_SNDTIMEO = 4101
-alias SO_RCVTIMEO_OLD = 4102
-alias SO_SNDTIMEO_OLD = 4101
-alias SO_ACCEPTCONN = 2
-
-# unsure of these socket options, they weren't available via python
+alias SO_REUSEADDR = 2
+alias SO_TYPE = 3
+alias SO_ERROR = 4
+alias SO_DONTROUTE = 5
+alias SO_BROADCAST = 6
+alias SO_SNDBUF = 7
+alias SO_RCVBUF = 8
+alias SO_KEEPALIVE = 9
+alias SO_OOBINLINE = 10
 alias SO_NO_CHECK = 11
 alias SO_PRIORITY = 12
+alias SO_LINGER = 13
 alias SO_BSDCOMPAT = 14
+alias SO_REUSEPORT = 15
 alias SO_PASSCRED = 16
 alias SO_PEERCRED = 17
+alias SO_RCVLOWAT = 18
+alias SO_SNDLOWAT = 19
+alias SO_RCVTIMEO = 20
+alias SO_SNDTIMEO = 21
+alias SO_RCVTIMEO_OLD = 20
+alias SO_SNDTIMEO_OLD = 21
 alias SO_SECURITY_AUTHENTICATION = 22
 alias SO_SECURITY_ENCRYPTION_TRANSPORT = 23
 alias SO_SECURITY_ENCRYPTION_NETWORK = 24
@@ -238,6 +261,7 @@ alias SO_GET_FILTER = SO_ATTACH_FILTER
 alias SO_PEERNAME = 28
 alias SO_TIMESTAMP = 29
 alias SO_TIMESTAMP_OLD = 29
+alias SO_ACCEPTCONN = 30
 alias SO_PEERSEC = 31
 alias SO_SNDBUFFORCE = 32
 alias SO_RCVBUFFORCE = 33
@@ -325,80 +349,35 @@ struct sockaddr_in6:
 @value
 @register_passable("trivial")
 struct addrinfo:
-    """Struct field ordering can vary based on platform.
-    For MacOS, I had to swap the order of ai_canonname and ai_addr.
-    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
-    """
-
-    var ai_flags: c_int
-    var ai_family: c_int
-    var ai_socktype: c_int
-    var ai_protocol: c_int
-    var ai_addrlen: socklen_t
-    var ai_canonname: DTypePointer[DType.uint8]
-    var ai_addr: UnsafePointer[sockaddr]
-    var ai_next: UnsafePointer[addrinfo]
-
-    fn __init__(
-        inout self,
-        ai_flags: c_int = 0,
-        ai_family: c_int = 0,
-        ai_socktype: c_int = 0,
-        ai_protocol: c_int = 0,
-        ai_addrlen: socklen_t = 0,
-        ai_canonname: DTypePointer[DType.uint8] = DTypePointer[DType.uint8](),
-        ai_addr: UnsafePointer[sockaddr] = UnsafePointer[sockaddr](),
-        ai_next: UnsafePointer[addrinfo] = UnsafePointer[addrinfo](),
-    ):
-        self.ai_flags = ai_flags
-        self.ai_family = ai_family
-        self.ai_socktype = ai_socktype
-        self.ai_protocol = ai_protocol
-        self.ai_addrlen = ai_addrlen
-        self.ai_canonname = ai_canonname
-        self.ai_addr = ai_addr
-        self.ai_next = ai_next
-
-    # fn __init__() -> Self:
-    #     return Self(0, 0, 0, 0, 0, DTypePointer[DType.uint8](), UnsafePointer[sockaddr](), UnsafePointer[addrinfo]())
-
-
-@value
-@register_passable("trivial")
-struct addrinfo_unix:
-    """Struct field ordering can vary based on platform.
-    For MacOS, I had to swap the order of ai_canonname and ai_addr.
-    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
-    """
-
     var ai_flags: c_int
     var ai_family: c_int
     var ai_socktype: c_int
     var ai_protocol: c_int
     var ai_addrlen: socklen_t
     var ai_addr: UnsafePointer[sockaddr]
-    var ai_canonname: DTypePointer[DType.uint8]
-    var ai_next: UnsafePointer[addrinfo]
+    var ai_canonname: UnsafePointer[c_char]
+    var ai_next: UnsafePointer[c_void]
 
-    fn __init__(
-        inout self,
-        ai_flags: c_int = 0,
-        ai_family: c_int = 0,
-        ai_socktype: c_int = 0,
-        ai_protocol: c_int = 0,
-        ai_addrlen: socklen_t = 0,
-        ai_canonname: DTypePointer[DType.uint8] = DTypePointer[DType.uint8](),
-        ai_addr: UnsafePointer[sockaddr] = UnsafePointer[sockaddr](),
-        ai_next: UnsafePointer[addrinfo] = UnsafePointer[addrinfo](),
-    ):
-        self.ai_flags = ai_flags
-        self.ai_family = ai_family
-        self.ai_socktype = ai_socktype
-        self.ai_protocol = ai_protocol
-        self.ai_addrlen = ai_addrlen
-        self.ai_canonname = ai_canonname
-        self.ai_addr = ai_addr
-        self.ai_next = ai_next
+    fn __init__(inout self) -> None:
+        self.ai_flags = 0
+        self.ai_family = 0
+        self.ai_socktype = 0
+        self.ai_protocol = 0
+        self.ai_addrlen = 0
+        self.ai_addr = UnsafePointer[sockaddr]()
+        self.ai_canonname = UnsafePointer[c_char]()
+        self.ai_next = UnsafePointer[c_void]()
+
+
+fn strlen(s: UnsafePointer[c_char]) -> c_size_t:
+    """Libc POSIX `strlen` function
+    Reference: https://man7.org/linux/man-pages/man3/strlen.3p.html
+    Fn signature: size_t strlen(const char *s).
+
+    Args: s: A UnsafePointer to a C string.
+    Returns: The length of the string.
+    """
+    return external_call["strlen", c_size_t, UnsafePointer[c_char]](s)
 
 
 # --- ( Network Related Syscalls & Structs )------------------------------------
@@ -449,70 +428,70 @@ fn ntohs(netshort: c_ushort) -> c_ushort:
 
 
 fn inet_ntop(
-    af: c_int, src: DTypePointer[DType.uint8], dst: DTypePointer[DType.uint8], size: socklen_t
-) -> DTypePointer[DType.uint8]:
+    af: c_int, src: UnsafePointer[c_void], dst: UnsafePointer[c_char], size: socklen_t
+) -> UnsafePointer[c_char]:
     """Libc POSIX `inet_ntop` function
     Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     Fn signature: const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size).
 
     Args:
         af: Address Family see AF_ aliases.
-        src: A pointer to a binary address.
-        dst: A pointer to a buffer to store the result.
+        src: A UnsafePointer to a binary address.
+        dst: A UnsafePointer to a buffer to store the result.
         size: The size of the buffer.
 
     Returns:
-        A pointer to the buffer containing the result.
+        A UnsafePointer to the buffer containing the result.
     """
     return external_call[
         "inet_ntop",
-        DTypePointer[DType.uint8],  # FnName, RetType
+        UnsafePointer[c_char],  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
+        UnsafePointer[c_void],
+        UnsafePointer[c_char],
         socklen_t,  # Args
     ](af, src, dst, size)
 
 
-fn inet_pton(af: c_int, src: DTypePointer[DType.uint8], dst: DTypePointer[DType.uint8]) -> c_int:
+fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) -> c_int:
     """Libc POSIX `inet_pton` function
     Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     Fn signature: int inet_pton(int af, const char *restrict src, void *restrict dst).
 
     Args: af: Address Family see AF_ aliases.
-        src: A pointer to a string containing the address.
-        dst: A pointer to a buffer to store the result.
+        src: A UnsafePointer to a string containing the address.
+        dst: A UnsafePointer to a buffer to store the result.
     Returns: 1 on success, 0 if the input is not a valid address, -1 on error.
     """
     return external_call[
         "inet_pton",
-        c_int,  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],  # Args
+        c_int,
+        UnsafePointer[c_char],
+        UnsafePointer[c_void],
     ](af, src, dst)
 
 
-fn inet_addr(cp: DTypePointer[DType.uint8]) -> in_addr_t:
+fn inet_addr(cp: UnsafePointer[c_char]) -> in_addr_t:
     """Libc POSIX `inet_addr` function
     Reference: https://man7.org/linux/man-pages/man3/inet_addr.3p.html
     Fn signature: in_addr_t inet_addr(const char *cp).
 
-    Args: cp: A pointer to a string containing the address.
+    Args: cp: A UnsafePointer to a string containing the address.
     Returns: The address in network byte order.
     """
-    return external_call["inet_addr", in_addr_t, DTypePointer[DType.uint8]](cp)
+    return external_call["inet_addr", in_addr_t, UnsafePointer[c_char]](cp)
 
 
-fn inet_ntoa(addr: in_addr) -> DTypePointer[DType.uint8]:
+fn inet_ntoa(addr: in_addr) -> UnsafePointer[c_char]:
     """Libc POSIX `inet_ntoa` function
     Reference: https://man7.org/linux/man-pages/man3/inet_addr.3p.html
     Fn signature: char *inet_ntoa(struct in_addr in).
 
-    Args: in: A pointer to a string containing the address.
+    Args: in: A UnsafePointer to a string containing the address.
     Returns: The address in network byte order.
     """
-    return external_call["inet_ntoa", DTypePointer[DType.uint8], in_addr](addr)
+    return external_call["inet_ntoa", UnsafePointer[c_char], in_addr](addr)
 
 
 fn socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
@@ -525,25 +504,26 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
         protocol: The protocol to use.
     Returns: A File Descriptor or -1 in case of failure.
     """
-    return external_call["socket", c_int, c_int, c_int, c_int](domain, type, protocol)  # FnName, RetType  # Args
+    return external_call[
+        "socket", c_int, c_int, c_int, c_int  # FnName, RetType  # Args
+    ](domain, type, protocol)
 
 
 fn setsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: DTypePointer[DType.uint8],
+    option_value: UnsafePointer[c_void],
     option_len: socklen_t,
 ) -> c_int:
     """Libc POSIX `setsockopt` function
     Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
     Fn signature: int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len).
 
-    Args:
-        socket: A File Descriptor.
+    Args: socket: A File Descriptor.
         level: The protocol level.
         option_name: The option to set.
-        option_value: A pointer to the value to set.
+        option_value: A UnsafePointer to the value to set.
         option_len: The size of the value.
     Returns: 0 on success, -1 on error.
     """
@@ -553,48 +533,21 @@ fn setsockopt(
         c_int,
         c_int,
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[c_void],
         socklen_t,  # Args
     ](socket, level, option_name, option_value, option_len)
 
 
-fn getsockopt(
-    socket: c_int,
-    level: c_int,
-    option_name: c_int,
-    option_value: DTypePointer[DType.uint8],
-    option_len: UnsafePointer[socklen_t],
+fn getsockname(
+    socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]
 ) -> c_int:
-    """Libc POSIX `getsockopt` function
-    Reference: https://man7.org/linux/man-pages/man3/getsockopt.3p.html
-    Fn signature: int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len).
-
-    Args: socket: A File Descriptor.
-        level: The protocol level.
-        option_name: The option to get.
-        option_value: A pointer to the value to get.
-        option_len: DTypePointer to the size of the value.
-    Returns: 0 on success, -1 on error.
-    """
-    return external_call[
-        "getsockopt",
-        c_int,  # FnName, RetType
-        c_int,
-        c_int,
-        c_int,
-        DTypePointer[DType.uint8],
-        UnsafePointer[socklen_t],  # Args
-    ](socket, level, option_name, option_value, option_len)
-
-
-fn getsockname(socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
     """Libc POSIX `getsockname` function
     Reference: https://man7.org/linux/man-pages/man3/getsockname.3p.html
     Fn signature: int getsockname(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
 
     Args: socket: A File Descriptor.
-        address: A pointer to a buffer to store the address of the peer.
-        address_len: A pointer to the size of the buffer.
+        address: A UnsafePointer to a buffer to store the address of the peer.
+        address_len: A UnsafePointer to the size of the buffer.
     Returns: 0 on success, -1 on error.
     """
     return external_call[
@@ -606,14 +559,16 @@ fn getsockname(socket: c_int, address: UnsafePointer[sockaddr], address_len: Uns
     ](socket, address, address_len)
 
 
-fn getpeername(sockfd: c_int, addr: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
+fn getpeername(
+    sockfd: c_int, addr: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]
+) -> c_int:
     """Libc POSIX `getpeername` function
     Reference: https://man7.org/linux/man-pages/man2/getpeername.2.html
     Fn signature:   int getpeername(int socket, struct sockaddr *restrict addr, socklen_t *restrict address_len).
 
     Args: sockfd: A File Descriptor.
-        addr: A pointer to a buffer to store the address of the peer.
-        address_len: A pointer to the size of the buffer.
+        addr: A UnsafePointer to a buffer to store the address of the peer.
+        address_len: A UnsafePointer to the size of the buffer.
     Returns: 0 on success, -1 on error.
     """
     return external_call[
@@ -630,9 +585,9 @@ fn bind(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t)
     Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
     Fn signature: int bind(int socket, const struct sockaddr *address, socklen_t address_len).
     """
-    return external_call["bind", c_int, c_int, UnsafePointer[sockaddr], socklen_t](  # FnName, RetType  # Args
-        socket, address, address_len
-    )
+    return external_call[
+        "bind", c_int, c_int, UnsafePointer[sockaddr], socklen_t
+    ](socket, address, address_len)
 
 
 fn listen(socket: c_int, backlog: c_int) -> c_int:
@@ -647,14 +602,16 @@ fn listen(socket: c_int, backlog: c_int) -> c_int:
     return external_call["listen", c_int, c_int, c_int](socket, backlog)
 
 
-fn accept(socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]) -> c_int:
+fn accept(
+    socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePointer[socklen_t]
+) -> c_int:
     """Libc POSIX `accept` function
     Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     Fn signature: int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
 
     Args: socket: A File Descriptor.
-        address: A pointer to a buffer to store the address of the peer.
-        address_len: A pointer to the size of the buffer.
+        address: A UnsafePointer to a buffer to store the address of the peer.
+        address_len: A UnsafePointer to the size of the buffer.
     Returns: A File Descriptor or -1 in case of failure.
     """
     return external_call[
@@ -666,22 +623,26 @@ fn accept(socket: c_int, address: UnsafePointer[sockaddr], address_len: UnsafePo
     ](socket, address, address_len)
 
 
-fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t) -> c_int:
+fn connect(socket: c_int, address: Reference[sockaddr], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function
     Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     Fn signature: int connect(int socket, const struct sockaddr *address, socklen_t address_len).
 
     Args: socket: A File Descriptor.
-        address: A pointer to the address to connect to.
+        address: A UnsafePointer to the address to connect to.
         address_len: The size of the address.
     Returns: 0 on success, -1 on error.
     """
-    return external_call["connect", c_int, c_int, UnsafePointer[sockaddr], socklen_t](  # FnName, RetType  # Args
-        socket, address, address_len
-    )
+    return external_call[
+        "connect", c_int
+    ](socket, address, address_len)
 
-
-fn recv(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flags: c_int) -> c_ssize_t:
+fn recv(
+    socket: c_int,
+    buffer: UnsafePointer[UInt8],
+    length: c_size_t,
+    flags: c_int,
+) -> c_ssize_t:
     """Libc POSIX `recv` function
     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
     Fn signature: ssize_t recv(int socket, void *buffer, size_t length, int flags).
@@ -690,31 +651,25 @@ fn recv(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flag
         "recv",
         c_ssize_t,  # FnName, RetType
         c_int,
-        DTypePointer[DType.uint8],
+        UnsafePointer[UInt8],
         c_size_t,
         c_int,  # Args
     ](socket, buffer, length, flags)
 
-
-fn send(socket: c_int, buffer: DTypePointer[DType.uint8], length: c_size_t, flags: c_int) -> c_ssize_t:
+fn send(
+    socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int
+) -> c_ssize_t:
     """Libc POSIX `send` function
     Reference: https://man7.org/linux/man-pages/man3/send.3p.html
     Fn signature: ssize_t send(int socket, const void *buffer, size_t length, int flags).
 
     Args: socket: A File Descriptor.
-        buffer: A pointer to the buffer to send.
+        buffer: A UnsafePointer to the buffer to send.
         length: The size of the buffer.
         flags: Flags to control the behaviour of the function.
     Returns: The number of bytes sent or -1 in case of failure.
     """
-    return external_call[
-        "send",
-        c_ssize_t,  # FnName, RetType
-        c_int,
-        DTypePointer[DType.uint8],
-        c_size_t,
-        c_int,  # Args
-    ](socket, buffer, length, flags)
+    return external_call["send", c_ssize_t](socket, buffer, length, flags)
 
 
 fn shutdown(socket: c_int, how: c_int) -> c_int:
@@ -726,12 +681,14 @@ fn shutdown(socket: c_int, how: c_int) -> c_int:
         how: How to shutdown the socket.
     Returns: 0 on success, -1 on error.
     """
-    return external_call["shutdown", c_int, c_int, c_int](socket, how)  # FnName, RetType  # Args
+    return external_call["shutdown", c_int, c_int, c_int](  # FnName, RetType  # Args
+        socket, how
+    )
 
 
 fn getaddrinfo(
-    nodename: DTypePointer[DType.uint8],
-    servname: DTypePointer[DType.uint8],
+    nodename: UnsafePointer[c_char],
+    servname: UnsafePointer[c_char],
     hints: UnsafePointer[addrinfo],
     res: UnsafePointer[UnsafePointer[addrinfo]],
 ) -> c_int:
@@ -742,49 +699,140 @@ fn getaddrinfo(
     return external_call[
         "getaddrinfo",
         c_int,  # FnName, RetType
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
+        UnsafePointer[c_char],
+        UnsafePointer[c_char],
         UnsafePointer[addrinfo],  # Args
         UnsafePointer[UnsafePointer[addrinfo]],  # Args
     ](nodename, servname, hints, res)
 
 
-fn getaddrinfo_unix(
-    nodename: DTypePointer[DType.uint8],
-    servname: DTypePointer[DType.uint8],
-    hints: UnsafePointer[addrinfo_unix],
-    res: UnsafePointer[UnsafePointer[addrinfo_unix]],
-) -> c_int:
-    """Libc POSIX `getaddrinfo` function
-    Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
-    Fn signature: int getaddrinfo(const char *restrict nodename, const char *restrict servname, const struct addrinfo *restrict hints, struct addrinfo **restrict res).
-    """
-    return external_call[
-        "getaddrinfo",
-        c_int,  # FnName, RetType
-        DTypePointer[DType.uint8],
-        DTypePointer[DType.uint8],
-        UnsafePointer[addrinfo_unix],  # Args
-        UnsafePointer[UnsafePointer[addrinfo_unix]],  # Args
-    ](nodename, servname, hints, res)
-
-
-fn gai_strerror(ecode: c_int) -> DTypePointer[DType.uint8]:
+fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
     """Libc POSIX `gai_strerror` function
     Reference: https://man7.org/linux/man-pages/man3/gai_strerror.3p.html
     Fn signature: const char *gai_strerror(int ecode).
 
     Args: ecode: The error code.
-    Returns: A pointer to a string describing the error.
+    Returns: A UnsafePointer to a string describing the error.
     """
-    return external_call["gai_strerror", DTypePointer[DType.uint8], c_int](ecode)  # FnName, RetType  # Args
+    return external_call[
+        "gai_strerror", UnsafePointer[c_char], c_int  # FnName, RetType  # Args
+    ](ecode)
 
 
-# fn inet_pton(address_family: Int, address: String) -> Int:
-#     var ip_buf_size = 4
-#     if address_family == AF_INET6:
-#         ip_buf_size = 16
+fn inet_pton(address_family: Int, address: String) -> Int:
+    var ip_buf_size = 4
+    if address_family == AF_INET6:
+        ip_buf_size = 16
 
-#     var ip_buf = DTypePointer[DType.uint8].alloc(ip_buf_size)
-#     var conv_status = inet_pton(rebind[c_int](address_family), to_char_ptr(address), ip_buf)
-#     return int(ip_buf.bitcast[c_uint]().load())
+    var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
+    var conv_status = inet_pton(
+        rebind[c_int](address_family), to_char_ptr(address), ip_buf
+    )
+    return int(ip_buf.bitcast[c_uint]())
+
+
+# --- ( File Related Syscalls & Structs )---------------------------------------
+alias O_NONBLOCK = 16384
+alias O_ACCMODE = 3
+alias O_CLOEXEC = 524288
+
+
+fn close(fildes: c_int) -> c_int:
+    """Libc POSIX `close` function
+    Reference: https://man7.org/linux/man-pages/man3/close.3p.html
+    Fn signature: int close(int fildes).
+
+    Args:
+        fildes: A File Descriptor to close.
+
+    Returns:
+        Upon successful completion, 0 shall be returned; otherwise, -1
+        shall be returned and errno set to indicate the error.
+    """
+    return external_call["close", c_int, c_int](fildes)
+
+
+fn open[*T: AnyType](path: UnsafePointer[c_char], oflag: c_int, *args: *T) -> c_int:
+    """Libc POSIX `open` function
+    Reference: https://man7.org/linux/man-pages/man3/open.3p.html
+    Fn signature: int open(const char *path, int oflag, ...).
+
+    Args:
+        path: A UnsafePointer to a C string containing the path to open.
+        oflag: The flags to open the file with.
+        args: The optional arguments.
+    Returns:
+        A File Descriptor or -1 in case of failure
+    """
+    return external_call["open", c_int](path, oflag, args)
+
+
+fn printf[*T: AnyType](format: UnsafePointer[c_char], *args: *T) -> c_int:
+    """Libc POSIX `printf` function
+    Reference: https://man7.org/linux/man-pages/man3/fprintf.3p.html
+    Fn signature: int printf(const char *restrict format, ...).
+
+    Args: format: A UnsafePointer to a C string containing the format.
+        args: The optional arguments.
+    Returns: The number of bytes written or -1 in case of failure.
+    """
+    return external_call[
+        "printf",
+        c_int,  # FnName, RetType
+    ](format, args)
+
+
+
+fn read(fildes: c_int, buf: UnsafePointer[c_void], nbyte: c_size_t) -> c_int:
+    """Libc POSIX `read` function
+    Reference: https://man7.org/linux/man-pages/man3/read.3p.html
+    Fn signature: sssize_t read(int fildes, void *buf, size_t nbyte).
+
+    Args: fildes: A File Descriptor.
+        buf: A UnsafePointer to a buffer to store the read data.
+        nbyte: The number of bytes to read.
+    Returns: The number of bytes read or -1 in case of failure.
+    """
+    return external_call["read", c_ssize_t, c_int, UnsafePointer[c_void], c_size_t](
+        fildes, buf, nbyte
+    )
+
+
+fn write(fildes: c_int, buf: UnsafePointer[c_void], nbyte: c_size_t) -> c_int:
+    """Libc POSIX `write` function
+    Reference: https://man7.org/linux/man-pages/man3/write.3p.html
+    Fn signature: ssize_t write(int fildes, const void *buf, size_t nbyte).
+
+    Args: fildes: A File Descriptor.
+        buf: A UnsafePointer to a buffer to write.
+        nbyte: The number of bytes to write.
+    Returns: The number of bytes written or -1 in case of failure.
+    """
+    return external_call["write", c_ssize_t, c_int, UnsafePointer[c_void], c_size_t](
+        fildes, buf, nbyte
+    )
+
+fn __test_getaddrinfo__():
+    var ip_addr = "127.0.0.1"
+    var port = 8083
+
+    var servinfo = UnsafePointer[addrinfo]().alloc(1)
+    servinfo[0] = addrinfo()
+
+    var hints = addrinfo()
+    hints.ai_family = AF_INET
+    hints.ai_socktype = SOCK_STREAM
+    hints.ai_flags = AI_PASSIVE
+
+    var status = getaddrinfo(
+        to_char_ptr(ip_addr),
+        UnsafePointer[UInt8](),
+        UnsafePointer.address_of(hints),
+        UnsafePointer.address_of(servinfo),
+    )
+    var msg_ptr = gai_strerror(c_int(status))
+    _ = external_call["printf", c_int, UnsafePointer[c_char], UnsafePointer[c_char]](
+        to_char_ptr("gai_strerror: %s"), msg_ptr
+    )
+    var msg = c_charptr_to_string(msg_ptr)
+    print("getaddrinfo satus: " + msg)

@@ -1,13 +1,20 @@
-from time import now
-from external.morrow import Morrow
-from external.gojo.strings.builder import StringBuilder
-from external.gojo.bufio import Reader
+from utils.string_slice import StringSlice
+from utils import Span
+from gojo.strings.builder import StringBuilder
+from gojo.bufio import Reader
+from small_time.small_time import now
 from lightbug_http.uri import URI
-from lightbug_http.io.bytes import Bytes, BytesView, bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
 from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar
+
+
+alias OK_MESSAGE = String("OK").as_bytes()
+alias NOT_FOUND_MESSAGE = String("Not Found").as_bytes()
+alias TEXT_PLAIN_CONTENT_TYPE = String("text/plain").as_bytes()
+alias OCTET_STREAM_CONTENT_TYPE = String("application/octet-stream").as_bytes()
 
 trait Request:
     fn __init__(inout self, uri: URI):
@@ -123,8 +130,8 @@ struct HTTPRequest(Request):
         self.timeout = timeout
         self.disable_redirect_path_normalization = disable_redirect_path_normalization
 
-    fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+    fn get_body_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.body_raw)
 
     fn set_body_bytes(inout self, body: Bytes) -> Self:
         self.body_raw = body
@@ -171,10 +178,10 @@ struct HTTPRequest(Request):
 
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
+        var body_buf = body_buf_result[0]
         
-        _ = self.set_body_bytes(bytes(body_buf))        
+        _ = self.set_body_bytes(body_buf)
 
 @value
 struct HTTPResponse(Response):
@@ -189,8 +196,8 @@ struct HTTPResponse(Response):
     fn __init__(inout self, body_bytes: Bytes):
         self.header = ResponseHeader(
             200,
-            bytes("OK"),
-            bytes("application/octet-stream"),
+            OK_MESSAGE,
+            OCTET_STREAM_CONTENT_TYPE,
         )
         self.stream_immediate_header_flush = False
         self.stream_body = False
@@ -208,8 +215,8 @@ struct HTTPResponse(Response):
         self.raddr = TCPAddr()
         self.laddr = TCPAddr()
     
-    fn get_body_bytes(self) -> BytesView:
-        return BytesView(unsafe_ptr=self.body_raw.unsafe_ptr(), len=self.body_raw.size)
+    fn get_body_bytes(self) -> Span[UInt8, __lifetime_of(self)]:
+        return Span[UInt8, __lifetime_of(self)](self.body_raw)
 
     fn get_body(self) -> Bytes:
         return self.body_raw
@@ -235,52 +242,51 @@ struct HTTPResponse(Response):
     fn read_body(inout self, inout r: Reader, header_len: Int) raises -> None:
         _ = r.discard(header_len)
 
-        var body_buf: Bytes
-        body_buf, _ = r.peek(r.buffered())
+        var body_buf_result = r.peek(r.buffered())
         
-        _ = self.set_body_bytes(bytes(body_buf)) 
+        _ = self.set_body_bytes(body_buf_result[0])
 
 fn OK(body: StringLiteral) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body.as_bytes_slice(),
     )
 
 fn OK(body: StringLiteral, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body.as_bytes_slice(),
     )
 
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), bytes(body),
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body.as_bytes(),
     )
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), bytes(body),
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body.as_bytes(),
     )
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes("text/plain")), body,
+        ResponseHeader(200, OK_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), body,
     )
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type)), body,
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes()), body,
     )
 
 fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(200, bytes("OK"), bytes(content_type), bytes(content_encoding)), body,
+        ResponseHeader(200, OK_MESSAGE, content_type.as_bytes(), content_encoding.as_bytes()), body,
     )
 
 fn NotFound(path: String) -> HTTPResponse:
     return HTTPResponse(
-        ResponseHeader(404, bytes("Not Found"), bytes("text/plain")), bytes("path " + path + " not found"),
+        ResponseHeader(404, NOT_FOUND_MESSAGE, TEXT_PLAIN_CONTENT_TYPE), ("path " + path + " not found").as_bytes(),
     )
 
-fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime]:
+fn encode(req: HTTPRequest) -> Bytes:
     var builder = StringBuilder()
 
     _ = builder.write(req.header.method())
@@ -328,16 +334,16 @@ fn encode(req: HTTPRequest) raises -> StringSlice[False, ImmutableStaticLifetime
     if len(req.body_raw) > 0:
         _ = builder.write(req.get_body_bytes())
     
-    return StringSlice[False, ImmutableStaticLifetime](unsafe_from_utf8_ptr=builder.render().unsafe_ptr(), len=builder.size)
+    # TODO: Might want to avoid creating a string then copying the bytes
+    return str(builder).as_bytes()
 
 
-fn encode(res: HTTPResponse) raises -> Bytes:
+fn encode(res: HTTPResponse) -> Bytes:
     var current_time = String()
     try:
-        current_time = Morrow.utcnow().__str__()
+        current_time = now(utc=True).__str__()
     except e:
         print("Error getting current time: " + str(e))
-        current_time = str(now())
 
     var builder = StringBuilder()
 
@@ -369,7 +375,7 @@ fn encode(res: HTTPResponse) raises -> Bytes:
 
     if len(res.body_raw) > 0:
         _ = builder.write_string("Content-Length: ")
-        _ = builder.write_string(len(res.body_raw).__str__())
+        _ = builder.write_string(str(len(res.body_raw)))
         _ = builder.write_string(rChar)
         _ = builder.write_string(nChar)
     else:
@@ -392,39 +398,9 @@ fn encode(res: HTTPResponse) raises -> Bytes:
     _ = builder.write_string(nChar)
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
-    
+ 
     if len(res.body_raw) > 0:
         _ = builder.write(res.get_body_bytes())
-    
-    return builder.render().as_bytes_slice()
 
-fn split_http_string(buf: Bytes) raises -> (String, String, String):
-    var request = String(buf)
-    
-    var request_first_line_headers_body = request.split("\r\n\r\n")
-    
-    if len(request_first_line_headers_body) == 0:
-        raise Error("Invalid HTTP string, did not find a double newline")
-    
-    var request_first_line_headers = request_first_line_headers_body[0]
-    
-    var request_body = String()
-
-    if len(request_first_line_headers_body) > 1:
-        request_body = request_first_line_headers_body[1]    
-    
-    var request_first_line_headers_list = request_first_line_headers.split("\r\n", 1)
-
-    var request_first_line = String()
-    var request_headers = String()
-
-    if len(request_first_line_headers_list) == 0:
-        raise Error("Invalid HTTP string, did not find a newline in the first line")
-    
-    if len(request_first_line_headers_list) == 1:
-        request_first_line = request_first_line_headers_list[0]
-    else:
-        request_first_line = request_first_line_headers_list[0]
-        request_headers = request_first_line_headers_list[1]
-
-    return (request_first_line, request_headers, request_body)
+    # TODO: Might want to avoid creating a string then copying the bytes
+    return str(builder).as_bytes()

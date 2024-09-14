@@ -1,8 +1,9 @@
+from sys.info import sizeof
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.sys.net import SysConnection
-from external.libc import (
+from .libc import (
     c_void,
     AF_INET,
     sockaddr,

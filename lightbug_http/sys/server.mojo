@@ -1,8 +1,8 @@
-from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from external.gojo.bytes import buffer
+from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
+from gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
-from lightbug_http.http import HTTPRequest, encode, split_http_string
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
@@ -168,9 +168,8 @@ struct SysServer:
             conn.close()
             return
 
-        var buf = buffer.new_buffer(b^)
+        var buf = Buffer(b^)
         var reader = Reader(buf^)
-
         var error = Error()
         
         var max_request_body_size = self.max_request_body_size()
@@ -188,7 +187,7 @@ struct SysServer:
                 if bytes_recv == 0:
                     conn.close()
                     break
-                buf = buffer.new_buffer(b^)
+                buf = Buffer(b^)
                 reader = Reader(buf^)
 
             var header = RequestHeader()
@@ -198,7 +197,7 @@ struct SysServer:
             except e:
                 error = Error("Failed to parse request headers: " + e.__str__())
 
-            var uri = URI(self.address() + String(header.request_uri()))
+            var uri = URI(self.address() + header.request_uri_str())
             try:
                 uri.parse()
             except e:
@@ -224,9 +223,7 @@ struct SysServer:
             if not self.tcp_keep_alive:
                 _ = res.set_connection_close()
             
-            var res_encoded = encode(res)
-
-            _ = conn.write(res_encoded)
+            _ = conn.write(encode(res))
 
             if not self.tcp_keep_alive:
                 conn.close()

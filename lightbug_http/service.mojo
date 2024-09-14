@@ -1,5 +1,6 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
 from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.strings import to_string
 
 trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
@@ -9,8 +10,16 @@ trait HTTPService:
 @value
 struct Printer(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var uri = req.uri()
+        print("Request URI: ", to_string(uri.request_uri()))
+        
+        var header = req.header
+        print("Request protocol: ", header.protocol_str())
+        print("Request method: ", to_string(header.method()))
+        print("Request Content-Type: ", to_string(header.content_type()))
+
         var body = req.body_raw
-        print(String(body))
+        print("Request Body: ", to_string(body))
 
         return OK(body)
 
@@ -48,7 +57,7 @@ struct ExampleRouter(HTTPService):
         elif uri.path() == "/second":
             print("I'm on /second!")
         elif uri.path() == "/echo":
-            print(String(body))
+            print(to_string(body))
 
         return OK(body)
 
@@ -56,7 +65,6 @@ struct ExampleRouter(HTTPService):
 @value
 struct TechEmpowerRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        # var body = req.body_raw
         var uri = req.uri()
 
         if uri.path() == "/plaintext":

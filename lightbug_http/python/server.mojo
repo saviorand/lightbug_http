@@ -1,6 +1,8 @@
+from gojo.bufio import Reader, Scanner
+from gojo.bytes.buffer import Buffer
 from lightbug_http.server import DefaultConcurrency
-from lightbug_http.net import Listener
-from lightbug_http.http import HTTPRequest, encode, split_http_string
+from lightbug_http.net import Listener, default_buffer_size
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import RequestHeader
 from lightbug_http.python.net import (
@@ -15,6 +17,7 @@ from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import NetworkType
 
+alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 struct PythonServer:
     var pymodules: Modules
@@ -62,42 +65,74 @@ struct PythonServer:
         T: HTTPService
     ](inout self, ln: PythonTCPListener, handler: T) raises -> None:
         self.ln = ln
+        var conn = self.ln.accept()
+        
+        var b = Bytes(capacity=default_buffer_size)
+        var bytes_recv = conn.read(b) 
+        print("Bytes received: ", bytes_recv)
+        if bytes_recv == 0:
+            conn.close()
+            return
 
+        print("Buffer time")
+        var buf = Buffer(b^)
+        var reader = Reader(buf^)
+        print("Reader time")
+        var error = Error()
+        
+        var max_request_body_size = default_max_request_body_size
+        
+        var req_number = 0
+        
         while True:
-            var conn = self.ln.accept()
-            var buf = Bytes()
-            var read_len = conn.read(buf)
-            if read_len == 0:
-                conn.close()
-                break
-            
-            var request_first_line: String
-            var request_headers: String
-            var request_body: String
+            req_number += 1
 
-            request_first_line, request_headers, request_body = split_http_string(buf)
-            
-            var uri = URI(request_first_line)
+            if req_number > 1:
+                var b = Bytes(capacity=default_buffer_size)
+                var bytes_recv = conn.read(b)
+                if bytes_recv == 0:
+                    conn.close()
+                    break
+                buf = Buffer(b^)
+                reader = Reader(buf^)
+
+            var header = RequestHeader()
+            var first_line_and_headers_len = 0
+            try:
+                first_line_and_headers_len = header.parse_raw(reader)
+            except e:
+                error = Error("Failed to parse request headers: " + e.__str__())
+
+            var uri = URI(String(header.request_uri()))
             try:
                 uri.parse()
-            except:
-                conn.close()
-                raise Error("Failed to parse request line")
-
-            var header = RequestHeader(request_headers.as_bytes())
-            try:
-                header.parse_raw(request_first_line)
-            except:
-                conn.close()
-                raise Error("Failed to parse request header")
-
-            var res = handler.func(
-                HTTPRequest(
+            except e:
+                error = Error("Failed to parse request line:" + e.__str__())
+            
+            if header.content_length() > 0:
+                if max_request_body_size > 0 and header.content_length() > max_request_body_size:
+                    error = Error("Request body too large")
+            
+            var request = HTTPRequest(
                     uri,
-                    buf,
+                    Bytes(),
                     header,
                 )
-            )
+            
+            try:
+                request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
+            except e:
+                error = Error("Failed to read request body: " + e.__str__())
+            
+            var res = handler.func(request)
+            
+            if not self.tcp_keep_alive:
+                _ = res.set_connection_close()
+            
             var res_encoded = encode(res)
-            _ = conn.write(res_encoded.as_bytes_slice())
-            conn.close()
+
+            _ = conn.write(res_encoded)
+
+            if not self.tcp_keep_alive:
+                conn.close()
+                return
