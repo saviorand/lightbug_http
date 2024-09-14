@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  test:
+  package:
     name: Package
     runs-on: ubuntu-latest
     steps:
@@ -15,3 +15,9 @@ jobs:
             curl -ssL https://magic.modular.com | bash
             source $HOME/.bash_profile
             magic run mojo package lightbug_http -o lightbug_http.mojopkg
+        
+        - name: Upload package as artifact
+          uses: actions/upload-artifact@v3
+          with:
+            name: lightbug_http-package
+            path: lightbug_http.mojopkg

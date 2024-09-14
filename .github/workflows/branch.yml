@@ -17,9 +17,6 @@ jobs:
   
   package:
     uses: ./.github/workflows/package.yml
-
-  upload:
-    uses: ./.github/workflows/upload.yml
   
   publish:
     uses: ./.github/workflows/publish.yml
