@@ -17,7 +17,7 @@ jobs:
             magic run mojo package lightbug_http -o lightbug_http.mojopkg
         
         - name: Upload package as artifact
-          uses: actions/upload-artifact@v3
+          uses: actions/upload-artifact@v4
           with:
             name: lightbug_http-package
             path: lightbug_http.mojopkg
