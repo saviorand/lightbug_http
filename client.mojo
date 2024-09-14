@@ -1,6 +1,7 @@
 from lightbug_http.http import HTTPRequest
 from lightbug_http.uri import URI
 from lightbug_http.sys.client import MojoClient
+from lightbug_http.strings import to_string
 
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI("http://httpbin.org/status/404")
@@ -20,14 +21,14 @@ fn test_request(inout client: MojoClient) raises -> None:
     # print("Headers:", response.header.headers())
 
     # print parsed headers (only some are parsed for now)
-    print("Content-Type:", String(response.header.content_type()))
+    print("Content-Type:", to_string(response.header.content_type()))
     print("Content-Length", response.header.content_length())
-    print("Server:", String(response.header.server()))
+    print("Server:", to_string(response.header.server()))
 
     print("Is connection set to connection-close? ", response.header.connection_close())
 
     # print body
-    print(String(response.get_body_bytes()))
+    print(to_string(response.get_body_bytes()))
 
 
 fn main() raises -> None:

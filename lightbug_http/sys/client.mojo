@@ -108,11 +108,6 @@ struct MojoClient(Client):
 
         var error = Error()
 
-        # # Ugly hack for now in case the default buffer is too large and we read additional responses from the server
-        # var newline_in_body = response_body.find("\r\n")
-        # if newline_in_body != -1:
-        #     response_body = response_body[:newline_in_body]
-
         var header = ResponseHeader()
         var first_line_and_headers_len = 0
         try:
@@ -127,13 +122,6 @@ struct MojoClient(Client):
             response.read_body(reader, first_line_and_headers_len,)
         except e:
             error = Error("Failed to read request body: " + e.__str__())
-        # var total_recv = bytes_recv
-        # while header.content_length() > total_recv:
-        #     if header.content_length() != 0 and header.content_length() != -2:
-        #         var remaining_body = Bytes()
-        #         var read_len = conn.read(remaining_body)
-        #         response_body += remaining_body
-        #         total_recv += read_len
 
         conn.close()
 
