@@ -37,9 +37,8 @@ Lightbug currently has the following features:
 
  ### Check Out These Mojo Libraries:
 
-- Bound Logger - [@toasty/stump](https://github.com/thatstoasty/stump)
-- Terminal text styling - [@toasty/mog](https://github.com/thatstoasty/mog)
-- CLI Library - [@toasty/prism](https://github.com/thatstoasty/prism)
+- Logging - [@toasty/stump](https://github.com/thatstoasty/stump)
+- CLI and Terminal - [@toasty/prism](https://github.com/thatstoasty/prism), [@toasty/mog](https://github.com/thatstoasty/mog)
 - Date/Time - [@mojoto/morrow](https://github.com/mojoto/morrow.mojo) and [@toasty/small-time](https://github.com/thatstoasty/small-time)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -47,90 +46,108 @@ Lightbug currently has the following features:
 <!-- GETTING STARTED -->
 ## Getting Started
 
-The only hard dependencies for `lightbug_http` are Mojo and [Git](https://docs.github.com/en/get-started/getting-started-with-git). 
-Learn how to get up and running with Mojo on the [Modular website](https://www.modular.com/max/mojo). The Docker installation was removed with the changes in Modular CLI. It will be available once Modular provides needed functionality for Docker setups.
+The only hard dependency for `lightbug_http` is Mojo. 
+Learn how to get up and running with Mojo on the [Modular website](https://www.modular.com/max/mojo).
+Once you have a Mojo project set up locally,
 
-Once you have Mojo set up locally,
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/saviorand/lightbug_http.git
+1. Add the `mojo-community` channel to your `mojoproject.toml`, e.g:
+   ```toml
+   [project]
+   channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo-community"]
    ```
-2. Switch to the project directory:
-   ```sh
-   cd lightbug_http
+2. Add `lightbug_http` as a dependency:
+   ```toml
+   [dependencies]
+   lightbug_http = ">=0.1.0"
    ```
-   then run:
-   ```sh
-   magic run mojo lightbug.🔥
-   ```
-   
-   Open `localhost:8080` in your browser. You should see a welcome screen. 
-   
-   Congrats 🥳 You're using Lightbug!
-2. Add your handler in `lightbug.🔥` by passing a struct that satisfies the following trait:
+3. Run `magic install` at the root of your project, where `mojoproject.toml` is located
+4. Lightbug should now be installed as a dependency. You can import all the default imports at once, e.g:
+    ```mojo
+    from lightbug_http import *
+    ```
+    or import individual structs and functions, e.g. 
+    ```mojo
+    from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK, NotFound
+    ```
+    there are some default handlers you can play with:
+    ```mojo
+    from lightbug_http.service import Printer # prints request details to console
+    from lightbug_http.service import Welcome # serves an HTML file with an image (currently requires manually adding files to static folder, details below)
+    from lightbug_http.service import ExampleRouter # serves /, /first, /second, and /echo routes
+    ```
+5. Add your handler in `lightbug.🔥` by passing a struct that satisfies the following trait:
    ```mojo
    trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         ...
    ```
-   For example, to make a `Printer` service that simply prints the request to console:
+   For example, to make a `Printer` service that prints some details about the request to console:
    ```mojo
-   from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK
-   from lightbug_http.strings import to_string
+    from lightbug_http import *
 
-   @value
-   struct Printer(HTTPService):
-      fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-         var body = req.body_raw
-         print(to_string(body))
+    @value
+    struct Printer(HTTPService):
+        fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+            var uri = req.uri()
+            print("Request URI: ", to_string(uri.request_uri()))
+            
+            var header = req.header
+            print("Request protocol: ", header.protocol_str())
+            print("Request method: ", to_string(header.method()))
+            print("Request Content-Type: ", to_string(header.content_type()))
 
-         return OK(body)
+            var body = req.body_raw
+            print("Request Body: ", to_string(body))
+
+            return OK(body)
    ```
-   Routing is not in scope for this library, but you can easily set up routes yourself:
-   ```mojo
-   from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK
-   from lightbug_http.strings import to_string
+6. Start a server listening on a port with your service like so. 
+    ```mojo
+    fn main() raises:
+        var server = SysServer()
+        var handler = Printer()
+        server.listen_and_serve("0.0.0.0:8080", handler)
+    ```
+Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
-   @value
-   struct ExampleRouter(HTTPService):
-      fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-         var body = req.body_raw
-         var uri = req.uri()
-
-         if uri.path() == "/":
-               print("I'm on the index path!")
-         if uri.path() == "/first":
-               print("I'm on /first!")
-         elif uri.path() == "/second":
-               print("I'm on /second!")
-         elif uri.path() == "/echo":
-               print(to_string(body))
-
-         return OK(body)
-   ```
+Now send a request `0.0.0.0:8080`. You should see some details about the request printed out to the console.
    
-   We plan to add more advanced routing functionality in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
-3. Run `magic run mojo lightbug.🔥`. This will start up a server listening on `localhost:8080`. Or, if you prefer to import the server into your own app:
-   ```mojo
-   from lightbug_http import *
+Congrats 🥳 You're using Lightbug!
 
-   fn main() raises:
-       var server = SysServer()
-       var handler = Welcome()
-       server.listen_and_serve("0.0.0.0:8080", handler)
-   ```
-   Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
+
+Routing is not in scope for this library, but you can easily set up routes yourself:
+```mojo
+from lightbug_http import *
+
+@value
+struct ExampleRouter(HTTPService):
+    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var body = req.body_raw
+        var uri = req.uri()
+
+        if uri.path() == "/":
+            print("I'm on the index path!")
+        if uri.path() == "/first":
+            print("I'm on /first!")
+        elif uri.path() == "/second":
+            print("I'm on /second!")
+        elif uri.path() == "/echo":
+            print(to_string(body))
+
+        return OK(body)
+```
+
+We plan to add more advanced routing functionality in a future library called `lightbug_api`, see [Roadmap](#roadmap) for more details.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Serving static files
 
-The default welcome screen shows an example of how to serve files like images or HTML using Lightbug. Mojo has built-in `open`, `read` and `read_bytes` methods that you can use to read files from e.g. a `static` directory and serve them on a route:
+The default welcome screen shows an example of how to serve files like images or HTML using Lightbug. Mojo has built-in `open`, `read` and `read_bytes` methods that you can use to read files and serve them on a route. Assuming you copy an html file and image from the Lightbug repo into a `static` directory at the root of your repo:
 
 ```mojo
-from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK, NotFound
-from lightbug_http.io.bytes import Bytes
+from lightbug_http import *
 
 @value
 struct Welcome(HTTPService):
@@ -157,10 +174,8 @@ struct Welcome(HTTPService):
 Create a file, e.g `client.mojo` with the following code. Run `magic run mojo client.mojo` to execute the request to a given URL.
 
 ```mojo
-from lightbug_http.http import HTTPRequest
-from lightbug_http.uri import URI
+from lightbug_http import *
 from lightbug_http.sys.client import MojoClient
-from lightbug_http.strings import to_string
 
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI("http://httpbin.org/status/404")
@@ -185,6 +200,11 @@ fn test_request(inout client: MojoClient) raises -> None:
 
     # print body
     print(to_string(response.get_body_bytes()))
+
+
+fn main() raises -> None:
+    var client = MojoClient()
+    test_request(client)
 ```
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.
@@ -195,6 +215,7 @@ By default, Lightbug uses the pure Mojo implementation for networking. To use Py
 from lightbug_http.python.server import PythonServer
 ```
 You can then use all the regular server commands in the same way as with the default server.
+Note: as of September, 2024, `PythonServer` and `PythonClient` throw a compilation error when starting. There's an open [issue](https://github.com/saviorand/lightbug_http/issues/41) to fix this - contributions welcome!
 
 <!-- ROADMAP -->
 ## Roadmap

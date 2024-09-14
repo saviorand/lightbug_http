@@ -10,8 +10,16 @@ trait HTTPService:
 @value
 struct Printer(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        var uri = req.uri()
+        print("Request URI: ", to_string(uri.request_uri()))
+        
+        var header = req.header
+        print("Request protocol: ", header.protocol_str())
+        print("Request method: ", to_string(header.method()))
+        print("Request Content-Type: ", to_string(header.content_type()))
+
         var body = req.body_raw
-        print(to_string(body))
+        print("Request Body: ", to_string(body))
 
         return OK(body)
 

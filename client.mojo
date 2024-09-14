@@ -1,7 +1,5 @@
-from lightbug_http.http import HTTPRequest
-from lightbug_http.uri import URI
+from lightbug_http import *
 from lightbug_http.sys.client import MojoClient
-from lightbug_http.strings import to_string
 
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI("http://httpbin.org/status/404")
@@ -16,9 +14,6 @@ fn test_request(inout client: MojoClient) raises -> None:
 
     # print status code
     print("Response:", response.header.status_code())
-
-    # print raw headers
-    # print("Headers:", response.header.headers())
 
     # print parsed headers (only some are parsed for now)
     print("Content-Type:", to_string(response.header.content_type()))
