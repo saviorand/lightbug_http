@@ -2,6 +2,9 @@ name: Build and publish
 
 on:
   workflow_call:
+    secrets:
+      PREFIX_API_KEY:
+        required: true
 
 jobs:
   publish:

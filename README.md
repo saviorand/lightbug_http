@@ -40,7 +40,7 @@ Lightbug currently has the following features:
 - Bound Logger - [@toasty/stump](https://github.com/thatstoasty/stump)
 - Terminal text styling - [@toasty/mog](https://github.com/thatstoasty/mog)
 - CLI Library - [@toasty/prism](https://github.com/thatstoasty/prism)
-- Date/Time - [@mojoto/morrow](https://github.com/mojoto/morrow.mojo)
+- Date/Time - [@mojoto/morrow](https://github.com/mojoto/morrow.mojo) and [@toasty/small-time](https://github.com/thatstoasty/small-time)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -160,6 +160,7 @@ Create a file, e.g `client.mojo` with the following code. Run `magic run mojo cl
 from lightbug_http.http import HTTPRequest
 from lightbug_http.uri import URI
 from lightbug_http.sys.client import MojoClient
+from lightbug_http.strings import to_string
 
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI("http://httpbin.org/status/404")
@@ -168,19 +169,22 @@ fn test_request(inout client: MojoClient) raises -> None:
     except e:
         print("error parsing uri: " + e.__str__())
 
+
     var request = HTTPRequest(uri)
     var response = client.do(request)
 
-    print("Status Code:", response.header.status_code())
+    # print status code
+    print("Response:", response.header.status_code())
 
-    # print parsed headers (only selected headers are parsed for now)
-    print("Content-Type:", String(response.header.content_type()))
+    # print parsed headers (only some are parsed for now)
+    print("Content-Type:", to_string(response.header.content_type()))
     print("Content-Length", response.header.content_length())
-    print("Server:", String(response.header.server()))
+    print("Server:", to_string(response.header.server()))
+
     print("Is connection set to connection-close? ", response.header.connection_close())
 
     # print body
-    print(String(response.get_body_bytes()))
+    print(to_string(response.get_body_bytes()))
 ```
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.

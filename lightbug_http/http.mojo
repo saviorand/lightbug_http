@@ -1,9 +1,8 @@
-from time import now
 from utils.string_slice import StringSlice
 from utils import Span
-# from external.morrow import Morrow
 from gojo.strings.builder import StringBuilder
 from gojo.bufio import Reader
+from small_time.small_time import now
 from lightbug_http.uri import URI
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.header import RequestHeader, ResponseHeader
@@ -340,12 +339,11 @@ fn encode(req: HTTPRequest) -> Bytes:
 
 
 fn encode(res: HTTPResponse) -> Bytes:
-    # var current_time = String()
-    # try:
-    #     current_time = Morrow.utcnow().__str__()
-    # except e:
-    #     print("Error getting current time: " + str(e))
-    #     current_time = str(now())
+    var current_time = String()
+    try:
+        current_time = now(utc=True).__str__()
+    except e:
+        print("Error getting current time: " + str(e))
 
     var builder = StringBuilder()
 
@@ -393,8 +391,8 @@ fn encode(res: HTTPResponse) -> Bytes:
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)
 
-    _ = builder.write_string("Date: 12345")
-    # _ = builder.write_string(current_time)
+    _ = builder.write_string("Date: ")
+    _ = builder.write_string(current_time)
 
     _ = builder.write_string(rChar)
     _ = builder.write_string(nChar)

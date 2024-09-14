@@ -18,6 +18,8 @@ jobs:
   
   publish:
     uses: ./.github/workflows/publish.yml
+    secrets:
+      PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
 
   upload-to-release:
     name: Upload to release

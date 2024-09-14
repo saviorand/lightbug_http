@@ -1,5 +1,4 @@
 import testing
-from external.morrow import Morrow
 from tests.utils import (
     default_server_conn_string,
     getRequest,
