@@ -1,0 +1,36 @@
+name: Release tag pipeline
+
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+  
+  package:
+    uses: ./.github/workflows/package.yml
+  
+  publish:
+    uses: ./.github/workflows/publish.yml
+
+  upload-to-release:
+    name: Upload to release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Upload package to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file: lightbug_http.mojopkg
+          tag: ${{ steps.get_version.outputs.VERSION }}
+          overwrite: true
