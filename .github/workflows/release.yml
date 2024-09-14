@@ -29,7 +29,11 @@ jobs:
       - name: Get the version
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
+      
+      - uses: actions/download-artifact@v4
+        with:
+          name: lightbug_http-package
+      
       - name: Upload package to release
         uses: svenstaro/upload-release-action@v2
         with:
