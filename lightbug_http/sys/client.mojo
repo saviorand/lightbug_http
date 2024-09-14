@@ -10,6 +10,7 @@ from ..libc import (
     recv,
     close,
 )
+from lightbug_http.strings import to_string
 from lightbug_http.client import Client
 from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
@@ -65,7 +66,7 @@ struct MojoClient(Client):
             If there is a failure in sending or receiving the message.
         """
         var uri = req.uri()
-        var host = String(uri.host())
+        var host = to_string(uri.host())
 
         if host == "":
             raise Error("URI is nil")

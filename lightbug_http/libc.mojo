@@ -623,7 +623,7 @@ fn accept(
     ](socket, address, address_len)
 
 
-fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t) -> c_int:
+fn connect(socket: c_int, address: Reference[sockaddr], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function
     Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     Fn signature: int connect(int socket, const struct sockaddr *address, socklen_t address_len).
@@ -634,7 +634,7 @@ fn connect(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen
     Returns: 0 on success, -1 on error.
     """
     return external_call[
-        "connect", c_int, c_int, UnsafePointer[sockaddr], socklen_t  # FnName, RetType  # Args
+        "connect", c_int
     ](socket, address, address_len)
 
 fn recv(

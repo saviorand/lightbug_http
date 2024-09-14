@@ -315,25 +315,24 @@ struct addrinfo_macos(AnAddrInfo):
             host: String - The host to get the IP from.
 
         Returns:
-            UInt32 - The IP address.
+            in_addr - The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = UnsafePointer[Self]().alloc(1)
-        servinfo.init_pointee_move(Self())
-
+        var servinfo = Reference(Self())
+        var servname = UnsafePointer[Int8]()
+        
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
         hints.ai_flags = AI_PASSIVE
+        
+        var error = external_call[
+            "getaddrinfo",
+            Int32,
+        ](host_ptr, servname, Reference(hints), Reference(servinfo))
 
-        var error = getaddrinfo[Self](
-            host_ptr,
-            UnsafePointer[UInt8](),
-            UnsafePointer.address_of(hints),
-            UnsafePointer.address_of(servinfo),
-        )
         if error != 0:
-            print("getaddrinfo failed")
+            print("getaddrinfo failed with error code: " + error.__str__())
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
         var addrinfo = servinfo[]
@@ -349,6 +348,7 @@ struct addrinfo_macos(AnAddrInfo):
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
+
 
 
 @value
@@ -444,9 +444,9 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     var addr: sockaddr_in = sockaddr_in(
         AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
     )
-    var addr_ptr = UnsafePointer[sockaddr_in].address_of(addr).bitcast[sockaddr]()
+    var addr_ptr = Reference[sockaddr_in](addr)
 
-    if connect(sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
+    if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server")
 

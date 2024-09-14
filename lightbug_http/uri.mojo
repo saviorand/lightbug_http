@@ -260,7 +260,7 @@ struct URI:
             remainder_uri = raw_uri[proto_end + 3:]
         else:
             remainder_uri = raw_uri
-
+        
         _ = self.set_scheme_bytes(proto_str.as_bytes())
         
         var path_start = remainder_uri.find("/")
