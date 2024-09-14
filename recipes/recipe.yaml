@@ -20,6 +20,7 @@ requirements:
   run:
     - max >=24.5.0
     - gojo == 0.1.9
+    - small_time == 0.1.3
 
 about:
   homepage: https://github.com/saviorand/lightbug_http
