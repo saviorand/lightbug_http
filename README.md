@@ -58,7 +58,7 @@ Once you have a Mojo project set up locally,
 2. Add `lightbug_http` as a dependency:
    ```toml
    [dependencies]
-   lightbug_http = ">=0.1.0"
+   lightbug_http = ">=0.1.1"
    ```
 3. Run `magic install` at the root of your project, where `mojoproject.toml` is located
 4. Lightbug should now be installed as a dependency. You can import all the default imports at once, e.g:
