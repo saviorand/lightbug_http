@@ -8,7 +8,8 @@ package:
   version: 0.1.0
 
 source:
-  - path: ./lightbug_http
+  - path: ../lightbug_http
+  - path: ../LICENSE
 
 build:
   script:
