@@ -1,94 +1,55 @@
-from utils import Span
-from collections import Dict
-import testing
-from gojo.bytes import buffer
-from gojo.bufio import Reader
-from lightbug_http.header import RequestHeader, ResponseHeader, headerScanner
+from testing import assert_equal, assert_true
+from lightbug_http.utils import  ByteReader
+from lightbug_http.header import Headers, Header
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import empty_string 
 from lightbug_http.net import default_buffer_size
 
-
-fn to_string(b: Span[UInt8]) -> String:
-    var bytes = List[UInt8, True](b)
-    bytes.append(0)
-    return String(bytes)
-
-
-fn to_string(owned b: List[UInt8, True]) -> String:
-    b.append(0)
-    return String(b)
-
 def test_header():
     test_parse_request_header()
     test_parse_response_header()
-    test_header_scanner()
+    test_header_case_insensitive()
+
+def test_header_case_insensitive():
+    var headers = Headers(Header("Host", "SomeHost"))
+    assert_true("host" in headers)
+    assert_true("HOST" in headers)
+    assert_true("hOST" in headers)
+    assert_equal(headers["Host"], "SomeHost")
+    assert_equal(headers["host"], "SomeHost")
 
 def test_parse_request_header():
-    var headers_str = 'GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n'
-    var header = RequestHeader()
-    var reader = Reader(buffer.Buffer(headers_str))
-    _ = header.parse_raw(reader)
-    testing.assert_equal(to_string(header.request_uri()), "/index.html")
-    testing.assert_equal(to_string(header.protocol()), "HTTP/1.1")
-    testing.assert_equal(header.no_http_1_1, False)
-    testing.assert_equal(to_string(header.host()), String("example.com"))
-    testing.assert_equal(to_string(header.user_agent()), "Mozilla/5.0")
-    testing.assert_equal(to_string(header.content_type()), "text/html")
-    testing.assert_equal(header.content_length(), 1234)
-    testing.assert_equal(header.connection_close(), True)
+    var headers_str = bytes('''GET /index.html HTTP/1.1\r\nHost:example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+    var header = Headers()
+    var b = Bytes(headers_str)
+    var reader = ByteReader(b^)
+    var method: String
+    var protocol: String
+    var uri: String
+    method, uri, protocol = header.parse_raw(reader)
+    assert_equal(uri, "/index.html")
+    assert_equal(protocol, "HTTP/1.1")
+    assert_equal(method, "GET")
+    assert_equal(header["Host"], "example.com")
+    assert_equal(header["User-Agent"], "Mozilla/5.0")
+    assert_equal(header["Content-Type"], "text/html")
+    assert_equal(header["Content-Length"], "1234")
+    assert_equal(header["Connection"], "close")
 
 def test_parse_response_header():
-    var headers_str = 'HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n'
-    var header = ResponseHeader()
-    var reader = Reader(buffer.Buffer(headers_str))
-    _ = header.parse_raw(reader)
-    testing.assert_equal(to_string(header.protocol()), "HTTP/1.1")
-    testing.assert_equal(header.no_http_1_1, False)
-    testing.assert_equal(header.status_code(), 200)
-    testing.assert_equal(to_string(header.status_message()), "OK")
-    testing.assert_equal(to_string(header.server()), "example.com")
-    testing.assert_equal(to_string(header.content_type()), "text/html")
-    testing.assert_equal(to_string(header.content_encoding()), "gzip")
-    testing.assert_equal(header.content_length(), 1234)
-    testing.assert_equal(header.connection_close(), True)
-    testing.assert_equal(header.trailer_str(), "end-of-message")
-
-
-def test_header_scanner():
-    var headers_str = 'Server: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n'
-    var expected_results = List[List[String]](
-        List[String]("Server", "example.com"),
-        List[String]("User-Agent", "Mozilla/5.0"),
-        List[String]("Content-Type", "text/html"),
-        List[String]("Content-Encoding", "gzip"),
-        List[String]("Content-Length", "1234"),
-        List[String]("Connection", "close"),
-        List[String]("Trailer", "end-of-message")
-    )
-    var scanner = headerScanner()
-    scanner.set_b(headers_str.as_bytes_slice())
-    var i = 0
-    while scanner.next():
-        if len(scanner.key()) > 0:
-            testing.assert_equal(to_string(scanner.key()), expected_results[i][0])
-            testing.assert_equal(to_string(scanner.value()), expected_results[i][1])
-        i += 1
-    
-    headers_str = 'Host: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n'
-    expected_results = List[List[String]](
-        List[String]("Host", "example.com"),
-        List[String]("User-Agent", "Mozilla/5.0"),
-        List[String]("Content-Type", "text/html"),
-        List[String]("Content-Length", "1234"),
-        List[String]("Connection", "close"),
-        List[String]("Trailer", "end-of-message")
-    )
-    scanner = headerScanner()
-    scanner.set_b(headers_str.as_bytes_slice())
-    i = 0
-    while scanner.next():
-        if len(scanner.key()) > 0:
-            testing.assert_equal(to_string(scanner.key()), expected_results[i][0])
-            testing.assert_equal(to_string(scanner.value()), expected_results[i][1])
-        i += 1
+    var headers_str = bytes('''HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+    var header = Headers()
+    var protocol: String
+    var status_code: String
+    var status_text: String
+    var reader = ByteReader(headers_str^)
+    protocol, status_code, status_text = header.parse_raw(reader)
+    assert_equal(protocol, "HTTP/1.1")
+    assert_equal(status_code, "200")
+    assert_equal(status_text, "OK")
+    assert_equal(header["Server"], "example.com")
+    assert_equal(header["Content-Type"], "text/html")
+    assert_equal(header["Content-Encoding"], "gzip")
+    assert_equal(header["Content-Length"], "1234")
+    assert_equal(header["Connection"], "close")
+    assert_equal(header["Trailer"], "end-of-message")

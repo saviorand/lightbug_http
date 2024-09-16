@@ -2,21 +2,15 @@ from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.uri import URI
-from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.http import HTTPRequest, HTTPResponse
 from lightbug_http.net import Listener, Addr, Connection, TCPAddr
 from lightbug_http.service import HTTPService, OK
 from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
 from lightbug_http.io.bytes import bytes
+from lightbug_http.header import Headers, Header
 
 alias default_server_conn_string = "http://localhost:8080"
-
-alias getRequest = bytes(
-    "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
-    " Firefox Chrome MSIE Opera\r\n"
-    + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
-    " aa=aakslsdweriwereowriewroire\r\n\r\n"
-)
 
 alias defaultExpectedGetResponse = bytes(
     "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
@@ -130,7 +124,7 @@ struct FakeServer(ServerTrait):
 @value
 struct FakeResponder(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        var method = String(req.header.method())
+        var method = req.method
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
         return OK(bytes("Hello, world!"))

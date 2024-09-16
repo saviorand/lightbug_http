@@ -1,5 +1,4 @@
 from lightbug_http.http import HTTPResponse
-from lightbug_http.header import ResponseHeader
 from lightbug_http.io.bytes import bytes
 
 alias TODO_MESSAGE = String("TODO").as_bytes()
@@ -8,4 +7,4 @@ alias TODO_MESSAGE = String("TODO").as_bytes()
 @value
 struct ErrorHandler:
     fn Error(self) -> HTTPResponse:
-        return HTTPResponse(ResponseHeader(), TODO_MESSAGE)
+        return HTTPResponse(TODO_MESSAGE)
