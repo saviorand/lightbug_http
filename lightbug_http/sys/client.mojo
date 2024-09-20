@@ -87,7 +87,6 @@ struct MojoClient(Client):
                 port = 443
             else:
                 port = 80
-
         var conn = create_connection(self.fd, host_str, port)
         var bytes_sent = conn.write(encode(req^))
         if bytes_sent == -1:
@@ -104,5 +103,5 @@ struct MojoClient(Client):
         except e:
             conn.close()
             raise e
-        
+
         return HTTPResponse(Bytes())

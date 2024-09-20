@@ -98,7 +98,6 @@ struct Headers(Formattable, Stringable):
             # TODO (bgreni): Handle possible trailing whitespace
             var value = r.read_line()
             self._inner[to_string(key^).lower()] = to_string(value^)
-
         return (to_string(first^), to_string(second^), to_string(third^))
 
     fn format_to(self, inout writer: Formatter):
