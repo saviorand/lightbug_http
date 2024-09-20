@@ -95,7 +95,7 @@ struct MojoClient(Client):
 
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
-        
+
         if bytes_recv == 0:
             conn.close()
 
@@ -104,4 +104,5 @@ struct MojoClient(Client):
         except e:
             conn.close()
             raise e
+        print("should not reach here")
         return HTTPResponse(Bytes())

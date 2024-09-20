@@ -15,31 +15,17 @@ def test_client():
     test_mojo_client_lightbug_external_req(mojo_client)
 
 
-# fn test_mojo_client_lightbug(client: MojoClient) raises:
-#     var res = client.do(
-#         HTTPRequest(
-#             uri = URI(default_server_conn_string),
-#             body_bytes = bytes("Hello world!"),
-#             headers = GetRequestHeaders,
-#             protocol = "GET",
-#             request
-#         )
-#     )
-#     testing.assert_equal(
-#         String(res.body_raw[0:112]),
-#         String(
-#             "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
-#             " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: "
-#         ),
-#     )
-
-
 fn test_mojo_client_lightbug_external_req(client: MojoClient) raises:
     var req = HTTPRequest(
-        URI("http://grandinnerastoundingspell.neverssl.com/online/"),
+        uri = URI.parse("httpbin.org/status/200")[URI],
+        headers = Header("Connection", "keep-alive"),
+        protocol = "GET",
     )
+    print("parsed uri: ", req.uri.host)
+    print("parsed path: ", req.uri.path)
     try:
         var res = client.do(req)
         testing.assert_equal(res.status_code, 200)
+    
     except e:
         print(e)

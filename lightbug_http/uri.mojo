@@ -42,6 +42,18 @@ struct URI:
         u._parse()
         return u
 
+    fn __init__(inout self) -> None:
+        self.__path_original = "/"
+        self.scheme = ""
+        self.path = "/"
+        self.query_string = ""
+        self.__hash = ""
+        self.host = ""
+        self.full_uri = ""
+        self.request_uri = ""
+        self.username = ""
+        self.password = ""
+    
     fn __init__(
         inout self,
         uri: String

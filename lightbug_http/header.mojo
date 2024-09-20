@@ -76,7 +76,7 @@ struct Headers(Formattable, Stringable):
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Failed to read first byte from response header")
-
+        
         var first = r.read_word()
         r.increment()
         var second = r.read_word()

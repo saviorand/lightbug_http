@@ -175,7 +175,7 @@ struct HTTPResponse(Formattable, Stringable):
             protocol = protocol,
             status_code = int(status_code),
             status_text = status_text)
-
+        
         try:
             response.read_body(reader)
             return response
