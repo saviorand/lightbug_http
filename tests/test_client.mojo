@@ -21,7 +21,6 @@ fn test_mojo_client_lightbug_external_req(client: MojoClient) raises:
             Header("Connection", "keep-alive"),
             Header("Host", "httpbin.org")),
         method="GET",
-        protocol="GET",
     )
 
     try:
