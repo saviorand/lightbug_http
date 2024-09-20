@@ -4,6 +4,7 @@ from collections import Dict
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 from lightbug_http.strings import rChar, nChar, lineBreak, to_string
 
+
 struct HeaderKey:
     # TODO: Fill in more of these
     alias CONNECTION = "connection"
@@ -12,21 +13,25 @@ struct HeaderKey:
     alias CONTENT_ENCODING = "content-encoding"
     alias DATE = "date"
 
+
 @value
 struct Header:
     var key: String
     var value: String
 
+
 @always_inline
 fn write_header(inout writer: Formatter, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
+
 @always_inline
 fn write_header(inout writer: ByteWriter, key: String, inout value: String):
-    var  k = key + ": "
+    var k = key + ": "
     writer.write(k)
     writer.write(value)
     writer.write(lineBreak)
+
 
 @value
 struct Headers(Formattable, Stringable):
@@ -59,7 +64,7 @@ struct Headers(Formattable, Stringable):
             return self._inner[key.lower()]
         except:
             return String()
-        
+
     @always_inline
     fn __setitem__(inout self, key: String, value: String):
         self._inner[key.lower()] = value
@@ -72,11 +77,13 @@ struct Headers(Formattable, Stringable):
         except:
             return 0
 
-    fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String):
+    fn parse_raw(
+        inout self, inout r: ByteReader
+    ) raises -> (String, String, String):
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Failed to read first byte from response header")
-        
+
         var first = r.read_word()
         r.increment()
         var second = r.read_word()
@@ -91,7 +98,7 @@ struct Headers(Formattable, Stringable):
             # TODO (bgreni): Handle possible trailing whitespace
             var value = r.read_line()
             self._inner[to_string(key^).lower()] = to_string(value^)
-        
+
         return (to_string(first^), to_string(second^), to_string(third^))
 
     fn format_to(self, inout writer: Formatter):
@@ -104,4 +111,3 @@ struct Headers(Formattable, Stringable):
 
     fn __str__(self) -> String:
         return to_string(self)
-    

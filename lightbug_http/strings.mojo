@@ -23,11 +23,13 @@ alias whitespace_byte = ord(whitespace)
 alias tab = "\t"
 alias tab_byte = ord(tab)
 
+
 struct BytesConstant:
     alias whitespace = byte(whitespace)
     alias colon = byte(colonChar)
     alias rChar = byte(rChar)
     alias nChar = byte(nChar)
+
 
 @value
 struct NetworkType:
@@ -45,6 +47,7 @@ struct NetworkType:
     alias ip6 = NetworkType("ip6")
     alias unix = NetworkType("unix")
 
+
 @value
 struct ConnType:
     var value: String
@@ -52,6 +55,7 @@ struct ConnType:
     alias empty = ConnType("")
     alias http = ConnType("http")
     alias websocket = ConnType("websocket")
+
 
 @value
 struct RequestMethod:
@@ -65,11 +69,13 @@ struct RequestMethod:
     alias patch = RequestMethod("PATCH")
     alias options = RequestMethod("OPTIONS")
 
+
 @value
 struct CharSet:
     var value: String
 
     alias utf8 = CharSet("utf-8")
+
 
 @value
 struct MediaType:
@@ -79,12 +85,14 @@ struct MediaType:
     alias plain = MediaType("text/plain")
     alias json = MediaType("application/json")
 
+
 @value
 struct Message:
     var type: String
 
     alias empty = Message("")
     alias http_start = Message("http.response.start")
+
 
 fn to_string[T: Formattable](value: T) -> String:
     var s = String()
@@ -107,7 +115,7 @@ fn to_string(b: Span[UInt8]) -> String:
 fn to_string(owned bytes: List[UInt8, True]) -> String:
     """Creates a String from the provided List of bytes.
     If you do not transfer ownership of the List, the List will be copied.
-    
+
     Args:
         bytes: The List of bytes to convert to a String.
     """

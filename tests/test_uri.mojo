@@ -4,6 +4,7 @@ from lightbug_http.uri import URI
 from lightbug_http.strings import empty_string, to_string
 from lightbug_http.io.bytes import Bytes
 
+
 def test_uri():
     test_uri_no_parse_defaults()
     test_uri_parse_http_with_port()
@@ -15,12 +16,14 @@ def test_uri():
     test_uri_parse_http_with_query_string()
     test_uri_parse_http_with_hash()
 
+
 def test_uri_no_parse_defaults():
     var uri = URI.parse("http://example.com")[URI]
     testing.assert_equal(uri.full_uri, "http://example.com")
 
     testing.assert_equal(uri.scheme, "http")
     testing.assert_equal(uri.path, "/")
+
 
 def test_uri_parse_http_with_port():
     var uri = URI.parse("http://example.com:8080/index.html")[URI]
@@ -33,6 +36,7 @@ def test_uri_parse_http_with_port():
     testing.assert_equal(uri.is_http(), True)
     testing.assert_equal(uri.query_string, empty_string)
 
+
 def test_uri_parse_https_with_port():
     var uri = URI.parse("https://example.com:8080/index.html")[URI]
     testing.assert_equal(uri.scheme, "https")
@@ -43,6 +47,7 @@ def test_uri_parse_https_with_port():
     testing.assert_equal(uri.is_https(), True)
     testing.assert_equal(uri.is_http(), False)
     testing.assert_equal(uri.query_string, empty_string)
+
 
 def test_uri_parse_http_with_path():
     var uri = URI.parse("http://example.com/index.html")[URI]
@@ -55,6 +60,7 @@ def test_uri_parse_http_with_path():
     testing.assert_equal(uri.is_http(), True)
     testing.assert_equal(uri.query_string, empty_string)
 
+
 def test_uri_parse_https_with_path():
     var uri = URI.parse("https://example.com/index.html")[URI]
     testing.assert_equal(uri.scheme, "https")
@@ -66,6 +72,7 @@ def test_uri_parse_https_with_path():
     testing.assert_equal(uri.is_http(), False)
     testing.assert_equal(uri.query_string, empty_string)
 
+
 def test_uri_parse_http_basic():
     var uri = URI.parse("http://example.com")[URI]
     testing.assert_equal(uri.scheme, "http")
@@ -74,6 +81,7 @@ def test_uri_parse_http_basic():
     testing.assert_equal(uri.__path_original, "/")
     testing.assert_equal(uri.request_uri, "/")
     testing.assert_equal(uri.query_string, empty_string)
+
 
 def test_uri_parse_http_basic_www():
     var uri = URI.parse("http://www.example.com")[URI]
@@ -84,8 +92,10 @@ def test_uri_parse_http_basic_www():
     testing.assert_equal(uri.request_uri, "/")
     testing.assert_equal(uri.query_string, empty_string)
 
+
 def test_uri_parse_http_with_query_string():
     ...
+
 
 def test_uri_parse_http_with_hash():
     ...

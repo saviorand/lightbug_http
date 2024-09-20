@@ -1,14 +1,16 @@
 from testing import assert_equal, assert_true
-from lightbug_http.utils import  ByteReader
+from lightbug_http.utils import ByteReader
 from lightbug_http.header import Headers, Header
 from lightbug_http.io.bytes import Bytes, bytes
-from lightbug_http.strings import empty_string 
+from lightbug_http.strings import empty_string
 from lightbug_http.net import default_buffer_size
+
 
 def test_header():
     test_parse_request_header()
     test_parse_response_header()
     test_header_case_insensitive()
+
 
 def test_header_case_insensitive():
     var headers = Headers(Header("Host", "SomeHost"))
@@ -18,8 +20,11 @@ def test_header_case_insensitive():
     assert_equal(headers["Host"], "SomeHost")
     assert_equal(headers["host"], "SomeHost")
 
+
 def test_parse_request_header():
-    var headers_str = bytes('''GET /index.html HTTP/1.1\r\nHost:example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+    var headers_str = bytes(
+        """GET /index.html HTTP/1.1\r\nHost:example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
+    )
     var header = Headers()
     var b = Bytes(headers_str)
     var reader = ByteReader(b^)
@@ -36,8 +41,11 @@ def test_parse_request_header():
     assert_equal(header["Content-Length"], "1234")
     assert_equal(header["Connection"], "close")
 
+
 def test_parse_response_header():
-    var headers_str = bytes('''HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+    var headers_str = bytes(
+        """HTTP/1.1 200 OK\r\nServer: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Encoding: gzip\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
+    )
     var header = Headers()
     var protocol: String
     var status_code: String

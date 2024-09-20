@@ -7,7 +7,16 @@ from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
 from lightbug_http.io.sync import Duration
 from lightbug_http.net import Addr, TCPAddr
-from lightbug_http.strings import strHttp11, strHttp, strSlash, whitespace, rChar, nChar, lineBreak, to_string
+from lightbug_http.strings import (
+    strHttp11,
+    strHttp,
+    strSlash,
+    whitespace,
+    rChar,
+    nChar,
+    lineBreak,
+    to_string,
+)
 
 
 alias OK_MESSAGE = String("OK").as_bytes()
@@ -15,13 +24,16 @@ alias NOT_FOUND_MESSAGE = String("Not Found").as_bytes()
 alias TEXT_PLAIN_CONTENT_TYPE = String("text/plain").as_bytes()
 alias OCTET_STREAM_CONTENT_TYPE = String("application/octet-stream").as_bytes()
 
+
 @always_inline
 fn encode(owned req: HTTPRequest) -> Bytes:
     return req._encoded()
 
+
 @always_inline
 fn encode(owned res: HTTPResponse) -> Bytes:
     return res._encoded()
+
 
 @value
 struct HTTPRequest(Formattable, Stringable):
@@ -36,7 +48,9 @@ struct HTTPRequest(Formattable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
+    fn from_bytes(
+        addr: String, max_body_size: Int, owned b: Bytes
+    ) raises -> HTTPRequest:
         var reader = ByteReader(b^)
         var headers = Headers()
         var method: String
@@ -51,21 +65,22 @@ struct HTTPRequest(Formattable, Stringable):
 
         var content_length = headers.content_length()
 
-        if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
+        if (
+            content_length > 0
+            and max_body_size > 0
+            and content_length > max_body_size
+        ):
             raise Error("Request body too large")
 
         var request = HTTPRequest(
-            uri,
-            headers = headers,
-            method = method,
-            protocol = protocol
+            uri, headers=headers, method=method, protocol=protocol
         )
 
         try:
             request.read_body(reader, content_length, max_body_size)
         except e:
             raise Error("Failed to read request body: " + e.__str__())
-        
+
         return request
 
     fn __init__(
@@ -97,12 +112,14 @@ struct HTTPRequest(Formattable, Stringable):
 
     fn connection_close(self) -> Bool:
         return self.headers[HeaderKey.CONNECTION] == "close"
-    
+
     @always_inline
-    fn read_body(inout self, inout r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
+    fn read_body(
+        inout self, inout r: ByteReader, content_length: Int, max_body_size: Int
+    ) raises -> None:
         if content_length > max_body_size:
             raise Error("Request body too large")
-        
+
         r.consume(self.body_raw)
         self.set_content_length(content_length)
 
@@ -113,7 +130,7 @@ struct HTTPRequest(Formattable, Stringable):
             self.uri.path if len(self.uri.path) > 1 else strSlash,
             whitespace,
             self.protocol,
-            lineBreak
+            lineBreak,
         )
 
         self.headers.format_to(writer)
@@ -168,14 +185,15 @@ struct HTTPResponse(Formattable, Stringable):
             protocol, status_code, status_text = headers.parse_raw(reader)
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
-        
+
         var response = HTTPResponse(
             Bytes(),
-            headers = headers,
-            protocol = protocol,
-            status_code = int(status_code),
-            status_text = status_text)
-        
+            headers=headers,
+            protocol=protocol,
+            status_code=int(status_code),
+            status_text=status_text,
+        )
+
         try:
             response.read_body(reader)
             return response
@@ -188,7 +206,7 @@ struct HTTPResponse(Formattable, Stringable):
         headers: Headers = Headers(),
         status_code: Int = 200,
         status_text: String = "OK",
-        protocol: String = strHttp11
+        protocol: String = strHttp11,
     ):
         self.headers = headers
         if HeaderKey.CONTENT_TYPE not in self.headers:
@@ -199,7 +217,7 @@ struct HTTPResponse(Formattable, Stringable):
         self.body_raw = body_bytes
         self.set_connection_keep_alive()
         self.set_content_length(len(body_bytes))
-    
+
     fn get_body_bytes(self) -> Bytes:
         return self.body_raw
 
@@ -217,7 +235,7 @@ struct HTTPResponse(Formattable, Stringable):
     @always_inline
     fn set_content_length(inout self, l: Int):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
-    
+
     @always_inline
     fn read_body(inout self, inout r: ByteReader) raises -> None:
         r.consume(self.body_raw)
@@ -231,7 +249,7 @@ struct HTTPResponse(Formattable, Stringable):
             self.status_text,
             lineBreak,
             "server: lightbug_http",
-            lineBreak
+            lineBreak,
         )
 
         if HeaderKey.DATE not in self.headers:
@@ -240,7 +258,7 @@ struct HTTPResponse(Formattable, Stringable):
                 write_header(writer, HeaderKey.DATE, current_time)
             except:
                 pass
-        
+
         self.headers.format_to(writer)
 
         writer.write(lineBreak)
@@ -268,7 +286,7 @@ struct HTTPResponse(Formattable, Stringable):
                 write_header(writer, HeaderKey.DATE, current_time)
             except:
                 pass
-        
+
         self.headers.encode_to(writer)
 
         writer.write(lineBreak)
@@ -276,47 +294,54 @@ struct HTTPResponse(Formattable, Stringable):
 
         return writer.consume()
 
-        
     fn __str__(self) -> String:
         return to_string(self)
 
-    
+
 fn OK(body: String) -> HTTPResponse:
     return HTTPResponse(
-        headers = Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
-        body_bytes = bytes(body),
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
+        body_bytes=bytes(body),
     )
+
 
 fn OK(body: String, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        headers = Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
-        body_bytes = bytes(body),
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
+        body_bytes=bytes(body),
     )
+
 
 fn OK(body: Bytes) -> HTTPResponse:
     return HTTPResponse(
-        headers = Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
-        body_bytes = body,
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
+        body_bytes=body,
     )
+
 
 fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     return HTTPResponse(
-        headers = Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
-        body_bytes = body,
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
+        body_bytes=body,
     )
 
-fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
+
+fn OK(
+    body: Bytes, content_type: String, content_encoding: String
+) -> HTTPResponse:
     return HTTPResponse(
-        headers = Headers(
+        headers=Headers(
             Header(HeaderKey.CONTENT_TYPE, content_type),
-            Header(HeaderKey.CONTENT_ENCODING, content_encoding)),
-        body_bytes = body,
+            Header(HeaderKey.CONTENT_ENCODING, content_encoding),
+        ),
+        body_bytes=body,
     )
+
 
 fn NotFound(path: String) -> HTTPResponse:
     return HTTPResponse(
-        status_code = 404,
-        status_text = "Not Found",
-        headers = Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
-        body_bytes = bytes("path " + path + " not found")
+        status_code=404,
+        status_text="Not Found",
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
+        body_bytes=bytes("path " + path + " not found"),
     )

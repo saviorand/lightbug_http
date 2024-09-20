@@ -3,6 +3,7 @@ from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import to_string
 from lightbug_http.header import HeaderKey
 
+
 trait HTTPService:
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         ...
@@ -13,11 +14,13 @@ struct Printer(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
         print("Request URI: ", to_string(uri.request_uri))
-        
+
         var header = req.headers
         print("Request protocol: ", req.protocol)
         print("Request method: ", req.method)
-        print("Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE]))
+        print(
+            "Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE])
+        )
 
         var body = req.body_raw
         print("Request Body: ", to_string(body))
@@ -35,13 +38,13 @@ struct Welcome(HTTPService):
             with open("static/lightbug_welcome.html", "r") as f:
                 html = f.read_bytes()
             return OK(html, "text/html; charset=utf-8")
-        
+
         if uri.path == "/logo.png":
             var image: Bytes
             with open("static/logo.png", "r") as f:
                 image = f.read_bytes()
             return OK(image, "image/png")
-        
+
         return NotFound(uri.path)
 
 
@@ -73,4 +76,4 @@ struct TechEmpowerRouter(HTTPService):
         elif uri.path == "/json":
             return OK('{"message": "Hello, World!"}', "application/json")
 
-        return OK("Hello world!") # text/plain is the default
+        return OK("Hello world!")  # text/plain is the default

@@ -104,5 +104,5 @@ struct MojoClient(Client):
         except e:
             conn.close()
             raise e
-        print("should not reach here")
+        
         return HTTPResponse(Bytes())

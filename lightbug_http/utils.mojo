@@ -3,16 +3,18 @@ from lightbug_http.strings import BytesConstant
 from lightbug_http.net import default_buffer_size
 from memory import memcpy
 
+
 @always_inline
 fn is_newline(b: Byte) -> Bool:
     return b == BytesConstant.nChar or b == BytesConstant.rChar
+
 
 @always_inline
 fn is_space(b: Byte) -> Bool:
     return b == BytesConstant.whitespace
 
-struct ByteWriter:
 
+struct ByteWriter:
     var _inner: Bytes
 
     fn __init__(inout self):
@@ -37,11 +39,12 @@ struct ByteWriter:
     @always_inline
     fn write(inout self, b: Byte):
         self._inner.append(b)
-        
+
     fn consume(inout self) -> Bytes:
         var ret = self._inner^
         self._inner = Bytes()
         return ret^
+
 
 struct ByteReader:
     var _inner: Bytes
@@ -60,7 +63,7 @@ struct ByteReader:
         var start = self.read_pos
         while self.peek() != char:
             self.increment()
-        return self._inner[start:self.read_pos]
+        return self._inner[start : self.read_pos]
 
     @always_inline
     fn read_word(inout self) -> Bytes:
@@ -70,7 +73,7 @@ struct ByteReader:
         var start = self.read_pos
         while not is_newline(self.peek()):
             self.increment()
-        var ret = self._inner[start:self.read_pos]
+        var ret = self._inner[start : self.read_pos]
         if self.peek() == BytesConstant.rChar:
             self.increment(2)
         else:
@@ -93,6 +96,3 @@ struct ByteReader:
         var read_len = len(self._inner) - pos
         buffer.resize(read_len, 0)
         memcpy(buffer.data, self._inner.data + pos, read_len)
-
-
-    

@@ -11,13 +11,23 @@ from tests.utils import (
     FakeServer,
 )
 
-alias headers = bytes('''GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''')
+alias headers = bytes(
+    """GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
+)
 alias body = bytes(String("I am the body of an HTTP request") * 5)
-alias Request = bytes('''GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n''') + body
-alias Response = bytes("HTTP/1.1 200 OK\r\nserver: lightbug_http\r\ncontent-type: application/octet-stream\r\nconnection: keep-alive\r\ncontent-length: 13\r\ndate: 2024-06-02T13:41:50.766880+00:00\r\n\r\n") + body
+alias Request = bytes(
+    """GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
+) + body
+alias Response = bytes(
+    "HTTP/1.1 200 OK\r\nserver: lightbug_http\r\ncontent-type:"
+    " application/octet-stream\r\nconnection: keep-alive\r\ncontent-length:"
+    " 13\r\ndate: 2024-06-02T13:41:50.766880+00:00\r\n\r\n"
+) + body
+
 
 fn main():
     run_benchmark()
+
 
 fn run_benchmark():
     try:
@@ -25,12 +35,24 @@ fn run_benchmark():
         config.verbose_timing = True
         config.tabular_view = True
         var m = Bench(config)
-        m.bench_function[lightbug_benchmark_header_encode](BenchId("HeaderEncode"))
-        m.bench_function[lightbug_benchmark_header_parse](BenchId("HeaderParse"))
-        m.bench_function[lightbug_benchmark_request_encode](BenchId("RequestEncode"))
-        m.bench_function[lightbug_benchmark_request_parse](BenchId("RequestParse"))
-        m.bench_function[lightbug_benchmark_response_encode](BenchId("ResponseEncode"))
-        m.bench_function[lightbug_benchmark_response_parse](BenchId("ResponseParse"))
+        m.bench_function[lightbug_benchmark_header_encode](
+            BenchId("HeaderEncode")
+        )
+        m.bench_function[lightbug_benchmark_header_parse](
+            BenchId("HeaderParse")
+        )
+        m.bench_function[lightbug_benchmark_request_encode](
+            BenchId("RequestEncode")
+        )
+        m.bench_function[lightbug_benchmark_request_parse](
+            BenchId("RequestParse")
+        )
+        m.bench_function[lightbug_benchmark_response_encode](
+            BenchId("ResponseEncode")
+        )
+        m.bench_function[lightbug_benchmark_response_parse](
+            BenchId("ResponseParse")
+        )
         m.dump_report()
     except:
         print("failed to start benchmark")
@@ -41,17 +63,20 @@ var headers_struct = Headers(
     Header("Content-Length", "1234"),
     Header("Connection", "close"),
     Header("Date", "some-datetime"),
-    Header("SomeHeader", "SomeValue")
+    Header("SomeHeader", "SomeValue"),
 )
+
 
 @parameter
 fn lightbug_benchmark_response_encode(inout b: Bencher):
     @always_inline
     @parameter
     fn response_encode():
-        var res = HTTPResponse(body, headers = headers_struct)
+        var res = HTTPResponse(body, headers=headers_struct)
         _ = encode(res^)
+
     b.iter[response_encode]()
+
 
 @parameter
 fn lightbug_benchmark_response_parse(inout b: Bencher):
@@ -63,7 +88,9 @@ fn lightbug_benchmark_response_parse(inout b: Bencher):
             _ = HTTPResponse.from_bytes(res^)
         except:
             pass
+
     b.iter[response_parse]()
+
 
 @parameter
 fn lightbug_benchmark_request_parse(inout b: Bencher):
@@ -75,7 +102,9 @@ fn lightbug_benchmark_request_parse(inout b: Bencher):
             _ = HTTPRequest.from_bytes("127.0.0.1/path", 4096, r^)
         except:
             pass
+
     b.iter[request_parse]()
+
 
 @parameter
 fn lightbug_benchmark_request_encode(inout b: Bencher):
@@ -84,12 +113,14 @@ fn lightbug_benchmark_request_encode(inout b: Bencher):
     fn request_encode():
         var req = HTTPRequest(
             URI.parse("http://127.0.0.1:8080/some-path")[URI],
-            headers = headers_struct,
-            body = body
+            headers=headers_struct,
+            body=body,
         )
         _ = encode(req^)
+
     b.iter[request_encode]()
-        
+
+
 @parameter
 fn lightbug_benchmark_header_encode(inout b: Bencher):
     @always_inline
@@ -98,7 +129,9 @@ fn lightbug_benchmark_header_encode(inout b: Bencher):
         var b = ByteWriter()
         var h = headers_struct
         h.encode_to(b)
+
     b.iter[header_encode]()
+
 
 @parameter
 fn lightbug_benchmark_header_parse(inout b: Bencher):
@@ -115,6 +148,7 @@ fn lightbug_benchmark_header_parse(inout b: Bencher):
 
     b.iter[header_parse]()
 
+
 fn lightbug_benchmark_server():
     var server_report = benchmark.run[run_fake_server](max_iters=1)
     print("Server: ")
@@ -122,9 +156,13 @@ fn lightbug_benchmark_server():
 
 
 fn lightbug_benchmark_misc() -> None:
-    var direct_set_report = benchmark.run[init_test_and_set_a_direct](max_iters=1)
+    var direct_set_report = benchmark.run[init_test_and_set_a_direct](
+        max_iters=1
+    )
 
-    var recreating_set_report = benchmark.run[init_test_and_set_a_copy](max_iters=1)
+    var recreating_set_report = benchmark.run[init_test_and_set_a_copy](
+        max_iters=1
+    )
 
     print("Direct set: ")
     direct_set_report.print(benchmark.Unit.ms)
@@ -133,6 +171,7 @@ fn lightbug_benchmark_misc() -> None:
 
 
 var GetRequest = HTTPRequest(URI.parse("http://127.0.0.1/path")[URI])
+
 
 fn run_fake_server():
     var handler = FakeResponder()

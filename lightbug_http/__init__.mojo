@@ -4,6 +4,7 @@ from lightbug_http.service import HTTPService, Welcome
 from lightbug_http.sys.server import SysServer
 from lightbug_http.strings import to_string
 
+
 trait DefaultConstructible:
     fn __init__(inout self) raises:
         ...

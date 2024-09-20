@@ -13,6 +13,7 @@ from lightbug_http.utils import ByteReader
 
 alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
+
 @value
 struct SysServer:
     """
@@ -40,7 +41,7 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
+
     fn __init__(inout self, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
@@ -50,7 +51,7 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
-    
+
     fn __init__(inout self, own_address: String) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
@@ -70,7 +71,7 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
+
     fn __init__(inout self, max_request_body_size: Int) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
@@ -80,8 +81,10 @@ struct SysServer:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
-    fn __init__(inout self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
+
+    fn __init__(
+        inout self, max_request_body_size: Int, tcp_keep_alive: Bool
+    ) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -90,17 +93,17 @@ struct SysServer:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
-    
+
     fn address(self) -> String:
         return self.__address
-    
+
     fn set_address(inout self, own_address: String) -> Self:
         self.__address = own_address
         return self
 
     fn max_request_body_size(self) -> Int:
         return self.__max_request_body_size
-    
+
     fn set_max_request_body_size(inout self, size: Int) -> Self:
         self.__max_request_body_size = size
         return self
@@ -133,7 +136,9 @@ struct SysServer:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
+    fn serve[
+        T: HTTPService
+    ](inout self, ln: SysListener, handler: T) raises -> None:
         """
         Serve HTTP requests.
 
@@ -149,8 +154,10 @@ struct SysServer:
         while True:
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
-    
-    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
+
+    fn serve_connection[
+        T: HTTPService
+    ](inout self, conn: SysConnection, handler: T) raises -> None:
         """
         Serve a single connection.
 
@@ -162,17 +169,17 @@ struct SysServer:
         If there is an error while serving the connection.
         """
         # var b = Bytes(capacity=default_buffer_size)
-        # var bytes_recv = conn.read(b) 
+        # var bytes_recv = conn.read(b)
         # if bytes_recv == 0:
         #     conn.close()
         #     return
-        
+
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
-        
+
         var req_number = 0
-        
+
         while True:
             req_number += 1
 
@@ -182,18 +189,15 @@ struct SysServer:
                 conn.close()
                 break
 
-            
             var request = HTTPRequest.from_bytes(
-                self.address(),
-                max_request_body_size,
-                b^
+                self.address(), max_request_body_size, b^
             )
-            
+
             var res = handler.func(request)
-            
+
             if not self.tcp_keep_alive:
                 _ = res.set_connection_close()
-            
+
             _ = conn.write(encode(res^))
 
             if not self.tcp_keep_alive:
