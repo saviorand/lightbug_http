@@ -88,13 +88,15 @@ Once you have a Mojo project set up locally,
     @value
     struct Printer(HTTPService):
         fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-            var uri = req.uri()
-            print("Request URI: ", to_string(uri.request_uri()))
-            
-            var header = req.header
-            print("Request protocol: ", header.protocol_str())
-            print("Request method: ", to_string(header.method()))
-            print("Request Content-Type: ", to_string(header.content_type()))
+            var uri = req.uri
+            print("Request URI: ", to_string(uri.request_uri))
+
+            var header = req.headers
+            print("Request protocol: ", req.protocol)
+            print("Request method: ", req.method)
+            print(
+                "Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE])
+            )
 
             var body = req.body_raw
             print("Request Body: ", to_string(body))
@@ -103,9 +105,11 @@ Once you have a Mojo project set up locally,
    ```
 6. Start a server listening on a port with your service like so. 
     ```mojo
+    from lightbug_http import Welcome, SysServer
+
     fn main() raises:
         var server = SysServer()
-        var handler = Printer()
+        var handler = Welcome()
         server.listen_and_serve("0.0.0.0:8080", handler)
     ```
 Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
@@ -123,15 +127,15 @@ from lightbug_http import *
 struct ExampleRouter(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
         var body = req.body_raw
-        var uri = req.uri()
+        var uri = req.uri
 
-        if uri.path() == "/":
+        if uri.path == "/":
             print("I'm on the index path!")
-        if uri.path() == "/first":
+        if uri.path == "/first":
             print("I'm on /first!")
-        elif uri.path() == "/second":
+        elif uri.path == "/second":
             print("I'm on /second!")
-        elif uri.path() == "/echo":
+        elif uri.path == "/echo":
             print(to_string(body))
 
         return OK(body)
@@ -152,21 +156,21 @@ from lightbug_http import *
 @value
 struct Welcome(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        var uri = req.uri()
+        var uri = req.uri
 
-        if uri.path() == "/":
+        if uri.path == "/":
             var html: Bytes
             with open("static/lightbug_welcome.html", "r") as f:
                 html = f.read_bytes()
             return OK(html, "text/html; charset=utf-8")
-        
-        if uri.path() == "/logo.png":
+
+        if uri.path == "/logo.png":
             var image: Bytes
             with open("static/logo.png", "r") as f:
                 image = f.read_bytes()
             return OK(image, "image/png")
-        
-        return NotFound(uri.path())
+
+        return NotFound(uri.path)
 ```
 
 ### Using the client
@@ -178,33 +182,34 @@ from lightbug_http import *
 from lightbug_http.sys.client import MojoClient
 
 fn test_request(inout client: MojoClient) raises -> None:
-    var uri = URI("http://httpbin.org/status/404")
-    try:
-        uri.parse()
-    except e:
-        print("error parsing uri: " + e.__str__())
+    var uri = URI.parse_raises("http://httpbin.org/status/404")
+    var headers = Header("Host", "httpbin.org")
 
-
-    var request = HTTPRequest(uri)
-    var response = client.do(request)
+    var request = HTTPRequest(uri, headers)
+    var response = client.do(request^)
 
     # print status code
-    print("Response:", response.header.status_code())
+    print("Response:", response.status_code)
 
     # print parsed headers (only some are parsed for now)
-    print("Content-Type:", to_string(response.header.content_type()))
-    print("Content-Length", response.header.content_length())
-    print("Server:", to_string(response.header.server()))
+    print("Content-Type:", response.headers["Content-Type"])
+    print("Content-Length", response.headers["Content-Length"])
+    print("Server:", to_string(response.headers["Server"]))
 
-    print("Is connection set to connection-close? ", response.header.connection_close())
+    print(
+        "Is connection set to connection-close? ", response.connection_close()
+    )
 
     # print body
-    print(to_string(response.get_body_bytes()))
+    print(to_string(response.body_raw))
 
 
-fn main() raises -> None:
-    var client = MojoClient()
-    test_request(client)
+fn main() -> None:
+    try:
+        var client = MojoClient()
+        test_request(client)
+    except e:
+        print(e)
 ```
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.

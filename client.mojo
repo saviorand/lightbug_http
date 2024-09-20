@@ -4,8 +4,9 @@ from lightbug_http.sys.client import MojoClient
 
 fn test_request(inout client: MojoClient) raises -> None:
     var uri = URI.parse_raises("http://httpbin.org/status/404")
+    var headers = Header("Host", "httpbin.org")
 
-    var request = HTTPRequest(uri)
+    var request = HTTPRequest(uri, headers)
     var response = client.do(request^)
 
     # print status code
@@ -24,6 +25,9 @@ fn test_request(inout client: MojoClient) raises -> None:
     print(to_string(response.body_raw))
 
 
-fn main() raises -> None:
-    var client = MojoClient()
-    test_request(client)
+fn main() -> None:
+    try:
+        var client = MojoClient()
+        test_request(client)
+    except e:
+        print(e)

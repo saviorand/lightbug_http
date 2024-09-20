@@ -21,8 +21,9 @@ fn test_mojo_client_lightbug_external_req(client: MojoClient) raises:
             Header("Connection", "keep-alive"),
             Header("Host", "httpbin.org")),
         method="GET",
+        protocol="GET",
     )
-    
+
     try:
         var res = client.do(req)
         testing.assert_equal(res.status_code, 200)
