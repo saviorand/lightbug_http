@@ -1,4 +1,4 @@
-from lightbug_http import *
+from lightbug_http import Welcome, SysServer
 
 fn main() raises:
     var server = SysServer()

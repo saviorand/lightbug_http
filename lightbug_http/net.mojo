@@ -12,7 +12,7 @@ from .libc import (
     getsockname,
     getpeername,
     ntohs,
-    inet_ntop
+    inet_ntop,
 )
 
 alias default_buffer_size = 4096
@@ -120,7 +120,9 @@ struct TCPAddr(Addr):
 
     fn string(self) -> String:
         if self.zone != "":
-            return join_host_port(self.ip + "%" + self.zone, self.port.__str__())
+            return join_host_port(
+                self.ip + "%" + self.zone, self.port.__str__()
+            )
         return join_host_port(self.ip, self.port.__str__())
 
 

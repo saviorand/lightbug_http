@@ -1,5 +1,3 @@
-from gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from gojo.bytes import buffer
 from ..libc import (
     c_int,
     AF_INET,
@@ -14,9 +12,10 @@ from lightbug_http.strings import to_string
 from lightbug_http.client import Client
 from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
-from lightbug_http.header import ResponseHeader
+from lightbug_http.header import Headers
 from lightbug_http.sys.net import create_connection
 from lightbug_http.io.bytes import Bytes
+from lightbug_http.utils import ByteReader
 
 
 struct MojoClient(Client):
@@ -37,7 +36,7 @@ struct MojoClient(Client):
         self.port = port
         self.name = "lightbug_http_client"
 
-    fn do(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn do(self, owned req: HTTPRequest) raises -> HTTPResponse:
         """
         The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
@@ -65,8 +64,8 @@ struct MojoClient(Client):
         Error :
             If there is a failure in sending or receiving the message.
         """
-        var uri = req.uri()
-        var host = to_string(uri.host())
+        var uri = req.uri
+        var host = uri.host
 
         if host == "":
             raise Error("URI is nil")
@@ -78,7 +77,7 @@ struct MojoClient(Client):
         var host_str: String
         var port: Int
 
-        if host.__contains__(":"):
+        if ":" in host:
             var host_port = host.split(":")
             host_str = host_port[0]
             port = atol(host_port[1])
@@ -88,41 +87,21 @@ struct MojoClient(Client):
                 port = 443
             else:
                 port = 80
-
         var conn = create_connection(self.fd, host_str, port)
-        
-        var req_encoded = encode(req)
-
-        var bytes_sent = conn.write(req_encoded)
+        var bytes_sent = conn.write(encode(req^))
         if bytes_sent == -1:
             raise Error("Failed to send message")
 
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
-        
+
         if bytes_recv == 0:
             conn.close()
 
-        var buf = buffer.Buffer(new_buf^)
-        var reader = Reader(buf^)
-
-        var error = Error()
-
-        var header = ResponseHeader()
-        var first_line_and_headers_len = 0
         try:
-            first_line_and_headers_len = header.parse_raw(reader)
+            return HTTPResponse.from_bytes(new_buf^)
         except e:
             conn.close()
-            error = Error("Failed to parse response headers: " + e.__str__())
-        
-        var response = HTTPResponse(header, Bytes())
+            raise e
 
-        try:
-            response.read_body(reader, first_line_and_headers_len,)
-        except e:
-            error = Error("Failed to read request body: " + e.__str__())
-
-        conn.close()
-
-        return response
+        return HTTPResponse(Bytes())

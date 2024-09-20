@@ -2,27 +2,22 @@ from python import Python, PythonObject
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.uri import URI
-from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.http import HTTPRequest, HTTPResponse
 from lightbug_http.net import Listener, Addr, Connection, TCPAddr
 from lightbug_http.service import HTTPService, OK
 from lightbug_http.server import ServerTrait
 from lightbug_http.client import Client
 from lightbug_http.io.bytes import bytes
+from lightbug_http.header import Headers, Header
 
 alias default_server_conn_string = "http://localhost:8080"
 
-alias getRequest = bytes(
-    "GET /foobar?baz HTTP/1.1\r\nHost: google.com\r\nUser-Agent: aaa/bbb/ccc/ddd/eee"
-    " Firefox Chrome MSIE Opera\r\n"
-    + "Referer: http://example.com/aaa?bbb=ccc\r\nCookie: foo=bar; baz=baraz;"
-    " aa=aakslsdweriwereowriewroire\r\n\r\n"
-)
-
 alias defaultExpectedGetResponse = bytes(
     "HTTP/1.1 200 OK\r\nServer: lightbug_http\r\nContent-Type:"
-    " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate: \r\n\r\nHello"
-    " world!"
+    " text/plain\r\nContent-Length: 12\r\nConnection: close\r\nDate:"
+    " \r\n\r\nHello world!"
 )
+
 
 @parameter
 fn new_httpx_client() -> PythonObject:
@@ -33,8 +28,10 @@ fn new_httpx_client() -> PythonObject:
         print("Could not set up httpx client: " + e.__str__())
         return None
 
+
 fn new_fake_listener(request_count: Int, request: Bytes) -> FakeListener:
     return FakeListener(request_count, request)
+
 
 struct ReqInfo:
     var full_uri: URI
@@ -45,6 +42,7 @@ struct ReqInfo:
         self.full_uri = full_uri
         self.host = host
         self.is_tls = is_tls
+
 
 struct FakeClient(Client):
     """FakeClient doesn't actually send any requests, but it extracts useful information from the input.
@@ -97,6 +95,7 @@ struct FakeClient(Client):
 
         return ReqInfo(full_uri, host, is_tls)
 
+
 struct FakeServer(ServerTrait):
     var __listener: FakeListener
     var __handler: FakeResponder
@@ -106,7 +105,10 @@ struct FakeServer(ServerTrait):
         self.__handler = handler
 
     fn __init__(
-        inout self, addr: String, service: HTTPService, error_handler: ErrorHandler
+        inout self,
+        addr: String,
+        service: HTTPService,
+        error_handler: ErrorHandler,
     ):
         self.__listener = FakeListener()
         self.__handler = FakeResponder()
@@ -114,7 +116,9 @@ struct FakeServer(ServerTrait):
     fn get_concurrency(self) -> Int:
         return 1
 
-    fn listen_and_serve(self, address: String, handler: HTTPService) raises -> None:
+    fn listen_and_serve(
+        self, address: String, handler: HTTPService
+    ) raises -> None:
         ...
 
     fn serve(inout self) -> None:
@@ -127,13 +131,15 @@ struct FakeServer(ServerTrait):
     fn serve(self, ln: Listener, handler: HTTPService) raises -> None:
         ...
 
+
 @value
 struct FakeResponder(HTTPService):
     fn func(self, req: HTTPRequest) raises -> HTTPResponse:
-        var method = String(req.header.method())
+        var method = req.method
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
         return OK(bytes("Hello, world!"))
+
 
 @value
 struct FakeConnection(Connection):
@@ -157,6 +163,7 @@ struct FakeConnection(Connection):
 
     fn remote_addr(self) raises -> TCPAddr:
         return TCPAddr()
+
 
 @value
 struct FakeListener:
@@ -189,6 +196,7 @@ struct FakeListener:
     fn addr(self) -> TCPAddr:
         return TCPAddr()
 
+
 @value
 struct TestStruct:
     var a: String
@@ -210,6 +218,7 @@ struct TestStruct:
 
     fn set_a_copy(self, a: String) -> Self:
         return Self(a, self.b)
+
 
 @value
 struct TestStructNested:

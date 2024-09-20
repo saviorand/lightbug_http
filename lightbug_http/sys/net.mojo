@@ -111,13 +111,17 @@ struct SysListener:
         var sin_size = socklen_t(sizeof[socklen_t]())
         var sin_size_ptr = Reference[socklen_t](sin_size)
         var new_sockfd = external_call["accept", c_int](
-            self.fd, their_addr_ptr, sin_size_ptr)
-        
-        # var new_sockfd = accept( 
+            self.fd, their_addr_ptr, sin_size_ptr
+        )
+
+        # var new_sockfd = accept(
         #     self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         # )
         if new_sockfd == -1:
-            print("Failed to accept connection, system accept() returned an error.")
+            print(
+                "Failed to accept connection, system accept() returned an"
+                " error."
+            )
         var peer = get_peer_name(new_sockfd)
 
         return SysConnection(
@@ -143,7 +147,9 @@ struct SysListenConfig(ListenConfig):
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__keep_alive = keep_alive
 
-    fn listen(inout self, network: String, address: String) raises -> SysListener:
+    fn listen(
+        inout self, network: String, address: String
+    ) raises -> SysListener:
         var addr = resolve_internet_addr(network, address)
         var address_family = AF_INET
         var ip_buf_size = 4
@@ -165,25 +171,32 @@ struct SysListenConfig(ListenConfig):
 
         var bind_success = False
         var bind_fail_logged = False
-        
 
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
+        var conv_status = inet_pton(
+            address_family, to_char_ptr(addr.ip), ip_buf
+        )
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
-        var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
+        var ai = sockaddr_in(
+            address_family, bin_port, raw_ip, StaticTuple[c_char, 8]()
+        )
         var ai_ptr = Reference[sockaddr_in](ai)
 
         while not bind_success:
             # var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
-            var bind = external_call[
-                "bind", c_int](sockfd, ai_ptr, sizeof[sockaddr_in]())
+            var bind = external_call["bind", c_int](
+                sockfd, ai_ptr, sizeof[sockaddr_in]()
+            )
             if bind == 0:
                 bind_success = True
             else:
                 if not bind_fail_logged:
-                    print("Bind attempt failed. The address might be in use or the socket might not be available.")
+                    print(
+                        "Bind attempt failed. The address might be in use or"
+                        " the socket might not be available."
+                    )
                     print("Retrying. Might take 10-15 seconds.")
                     bind_fail_logged = True
                 print(".", end="", flush=True)
@@ -229,7 +242,12 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, inout buf: Bytes) raises -> Int:
-        var bytes_recv = recv(self.fd, buf.unsafe_ptr().offset(buf.size), buf.capacity - buf.size, 0)
+        var bytes_recv = recv(
+            self.fd,
+            buf.unsafe_ptr().offset(buf.size),
+            buf.capacity - buf.size,
+            0,
+        )
         if bytes_recv == -1:
             return 0
         buf.size += bytes_recv
@@ -244,7 +262,7 @@ struct SysConnection(Connection):
         if bytes_sent == -1:
             print("Failed to send response")
         return bytes_sent
-    
+
     fn write(self, buf: Bytes) raises -> Int:
         var content = to_string(buf)
         var bytes_sent = send(self.fd, content.unsafe_ptr(), len(content), 0)
@@ -303,9 +321,9 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_protocol = 0
         self.ai_addrlen = 0
         self.ai_canonname = UnsafePointer[c_char]()
-        self.ai_addr = UnsafePointer[sockaddr]() 
+        self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_next = UnsafePointer[c_void]()
-        
+
     fn get_ip_address(self, host: String) raises -> in_addr:
         """
         Returns an IP address based on the host.
@@ -320,12 +338,12 @@ struct addrinfo_macos(AnAddrInfo):
         var host_ptr = to_char_ptr(host)
         var servinfo = Reference(Self())
         var servname = UnsafePointer[Int8]()
-        
+
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
         hints.ai_flags = AI_PASSIVE
-        
+
         var error = external_call[
             "getaddrinfo",
             Int32,
@@ -341,14 +359,13 @@ struct addrinfo_macos(AnAddrInfo):
         if not ai_addr:
             print("ai_addr is null")
             raise Error(
-                "Failed to get IP address. getaddrinfo was called successfully, but"
-                " ai_addr is null."
+                "Failed to get IP address. getaddrinfo was called successfully,"
+                " but ai_addr is null."
             )
 
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
-
 
 
 @value
@@ -413,8 +430,8 @@ struct addrinfo_unix(AnAddrInfo):
         if not ai_addr:
             print("ai_addr is null")
             raise Error(
-                "Failed to get IP address. getaddrinfo was called successfully, but"
-                " ai_addr is null."
+                "Failed to get IP address. getaddrinfo was called successfully,"
+                " but ai_addr is null."
             )
 
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
@@ -422,7 +439,9 @@ struct addrinfo_unix(AnAddrInfo):
         return addr_in.sin_addr
 
 
-fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
+fn create_connection(
+    sock: c_int, host: String, port: UInt16
+) raises -> SysConnection:
     """
     Connect to a server using a socket.
 
@@ -446,7 +465,10 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     )
     var addr_ptr = Reference[sockaddr_in](addr)
 
-    if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
+    if (
+        external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]())
+        == -1
+    ):
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server")
 

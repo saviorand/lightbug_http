@@ -8,5 +8,5 @@ trait Client:
     fn __init__(inout self, host: StringLiteral, port: Int) raises:
         ...
 
-    fn do(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn do(self, owned req: HTTPRequest) raises -> HTTPResponse:
         ...
