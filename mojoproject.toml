@@ -12,6 +12,7 @@ publish = { cmd = "bash scripts/publish.sh", env = { PREFIX_API_KEY = "$PREFIX_A
 test = { cmd = "magic run mojo run_tests.mojo" }
 bench = { cmd = "magic run mojo bench.mojo" }
 bench_server = { cmd = "magic run mojo build bench_server.mojo && ./bench_server ; rm bench_server" }
+format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 
 [dependencies]
 max = ">=24.5.0,<25"

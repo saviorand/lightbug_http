@@ -12,7 +12,7 @@ from lightbug_http.strings import (
 
 
 @value
-struct URI:
+struct URI(Formattable, Stringable):
     var __path_original: String
     var scheme: String
     var path: String
@@ -35,7 +35,7 @@ struct URI:
             return "Failed to parse URI: " + str(e)
 
         return u
-    
+
     @staticmethod
     fn parse_raises(uri: String) raises -> URI:
         var u = URI(uri)
@@ -47,7 +47,7 @@ struct URI:
         uri: String = "",
     ) -> None:
         self.__path_original = "/"
-        self.scheme = 
+        self.scheme = ""
         self.path = "/"
         self.query_string = ""
         self.__hash = ""
@@ -56,6 +56,15 @@ struct URI:
         self.request_uri = ""
         self.username = ""
         self.password = ""
+
+    fn __str__(self) -> String:
+        var s = self.scheme + "://" + self.host + self.path
+        if len(self.query_string) > 0:
+            s += "?" + self.query_string
+        return s
+
+    fn format_to(self, inout writer: Formatter):
+        writer.write(str(self))
 
     fn is_https(self) -> Bool:
         return self.scheme == https
@@ -74,12 +83,12 @@ struct URI:
             proto_str = raw_uri[:proto_end]
             if proto_str == https:
                 is_https = True
-            remainder_uri = raw_uri[proto_end + 3:]
+            remainder_uri = raw_uri[proto_end + 3 :]
         else:
             remainder_uri = raw_uri
-        
+
         self.scheme = proto_str^
-        
+
         var path_start = remainder_uri.find("/")
         var host_and_port: String
         var request_uri: String
@@ -96,7 +105,7 @@ struct URI:
             self.scheme = https
         else:
             self.scheme = http
-        
+
         var n = request_uri.find("?")
         if n >= 0:
             self.__path_original = request_uri[:n]

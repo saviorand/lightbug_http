@@ -14,7 +14,7 @@ def test_http():
 
 
 def test_encode_http_request():
-    var uri = URI(default_server_conn_string + "/foobar?baz")
+    var uri = URI.parse_raises(default_server_conn_string + "/foobar?baz")
     var req = HTTPRequest(
         uri,
         body=String("Hello world!").as_bytes(),
@@ -23,12 +23,16 @@ def test_encode_http_request():
 
     var as_str = str(req)
     var req_encoded = to_string(encode(req^))
+
+
+    var expected = String(
+        "GET /foobar?baz HTTP/1.1\r\nconnection: keep-alive\r\ncontent-length:"
+        " 12\r\nhost: localhost:8080\r\n\r\nHello world!"
+    )
+
     testing.assert_equal(
         req_encoded,
-        (
-            "GET / HTTP/1.1\r\nconnection: keep-alive\r\ncontent-length:"
-            " 12\r\n\r\nHello world!"
-        ),
+        expected
     )
     testing.assert_equal(req_encoded, as_str)
 

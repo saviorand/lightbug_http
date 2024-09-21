@@ -12,6 +12,8 @@ struct HeaderKey:
     alias CONTENT_LENGTH = "content-length"
     alias CONTENT_ENCODING = "content-encoding"
     alias DATE = "date"
+    alias LOCATION = "location"
+    alias HOST = "host"
 
 
 @value
@@ -70,16 +72,12 @@ struct Headers(Formattable, Stringable):
         self._inner[key.lower()] = value
 
     fn content_length(self) -> Int:
-        if HeaderKey.CONTENT_LENGTH not in self:
-            return 0
         try:
             return int(self[HeaderKey.CONTENT_LENGTH])
         except:
             return 0
 
-    fn parse_raw(
-        inout self, inout r: ByteReader
-    ) raises -> (String, String, String):
+    fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String):
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Failed to read first byte from response header")
