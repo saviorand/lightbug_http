@@ -2,14 +2,7 @@ from testing import assert_equal, assert_true
 from lightbug_http.utils import ByteReader
 from lightbug_http.header import Headers, Header
 from lightbug_http.io.bytes import Bytes, bytes
-from lightbug_http.strings import empty_string
-from lightbug_http.net import default_buffer_size
 
-
-def test_header():
-    test_parse_request_header()
-    test_parse_response_header()
-    test_header_case_insensitive()
 
 
 def test_header_case_insensitive():

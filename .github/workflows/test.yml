@@ -14,5 +14,5 @@ jobs:
         run: |
           curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
-          magic run mojo run_tests.mojo
+          magic run test
 
