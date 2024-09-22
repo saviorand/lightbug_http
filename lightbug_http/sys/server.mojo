@@ -4,7 +4,7 @@ from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
 from lightbug_http.header import Headers
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
-from lightbug_http.service import HTTPService, UpgradeServer, NoUpgrade
+from lightbug_http.service import HTTPService, UpgradeLoop, NoUpgrade
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
@@ -15,12 +15,12 @@ alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 
 @value
-struct SysServer[T: UpgradeServer = NoUpgrade]:
+struct SysServer[T: UpgradeLoop = NoUpgrade]:
     """
     A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
     var error_handler: ErrorHandler
-    var upgrade_handler: T
+    var upgrade_loop: T
 
     var name: String
     var __address: String
@@ -31,7 +31,6 @@ struct SysServer[T: UpgradeServer = NoUpgrade]:
     var tcp_keep_alive: Bool
 
     var ln: SysListener
-    # add websocket looper as a field here, has to hold an array
 
     fn __init__(inout self) raises:
         self.error_handler = ErrorHandler()

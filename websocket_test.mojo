@@ -1,5 +1,5 @@
 from lightbug_http.sys.server import SysServer
-from lightbug_http.python.websocket import WebSocketLoop, WebSocketHandshake, WebSocketPrinter, send_message, receive_message
+from lightbug_http.websocket import WebSocketLoop, WebSocketHandshake, WebSocketPrinter, send_message, receive_message
 
 
 def main():

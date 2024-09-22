@@ -4,11 +4,10 @@ from lightbug_http.io.bytes import Bytes, bytes
 from time import sleep
 from base64 import b64encode
 from lightbug_http.io.bytes import bytes_equal, bytes
-from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
+from lightbug_http.http import HTTPRequest, HTTPResponse, Headers
 from lightbug_http.net import Connection, default_buffer_size
 from lightbug_http.sys.net import SysConnection
-from lightbug_http.service import WebSocketService, UpgradeServer
-from lightbug_http.
+from lightbug_http.service import WebSocketService, UpgradeLoop
 
 # This is a "magic" GUID (Globally Unique Identifier) string that is concatenated 
 # with the value of the Sec-WebSocket-Key header in order to securely conduct the websocket handshake
@@ -32,11 +31,11 @@ struct WebSocketPrinter(WebSocketService):
 
 
 @value
-struct WebSocketLoop[T: WebSocketService](UpgradeServer):
+struct WebSocketLoop[T: WebSocketService](UpgradeLoop):
     var handler: T
     # array goes here
 
-    fn process_data(inout self, owned conn: SysConnection, ..) -> None:
+    fn process_data(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         # select() ...
         # frame comes in, call handle_frame()
         # if nothing, return and let the main server upgrade more websockets or handle regular requests
