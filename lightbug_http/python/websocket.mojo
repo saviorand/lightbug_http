@@ -8,6 +8,7 @@ from lightbug_http.http import HTTPRequest, HTTPResponse, ResponseHeader
 from lightbug_http.net import Connection, default_buffer_size
 from lightbug_http.sys.net import SysConnection
 from lightbug_http.service import WebSocketService, UpgradeServer
+from lightbug_http.
 
 # This is a "magic" GUID (Globally Unique Identifier) string that is concatenated 
 # with the value of the Sec-WebSocket-Key header in order to securely conduct the websocket handshake
@@ -31,26 +32,18 @@ struct WebSocketPrinter(WebSocketService):
 
 
 @value
-struct WebSocketServer[T: WebSocketService](UpgradeServer):
+struct WebSocketLoop[T: WebSocketService](UpgradeServer):
     var handler: T
+    # array goes here
 
-    fn func(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
-        try:
-            var select = Python.import_module("select").select
-            while True:
-                for _ in range(32):
-                    var b = Bytes(capacity=default_buffer_size)
-                    var bytes_recv = conn.read(b)
-                    if bytes_recv == 0:
-                        print("bytes_recv == 0")
-                        conn.close()
-                        break
-                    res = select([b[0]],[],[],0)[0]
-                    print("\nwait\n")
-                    sleep(1)
-        except e:
-            print("Error in WebSocketServer", e)
-    
+    fn process_data(inout self, owned conn: SysConnection, ..) -> None:
+        # select() ...
+        # frame comes in, call handle_frame()
+        # if nothing, return and let the main server upgrade more websockets or handle regular requests
+
+    fn handle_frame(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
+        # call receive_message(), get actual data, then call user func()
+        
     fn can_upgrade(self) -> Bool:
         return True
     
@@ -67,19 +60,18 @@ struct WebSocketHandshake(HTTPService):
         if not bytes_equal(req.header.upgrade(), String("websocket").as_bytes()):
             raise Error("Request upgrade do not contain an upgrade to websocket")
 
-        if not req.header.sec_websocket_key():
+        if not req.headers["Sec-WebSocket-Key"]:
             raise Error("No Sec-WebSocket-Key for upgrading to websocket")
 
-        var accept = String(req.header.sec_websocket_key()) + MAGIC_CONSTANT
-        # var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
-        var accept_encoded = b64encode(accept)
+        var accept = String(req.header["Sec-WebSocket-Key"]) + MAGIC_CONSTANT
+        var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
+        var accept_encoded = b64encode(accept_sha1)
 
-        var header = ResponseHeader(101, bytes("Switching Protocols"), bytes("text/plain"))
+        var header = Headers(101, bytes("Switching Protocols"), bytes("text/plain"))
 
-        _ = header.set_upgrade(bytes("websocket"))
-        _ = header.set_connection_upgrade(True)
-        # var accept_encoded_utf = str(accept.decode("utf-8"))
-        _ = header.set_sec_websocket_accept(bytes(accept_encoded))
+        _ = header["Upgrade"] = bytes("websocket")
+        _ = header["Connection"] = bytes("Upgrade")
+        _ = header["Sec-WebSocket-Accept"] = bytes(accept_encoded)
 
         var response = HTTPResponse(header, bytes(""))
                 

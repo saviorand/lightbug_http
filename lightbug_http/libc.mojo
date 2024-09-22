@@ -834,6 +834,80 @@ fn write(fildes: c_int, buf: UnsafePointer[c_void], nbyte: c_size_t) -> c_int:
     ](fildes, buf, nbyte)
 
 
+struct timeval:
+    var tv_sec: Int64
+    var tv_usec: Int64
+
+    fn __init__(inout self, seconds: Int64, microseconds: Int64):
+        self.tv_sec = seconds
+        self.tv_usec = microseconds
+
+
+struct fd_set:
+    var fds_bits: StaticTuple[Int64, 16]
+
+    fn __init__(inout self):
+        self.fds_bits = StaticTuple[Int64, 16]()
+        for i in range(16):
+            self.fds_bits[i] = 0
+
+    fn set(inout self, fd: Int):
+        var word = fd // 64
+        var bit = fd % 64
+        self.fds_bits[word] |= (1 << bit)
+        print("Set fd", fd, "word:", word, "bit:", bit)
+
+    fn clear(inout self, fd: Int):
+        var word = fd // 64
+        var bit = fd % 64
+        self.fds_bits[word] &= ~(1 << bit)
+        print("Cleared fd", fd, "word:", word, "bit:", bit)
+
+    fn is_set(self, fd: Int) -> Bool:
+        var word = fd // 64
+        var bit = fd % 64
+        var result = (self.fds_bits[word] & (1 << bit)) != 0
+        print("Checking fd", fd, "word:", word, "bit:", bit, "result:", result)
+        return result
+
+    fn clear_all(inout self):
+        for i in range(16):
+            self.fds_bits[i] = 0
+        print("Cleared all fds")
+
+    fn print_bits(self):
+        for i in range(16):
+            print("Word", i, ":", bin(self.fds_bits[i]))
+
+
+fn select(
+    nfds: c_int,
+    readfds: UnsafePointer[fd_set],
+    writefds: UnsafePointer[fd_set],
+    exceptfds: UnsafePointer[fd_set],
+    timeout: UnsafePointer[timeval],
+) -> c_int:
+    """Libc POSIX `select` function
+    Reference: https://man7.org/linux
+    Fn signature: int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout).
+    
+    Args: nfds: The highest-numbered file descriptor in any of the three sets, plus 1.
+        readfds: A UnsafePointer to the set of file descriptors to read from.
+        writefds: A UnsafePointer to the set of file descriptors to write to.
+        exceptfds: A UnsafePointer to the set of file descriptors to check for exceptions.
+        timeout: A UnsafePointer to a timeval struct to set a timeout.
+    Returns: The number of file descriptors in the sets or -1 in case of failure.
+    """
+    return external_call[
+        "select",
+        c_int,  # FnName, RetType
+        c_int,
+        UnsafePointer[fd_set],
+        UnsafePointer[fd_set],
+        UnsafePointer[fd_set],
+        UnsafePointer[timeval],  # Args
+    ](nfds, readfds, writefds, exceptfds, timeout)
+
 fn __test_getaddrinfo__():
     var ip_addr = "127.0.0.1"
     var port = 8083
