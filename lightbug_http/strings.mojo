@@ -1,5 +1,6 @@
 from utils import Span
 from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, bytes, byte
 
 alias strSlash = "/"
 alias strHttp = "http"
@@ -12,28 +13,23 @@ alias strHttp10 = "HTTP/1.0"
 alias strMethodGet = "GET"
 
 alias rChar = "\r"
-alias rChar_byte = ord(rChar)
 alias nChar = "\n"
-alias nChar_byte = ord(nChar)
+alias lineBreak = rChar + nChar
 alias colonChar = ":"
-alias colonChar_byte = ord(colonChar)
-
-alias h_byte = ord("h")
-alias H_byte = ord("H")
-alias c_byte = ord("c")
-alias C_byte = ord("C")
-alias u_byte = ord("u")
-alias U_byte = ord("U")
-alias t_byte = ord("t")
-alias T_byte = ord("T")
-alias s_byte = ord("s")
-alias S_byte = ord("S")
 
 alias empty_string = ""
 alias whitespace = " "
 alias whitespace_byte = ord(whitespace)
 alias tab = "\t"
 alias tab_byte = ord(tab)
+
+
+struct BytesConstant:
+    alias whitespace = byte(whitespace)
+    alias colon = byte(colonChar)
+    alias rChar = byte(rChar)
+    alias nChar = byte(nChar)
+
 
 @value
 struct NetworkType:
@@ -51,6 +47,7 @@ struct NetworkType:
     alias ip6 = NetworkType("ip6")
     alias unix = NetworkType("unix")
 
+
 @value
 struct ConnType:
     var value: String
@@ -58,6 +55,7 @@ struct ConnType:
     alias empty = ConnType("")
     alias http = ConnType("http")
     alias websocket = ConnType("websocket")
+
 
 @value
 struct RequestMethod:
@@ -71,11 +69,13 @@ struct RequestMethod:
     alias patch = RequestMethod("PATCH")
     alias options = RequestMethod("OPTIONS")
 
+
 @value
 struct CharSet:
     var value: String
 
     alias utf8 = CharSet("utf-8")
+
 
 @value
 struct MediaType:
@@ -85,12 +85,20 @@ struct MediaType:
     alias plain = MediaType("text/plain")
     alias json = MediaType("application/json")
 
+
 @value
 struct Message:
     var type: String
 
     alias empty = Message("")
     alias http_start = Message("http.response.start")
+
+
+fn to_string[T: Formattable](value: T) -> String:
+    var s = String()
+    var formatter = s._unsafe_to_formatter()
+    value.format_to(formatter)
+    return s
 
 
 fn to_string(b: Span[UInt8]) -> String:
@@ -107,7 +115,7 @@ fn to_string(b: Span[UInt8]) -> String:
 fn to_string(owned bytes: List[UInt8, True]) -> String:
     """Creates a String from the provided List of bytes.
     If you do not transfer ownership of the List, the List will be copied.
-    
+
     Args:
         bytes: The List of bytes to convert to a String.
     """
