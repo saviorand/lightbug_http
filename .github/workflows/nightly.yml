@@ -1,0 +1,21 @@
+name: Nightly workflow
+
+on:
+  push:
+    branches:
+      - nightly
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+  
+  package:
+    uses: ./.github/workflows/package.yml
+  
+  publish:
+    uses: ./.github/workflows/publish.yml
+    secrets:
+      PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}

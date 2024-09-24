@@ -5,7 +5,7 @@ context:
 
 package:
   name: "lightbug_http"
-  version: 0.1.4
+  version: 0.1.4.nightly
 
 source:
   - path: ../lightbug_http
@@ -19,8 +19,8 @@ build:
 requirements:
   run:
     - max >=24.5.0
-    - gojo == 0.1.9
-    - small_time == 0.1.3
+    - gojo == 0.1.12
+    - small_time == 0.1.4.nightly
 
 about:
   homepage: https://github.com/saviorand/lightbug_http

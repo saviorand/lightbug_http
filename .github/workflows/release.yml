@@ -1,4 +1,4 @@
-name: Release tag pipeline
+name: Release workflow
 
 on:
   push:
