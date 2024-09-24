@@ -190,10 +190,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
             var max_fd = self.ln.fd
             for i in range(len(self.connections)):
                 var conn = self.connections[i]
-                print("Setting fd in read_fds and write_fds: ", conn.fd)
                 self.read_fds.set(int(conn.fd))
                 self.write_fds.set(int(conn.fd))
-                print("Is fd set in read_fds: ", self.read_fds.is_set(int(conn.fd)))
+                
                 if conn.fd > max_fd:
                     max_fd = conn.fd
                 
@@ -209,36 +208,26 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
             if select_result == -1:
                 print("Select error")
                 return
-            print("Select result: ", select_result)
-            print("Number of connections: ", len(self.connections))
-            print("Listener fd: ", self.ln.fd)
-            print("Max fd: ", max_fd)
-            print("Is read_fds set: ", self.read_fds.is_set(int(self.ln.fd)))
+            
             if self.read_fds.is_set(int(self.ln.fd)):
-                print("New connection incoming")
                 var conn = self.ln.accept()
-                print("New connection accepted")
                 try: 
                     _ = conn.set_non_blocking(True)
                 except e:
-                    print("Error setting non-blocking: ", e)
+                    print("Error setting connnection to non-blocking mode: ", e)
                     conn.close()
                     continue
                 self.connections.append(conn)
                 if conn.fd > max_fd:
                     max_fd = conn.fd
-                    print("Max fd updated: ", max_fd)
                     self.read_fds.set(int(conn.fd))
             
             var i = 0
             while i < len(self.connections):
                 var conn = self.connections[i]
-                print("Checking connection ", i, "fd: ", conn.fd)
                 if self.read_fds.is_set(int(conn.fd)):
-                    print("Reading from connection ", i)
                     _ = self.handle_read(conn, handler)
                 if self.write_fds.is_set(int(conn.fd)):
-                    print("Writing to connection ", i)
                     _ = self.handle_write(conn)
                 
                 if conn.is_closed():
@@ -252,9 +241,7 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
             max_request_body_size = default_max_request_body_size
 
         var b = Bytes(capacity=default_buffer_size)
-        print("Trying to read")
         var bytes_recv = conn.read(b)
-        print("Read bytes: ", bytes_recv)
         
         if bytes_recv == 0:
             conn.close()
@@ -269,7 +256,10 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
             _ = res.set_connection_close()
 
         conn.set_write_buffer(encode(res^))
-        
+
+        # TODO: does this make sense?
+        self.write_fds.set(int(conn.fd))
+
         if can_upgrade:
             self.upgrade_loop.process_data(conn, False, Bytes()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
 
