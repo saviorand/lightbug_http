@@ -13,7 +13,7 @@ trait WebSocketService(Copyable):
     fn on_message(inout self, conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         ...
 
-trait UpgradeLoop(Copyable):
+trait UpgradeLoop(CollectionElement):
     fn process_data(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
         ...
 

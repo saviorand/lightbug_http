@@ -1,3 +1,5 @@
+from collections import Optional
+from sys.intrinsics import _type_is_eq
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
 from lightbug_http.http import HTTPRequest, encode
@@ -21,7 +23,7 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
     A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
     var error_handler: ErrorHandler
-    var upgrade_loop: T
+    var upgrade_loop: Optional[T]
 
     var name: String
     var __address: String
@@ -37,9 +39,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
     var read_fds: fd_set
     var write_fds: fd_set
 
-    fn __init__(inout self, upgrade: T) raises:
+    fn __init__(inout self) raises:
         self.error_handler = ErrorHandler()
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -51,9 +53,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         self.read_fds = fd_set()
         self.write_fds = fd_set()
 
-    fn __init__(inout self, tcp_keep_alive: Bool, upgrade: T) raises:
+    fn __init__(inout self, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -65,9 +67,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         self.read_fds = fd_set()
         self.write_fds = fd_set()
 
-    fn __init__(inout self, own_address: String, upgrade: T) raises:
+    fn __init__(inout self, own_address: String) raises:
         self.error_handler = ErrorHandler()
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = own_address
         self.max_concurrent_connections = 1000
@@ -79,9 +81,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         self.read_fds = fd_set()
         self.write_fds = fd_set()
 
-    fn __init__(inout self, error_handler: ErrorHandler, upgrade: T) raises:
+    fn __init__(inout self, error_handler: ErrorHandler) raises:
         self.error_handler = error_handler
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -93,9 +95,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         self.read_fds = fd_set()
         self.write_fds = fd_set()
 
-    fn __init__(inout self, max_request_body_size: Int, upgrade: T) raises:
+    fn __init__(inout self, max_request_body_size: Int) raises:
         self.error_handler = ErrorHandler()
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -108,16 +110,30 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         self.write_fds = fd_set()
 
     fn __init__(
-        inout self, max_request_body_size: Int, tcp_keep_alive: Bool, upgrade: T
+        inout self, max_request_body_size: Int, tcp_keep_alive: Bool
     ) raises:
         self.error_handler = ErrorHandler()
-        self.upgrade_loop = upgrade
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
         self.max_requests_per_connection = 0
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
+        self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+    
+    fn __init__(inout self, upgrade: T) raises:
+        self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = default_max_request_body_size
+        self.tcp_keep_alive = False
         self.ln = SysListener()
         self.connections = List[SysConnection]()
         self.read_fds = fd_set()
@@ -149,6 +165,12 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         if concurrency <= 0:
             concurrency = DefaultConcurrency
         return concurrency
+    
+    fn can_upgrade(self) -> Bool:
+        @parameter
+        if _type_is_eq[T, NoUpgrade]():
+            return False
+        return True
 
     fn listen_and_serve[
         T: HTTPService
@@ -250,7 +272,7 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
         var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
         var res = handler.func(request)
 
-        var can_upgrade = self.upgrade_loop.can_upgrade()
+        var can_upgrade = self.can_upgrade()
         
         if not self.tcp_keep_alive and not can_upgrade:
             _ = res.set_connection_close()
@@ -259,9 +281,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
 
         # TODO: does this make sense?
         self.write_fds.set(int(conn.fd))
-
+        
         if can_upgrade:
-            self.upgrade_loop.process_data(conn, False, Bytes()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
+            self.upgrade_loop.value().process_data(conn, False, Bytes()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
 
         # if not self.tcp_keep_alive:
         #     conn.close()
