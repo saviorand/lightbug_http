@@ -36,12 +36,14 @@ struct WebSocketLoop[T: WebSocketService](UpgradeLoop):
     # array goes here
 
     fn process_data(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
-        # select() ...
-        # frame comes in, call handle_frame()
-        # if nothing, return and let the main server upgrade more websockets or handle regular requests
+        self.handle_frame(conn, is_binary, data)
+        return
 
     fn handle_frame(inout self, owned conn: SysConnection, is_binary: Bool, data: Bytes) -> None:
-        # call receive_message(), get actual data, then call user func()
+        var message = receive_message(conn, data)
+        if message:
+            self.handler.on_message(conn, is_binary, message)
+        return
         
     fn can_upgrade(self) -> Bool:
         return True
@@ -66,15 +68,9 @@ struct WebSocketHandshake(HTTPService):
         var accept_sha1 = Python.import_module("hashlib").sha1(accept).digest()
         var accept_encoded = b64encode(accept_sha1)
 
-        var header = Headers(101, bytes("Switching Protocols"), bytes("text/plain"))
-
-        _ = header["Upgrade"] = bytes("websocket")
-        _ = header["Connection"] = bytes("Upgrade")
-        _ = header["Sec-WebSocket-Accept"] = bytes(accept_encoded)
-
-        var response = HTTPResponse(header, bytes(""))
-                
-        return response
+        var header = Headers(Header("Upgrade", "websocket"), Header("Connection", "Upgrade"), Header("Sec-WebSocket-Accept", accept_encoded))
+        
+        return HTTPResponse(Bytes(), header, 101, "Switching Protocols")
 
 fn receive_message[
     maximum_default_capacity:Int = 1<<16

@@ -225,6 +225,7 @@ struct SysConnection(Connection):
     var fd: c_int
     var raddr: TCPAddr
     var laddr: TCPAddr
+    var write_buffer: Bytes
 
     fn __init__(inout self, laddr: String, raddr: String) raises:
         self.raddr = resolve_internet_addr(NetworkType.tcp4.value, raddr)
