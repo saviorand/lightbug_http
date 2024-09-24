@@ -59,7 +59,7 @@ trait Listener(Movable):
         ...
 
 
-trait Connection(Movable):
+trait Connection(CollectionElement):
     fn __init__(inout self, laddr: String, raddr: String) raises:
         ...
 

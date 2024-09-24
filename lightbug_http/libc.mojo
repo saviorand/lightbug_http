@@ -545,6 +545,44 @@ fn setsockopt(
         socklen_t,  # Args
     ](socket, level, option_name, option_value, option_len)
 
+fn fcntl(fd: c_int, cmd: c_int, arg: c_int = 0) -> c_int:
+    """Libc POSIX `fcntl` function
+    Reference: https
+    Fn signature: int fcntl(int fd, int cmd, int arg).
+
+    Args: fd: A File Descriptor.
+        cmd: The command to execute.
+        arg: The argument for the command.
+    Returns: The result of the command.
+    """
+    return external_call["fcntl", c_int, c_int, c_int, c_int](fd, cmd, arg)
+
+fn getsockopt(
+    socket: c_int,
+    level: c_int,
+    option_name: c_int,
+    option_value: UnsafePointer[c_void],
+    option_len: UnsafePointer[socklen_t],
+) -> c_int:
+    """Libc POSIX `getsockopt` function
+    Reference: https://man7.org/linux
+
+    Args: socket: A File Descriptor.
+        level: The protocol level.
+        option_name: The option to get.
+        option_value: A UnsafePointer to the value to get.
+        option_len: A UnsafePointer to the size of the value.
+    Returns: 0 on success, -1 on error.
+    """
+    return external_call[
+        "getsockopt",
+        c_int,  # FnName, RetType
+        c_int,
+        c_int,
+        c_int,
+        UnsafePointer[c_void],
+        UnsafePointer[socklen_t],  # Args
+    ](socket, level, option_name, option_value, option_len)
 
 fn getsockname(
     socket: c_int,
@@ -842,7 +880,7 @@ struct timeval:
         self.tv_sec = seconds
         self.tv_usec = microseconds
 
-
+@value
 struct fd_set:
     var fds_bits: StaticTuple[Int64, 16]
 
@@ -855,25 +893,21 @@ struct fd_set:
         var word = fd // 64
         var bit = fd % 64
         self.fds_bits[word] |= (1 << bit)
-        print("Set fd", fd, "word:", word, "bit:", bit)
 
     fn clear(inout self, fd: Int):
         var word = fd // 64
         var bit = fd % 64
         self.fds_bits[word] &= ~(1 << bit)
-        print("Cleared fd", fd, "word:", word, "bit:", bit)
 
     fn is_set(self, fd: Int) -> Bool:
         var word = fd // 64
         var bit = fd % 64
         var result = (self.fds_bits[word] & (1 << bit)) != 0
-        print("Checking fd", fd, "word:", word, "bit:", bit, "result:", result)
         return result
 
     fn clear_all(inout self):
         for i in range(16):
             self.fds_bits[i] = 0
-        print("Cleared all fds")
 
     fn print_bits(self):
         for i in range(16):

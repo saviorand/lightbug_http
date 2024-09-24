@@ -10,13 +10,13 @@ from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import NetworkType
 from lightbug_http.utils import ByteReader
-from lightbug_http.libc import fd_set
+from lightbug_http.libc import fd_set, timeval, select
 
 alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 
 @value
-struct SysServer[T: UpgradeLoop = NoUpgrade]:
+struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on main struct , then a default for upgrade e.g. NoUpgrade
     """
     A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
@@ -37,8 +37,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
     var read_fds: fd_set
     var write_fds: fd_set
 
-    fn __init__(inout self) raises:
+    fn __init__(inout self, upgrade: T) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -46,9 +47,13 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
-    fn __init__(inout self, tcp_keep_alive: Bool) raises:
+    fn __init__(inout self, tcp_keep_alive: Bool, upgrade: T) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -56,9 +61,13 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
-    fn __init__(inout self, own_address: String) raises:
+    fn __init__(inout self, own_address: String, upgrade: T) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = own_address
         self.max_concurrent_connections = 1000
@@ -66,9 +75,13 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
-    fn __init__(inout self, error_handler: ErrorHandler) raises:
+    fn __init__(inout self, error_handler: ErrorHandler, upgrade: T) raises:
         self.error_handler = error_handler
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -76,9 +89,13 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
-    fn __init__(inout self, max_request_body_size: Int) raises:
+    fn __init__(inout self, max_request_body_size: Int, upgrade: T) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -86,11 +103,15 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
     fn __init__(
-        inout self, max_request_body_size: Int, tcp_keep_alive: Bool
+        inout self, max_request_body_size: Int, tcp_keep_alive: Bool, upgrade: T
     ) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -98,17 +119,9 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
-    
-    fn __init__(inout self, upgrade: T) raises:
-        self.error_handler = ErrorHandler()
-        self.upgrade_handler = upgrade
-        self.name = "lightbug_http"
-        self.__address = "127.0.0.1"
-        self.max_concurrent_connections = 1000
-        self.max_requests_per_connection = 0
-        self.__max_request_body_size = default_max_request_body_size
-        self.tcp_keep_alive = False
-        self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
     
     fn address(self) -> String:
         return self.__address
@@ -172,18 +185,19 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
             _ = self.read_fds.clear_all()
             _ = self.write_fds.clear_all()
 
-            self.read_fds.set(self.ln.fd())
+            self.read_fds.set(int(self.ln.fd))
 
-            for conn in self.connections:
-                self.read_fds.set(conn.fd())
-                self.write_fds.set(conn.fd())
-            
-            var max_fd = self.ln.fd()
-            for conn in self.connections:
-                if conn.fd() > max_fd:
-                    max_fd = conn.fd()
+            var max_fd = self.ln.fd
+            for i in range(len(self.connections)):
+                var conn = self.connections[i]
+                print("Setting fd in read_fds and write_fds: ", conn.fd)
+                self.read_fds.set(int(conn.fd))
+                self.write_fds.set(int(conn.fd))
+                print("Is fd set in read_fds: ", self.read_fds.is_set(int(conn.fd)))
+                if conn.fd > max_fd:
+                    max_fd = conn.fd
                 
-            var timeout = Duration(0, 100000)  # 100ms
+            var timeout = timeval(0, 10000)
 
             var select_result = select(
                 max_fd + 1,
@@ -192,36 +206,50 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
                 UnsafePointer[fd_set](),
                 UnsafePointer.address_of(timeout)
             )
-
             if select_result == -1:
                 print("Select error")
                 return
-
-            if self.read_fds.is_set(self.ln.fd()):
+            print("Select result: ", select_result)
+            print("Listener fd: ", self.ln.fd)
+            print("Max fd: ", max_fd)
+            print("Is read_fds set: ", self.read_fds.is_set(int(self.ln.fd)))
+            if self.read_fds.is_set(int(self.ln.fd)):
+                print("New connection incoming")
                 var conn = self.ln.accept()
-                # TODO: set nonblocking to true
+                print("New connection accepted")
+                try: 
+                    _ = conn.set_non_blocking(True)
+                except e:
+                    print("Error setting non-blocking: ", e)
+                    conn.close()
+                    continue
                 self.connections.append(conn)
             
             var i = 0
-            while i < self.connections.len():
+            while i < len(self.connections):
                 var conn = self.connections[i]
-                if self.read_fds.is_set(conn.fd()):
+                print("Checking connection ", i, "fd: ", conn.fd)
+                if self.read_fds.is_set(int(conn.fd)):
+                    print("Reading from connection ", i)
                     _ = self.handle_read(conn, handler)
-                if self.write_fds.is_set(conn.fd()):
+                if self.write_fds.is_set(int(conn.fd)):
+                    print("Writing to connection ", i)
                     _ = self.handle_write(conn)
                 
-                if conn.closed():
-                    self.connections.remove_at(i)
+                if conn.is_closed():
+                    _ = self.connections.pop(i)
                 else:
                     i += 1
 
-     fn handle_read[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
+    fn handle_read[T: HTTPService](inout self, inout conn: SysConnection, handler: T) raises -> None:
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
 
         var b = Bytes(capacity=default_buffer_size)
+        print("Trying to read")
         var bytes_recv = conn.read(b)
+        print("Read bytes: ", bytes_recv)
         
         if bytes_recv == 0:
             conn.close()
@@ -230,73 +258,24 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]:
         var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
         var res = handler.func(request)
 
-        var can_upgrade = self.upgrade_handler.can_upgrade()
+        var can_upgrade = self.upgrade_loop.can_upgrade()
         
         if not self.tcp_keep_alive and not can_upgrade:
             _ = res.set_connection_close()
 
-        conn.write_buffer = encode(res^)
+        conn.set_write_buffer(encode(res^))
         
         if can_upgrade:
-            self.upgrade_handler.func(conn, False, res.get_body()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
+            self.upgrade_loop.process_data(conn, False, Bytes()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
 
-        if not self.tcp_keep_alive:
-            conn.close()
+        # if not self.tcp_keep_alive:
+        #     conn.close()
 
-    fn handle_write(inout self, conn: SysConnection) raises -> None:
-        if conn.write_buffer:
-            var bytes_sent = conn.write(conn.write_buffer)
-            if bytes_sent < len(conn.write_buffer):
-                conn.write_buffer = conn.write_buffer[bytes_sent:]
+    fn handle_write(inout self, inout conn: SysConnection) raises -> None:
+        var write_buffer = conn.write_buffer()
+        if write_buffer:
+            var bytes_sent = conn.write(write_buffer)
+            if bytes_sent < len(write_buffer):
+                conn.set_write_buffer(write_buffer[bytes_sent:])
             else:
-                conn.write_buffer = None
-    
-    fn serve_connection[
-        T: HTTPService
-    ](inout self, conn: SysConnection, handler: T) raises -> None:
-        """
-        Serve a single connection.
-
-        Args:
-            conn : SysConnection - A connection object that represents a client connection.
-            handler : HTTPService - An object that handles incoming HTTP requests.
-
-        Raises:
-        If there is an error while serving the connection.
-        """
-
-        var max_request_body_size = self.max_request_body_size()
-        if max_request_body_size <= 0:
-            max_request_body_size = default_max_request_body_size
-
-        var req_number = 0
-
-        while True:
-            req_number += 1
-
-            b = Bytes(capacity=default_buffer_size)
-            bytes_recv = conn.read(b)
-            if bytes_recv == 0:
-                conn.close()
-                break
-
-            var request = HTTPRequest.from_bytes(
-                self.address(), max_request_body_size, b^
-            )
-
-            var res = handler.func(request)
-
-            var can_upgrade = self.upgrade_handler.can_upgrade()
-            
-            if not self.tcp_keep_alive and not can_upgrade:
-                _ = res.set_connection_close()
-
-            _ = conn.write(encode(res^))
-
-            if can_upgrade:
-                # select over the array in the looper
-                self.upgrade_handler.func(conn, False, res.get_body()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
-
-            if not self.tcp_keep_alive:
-                conn.close()
-                return
+                conn.set_write_buffer(Bytes())

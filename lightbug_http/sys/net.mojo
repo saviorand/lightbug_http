@@ -7,9 +7,9 @@ from lightbug_http.net import (
     Connection,
     TCPAddr,
     Net,
-    resolve_internet_addr,
     default_buffer_size,
     default_tcp_keep_alive,
+    resolve_internet_addr,
     get_peer_name,
 )
 from lightbug_http.strings import NetworkType, to_string
@@ -31,12 +31,15 @@ from ..libc import (
     SOCK_STREAM,
     SOL_SOCKET,
     SO_REUSEADDR,
+    SO_ERROR,
     SHUT_RDWR,
     htons,
     inet_pton,
     to_char_ptr,
     socket,
     connect,
+    getsockopt,
+    fcntl,
     setsockopt,
     listen,
     accept,
@@ -225,22 +228,31 @@ struct SysConnection(Connection):
     var fd: c_int
     var raddr: TCPAddr
     var laddr: TCPAddr
-    var write_buffer: Bytes
+    var __write_buffer: Bytes
 
     fn __init__(inout self, laddr: String, raddr: String) raises:
         self.raddr = resolve_internet_addr(NetworkType.tcp4.value, raddr)
         self.laddr = resolve_internet_addr(NetworkType.tcp4.value, laddr)
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        self.__write_buffer = Bytes()
 
     fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
         self.raddr = raddr
         self.laddr = laddr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        self.__write_buffer = Bytes()
 
     fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int) raises:
         self.raddr = raddr
         self.laddr = laddr
         self.fd = fd
+        self.__write_buffer = Bytes()
+    
+    fn write_buffer(self) -> Bytes:
+        return self.__write_buffer
+    
+    fn set_write_buffer(inout self, buf: Bytes):
+        self.__write_buffer = buf
 
     fn read(self, inout buf: Bytes) raises -> Int:
         var bytes_recv = recv(
@@ -277,6 +289,28 @@ struct SysConnection(Connection):
         var close_status = close(self.fd)
         if close_status == -1:
             print("Failed to close new_sockfd")
+    
+    fn is_closed(self) -> Bool:
+        var error = 0
+        var len = socklen_t(sizeof[Int]())
+        var result = external_call[
+        "getsockopt",
+        c_int,
+    ](self.fd, SOL_SOCKET, SO_ERROR, UnsafePointer.address_of(error), UnsafePointer.address_of(len))
+        return result == -1 or error != 0
+    
+    fn set_non_blocking(self, non_blocking: Bool) raises:
+        var flags = fcntl(self.fd, 3)
+        if flags == -1:
+            print("Failed to get flags")
+            return
+        if non_blocking:
+            flags |= 2048
+        else:
+            flags &= ~2048
+        var result = fcntl(self.fd, 4, flags)
+        if result == -1:
+            print("Failed to set flags")
 
     fn local_addr(inout self) raises -> TCPAddr:
         return self.laddr

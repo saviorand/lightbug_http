@@ -1,6 +1,7 @@
 from lightbug_http import Welcome, SysServer
+from lightbug_http.service import NoUpgrade
 
 fn main() raises:
-    var server = SysServer()
+    var server = SysServer(NoUpgrade())
     var handler = Welcome()
     server.listen_and_serve("0.0.0.0:8080", handler)

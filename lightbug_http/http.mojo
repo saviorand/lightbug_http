@@ -218,6 +218,10 @@ struct HTTPResponse(Formattable, Stringable):
         self.status_text = status_text
         self.protocol = protocol
         self.body_raw = body_bytes
+        self.skip_reading_writing_body = False
+        self.__is_upgrade = False
+        self.raddr = TCPAddr()
+        self.laddr = TCPAddr()
         self.set_connection_keep_alive()
         self.set_content_length(len(body_bytes))
 

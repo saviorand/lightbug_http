@@ -21,7 +21,7 @@ trait UpgradeLoop(Copyable):
         ...
         
     fn can_upgrade(self) -> Bool:
-        return True
+        ...
 
 @value
 struct NoUpgrade(UpgradeLoop):
