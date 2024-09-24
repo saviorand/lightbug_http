@@ -1,4 +1,6 @@
 from sys.info import sizeof
+from utils import StringRef
+from memory import UnsafePointer
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration

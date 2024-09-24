@@ -1,4 +1,5 @@
 from utils import StaticTuple
+from memory import UnsafePointer
 from sys.ffi import external_call
 from sys.info import sizeof
 from memory import memcpy

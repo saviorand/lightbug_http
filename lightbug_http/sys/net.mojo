@@ -1,4 +1,5 @@
 from utils import StaticTuple
+from memory import UnsafePointer
 from sys.info import sizeof
 from sys.ffi import external_call
 from lightbug_http.net import (
