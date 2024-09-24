@@ -210,6 +210,7 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
                 print("Select error")
                 return
             print("Select result: ", select_result)
+            print("Number of connections: ", len(self.connections))
             print("Listener fd: ", self.ln.fd)
             print("Max fd: ", max_fd)
             print("Is read_fds set: ", self.read_fds.is_set(int(self.ln.fd)))
@@ -224,6 +225,10 @@ struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on
                     conn.close()
                     continue
                 self.connections.append(conn)
+                if conn.fd > max_fd:
+                    max_fd = conn.fd
+                    print("Max fd updated: ", max_fd)
+                    self.read_fds.set(int(conn.fd))
             
             var i = 0
             while i < len(self.connections):
