@@ -1,8 +1,9 @@
+from sys.info import sizeof
 from lightbug_http.strings import NetworkType
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.sys.net import SysConnection
-from external.libc import (
+from .libc import (
     c_void,
     AF_INET,
     sockaddr,
@@ -11,7 +12,7 @@ from external.libc import (
     getsockname,
     getpeername,
     ntohs,
-    inet_ntop
+    inet_ntop,
 )
 
 alias default_buffer_size = 4096
@@ -58,7 +59,7 @@ trait Listener(Movable):
         ...
 
 
-trait Connection(Movable):
+trait Connection(CollectionElement):
     fn __init__(inout self, laddr: String, raddr: String) raises:
         ...
 
@@ -119,7 +120,9 @@ struct TCPAddr(Addr):
 
     fn string(self) -> String:
         if self.zone != "":
-            return join_host_port(self.ip + "%" + self.zone, self.port.__str__())
+            return join_host_port(
+                self.ip + "%" + self.zone, self.port.__str__()
+            )
         return join_host_port(self.ip, self.port.__str__())
 
 

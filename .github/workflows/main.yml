@@ -1,45 +1,22 @@
-name: Main pipeline
+name: Main workflow
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  setup:
-    name: Setup environment and install dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Install modular
-        run: |
-          curl -s https://get.modular.com | sh -
-          modular auth examples
-      - name: Install Mojo
-        run: modular install mojo
-      - name: Add to PATH
-        run: echo "/home/runner/.modular/pkg/packages.modular.com_mojo/bin" >> $GITHUB_PATH
   test:
-    name: Run tests
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Run the test suite
-        run: mojo run_tests.mojo
+    uses: ./.github/workflows/test.yml
+  
   package:
-    name: Create package
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-      - name: Run the package command
-        run: mojo package lightbug_http -o lightbug_http.mojopkg
-      - name: Upload package to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          file: lightbug_http.mojopkg
-          tag: latest-build
-          overwrite: true
+    uses: ./.github/workflows/package.yml
+  
+  publish:
+    uses: ./.github/workflows/publish.yml
+    secrets:
+      PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
+  
+

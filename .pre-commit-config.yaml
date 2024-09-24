@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: mojo-format
+        name: mojo-format
+        entry: magic run mojo format -l 120
+        language: system
+        files: '\.(mojo|🔥)$'
+        stages: [commit]

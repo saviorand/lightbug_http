@@ -1,26 +1,29 @@
-from external.gojo.bufio import Reader, Scanner, scan_words, scan_bytes
-from external.gojo.bytes import buffer
+from collections import Optional
+from sys.intrinsics import _type_is_eq
 from lightbug_http.server import DefaultConcurrency
 from lightbug_http.net import Listener, default_buffer_size
-from lightbug_http.http import HTTPRequest, encode, split_http_string
+from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.uri import URI
-from lightbug_http.header import RequestHeader
+from lightbug_http.header import Headers
 from lightbug_http.sys.net import SysListener, SysConnection, SysNet
-from lightbug_http.service import HTTPService
+from lightbug_http.service import HTTPService, UpgradeLoop, NoUpgrade
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.error import ErrorHandler
 from lightbug_http.strings import NetworkType
+from lightbug_http.utils import ByteReader
+from lightbug_http.libc import fd_set, timeval, select
 
 alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
+
 @value
-struct SysServer:
+struct SysServer[T: UpgradeLoop = NoUpgrade]: # TODO: conditional conformance on main struct , then a default for upgrade e.g. NoUpgrade
     """
     A Mojo-based server that accept incoming requests and delivers HTTP services.
     """
-
     var error_handler: ErrorHandler
+    var upgrade_loop: Optional[T]
 
     var name: String
     var __address: String
@@ -32,8 +35,13 @@ struct SysServer:
 
     var ln: SysListener
 
+    var connections: List[SysConnection]
+    var read_fds: fd_set
+    var write_fds: fd_set
+
     fn __init__(inout self) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -41,9 +49,13 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+
     fn __init__(inout self, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -51,9 +63,13 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
-    
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+
     fn __init__(inout self, own_address: String) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = own_address
         self.max_concurrent_connections = 1000
@@ -61,9 +77,13 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
 
     fn __init__(inout self, error_handler: ErrorHandler) raises:
         self.error_handler = error_handler
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -71,9 +91,13 @@ struct SysServer:
         self.__max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+
     fn __init__(inout self, max_request_body_size: Int) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -81,9 +105,15 @@ struct SysServer:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = False
         self.ln = SysListener()
-    
-    fn __init__(inout self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+
+    fn __init__(
+        inout self, max_request_body_size: Int, tcp_keep_alive: Bool
+    ) raises:
         self.error_handler = ErrorHandler()
+        self.upgrade_loop = None
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
         self.max_concurrent_connections = 1000
@@ -91,17 +121,34 @@ struct SysServer:
         self.__max_request_body_size = max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
+    
+    fn __init__(inout self, upgrade: T) raises:
+        self.error_handler = ErrorHandler()
+        self.upgrade_loop = upgrade
+        self.name = "lightbug_http"
+        self.__address = "127.0.0.1"
+        self.max_concurrent_connections = 1000
+        self.max_requests_per_connection = 0
+        self.__max_request_body_size = default_max_request_body_size
+        self.tcp_keep_alive = False
+        self.ln = SysListener()
+        self.connections = List[SysConnection]()
+        self.read_fds = fd_set()
+        self.write_fds = fd_set()
     
     fn address(self) -> String:
         return self.__address
-    
+
     fn set_address(inout self, own_address: String) -> Self:
         self.__address = own_address
         return self
 
     fn max_request_body_size(self) -> Int:
         return self.__max_request_body_size
-    
+
     fn set_max_request_body_size(inout self, size: Int) -> Self:
         self.__max_request_body_size = size
         return self
@@ -118,10 +165,16 @@ struct SysServer:
         if concurrency <= 0:
             concurrency = DefaultConcurrency
         return concurrency
+    
+    fn can_upgrade(self) -> Bool:
+        @parameter
+        if _type_is_eq[T, NoUpgrade]():
+            return False
+        return True
 
     fn listen_and_serve[
         T: HTTPService
-    ](inout self, address: String, handler: T) raises -> None:
+    ](inout self, address: String, handler: T) raises -> None: # TODO: conditional conformance on main struct , then a default for handler e.g. WebsocketHandshake
         """
         Listen for incoming connections and serve HTTP requests.
 
@@ -134,7 +187,9 @@ struct SysServer:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
+    fn serve[
+        T: HTTPService
+    ](inout self, ln: SysListener, handler: T) raises -> None:
         """
         Serve HTTP requests.
 
@@ -146,88 +201,98 @@ struct SysServer:
         If there is an error while serving requests.
         """
         self.ln = ln
+        self.connections = List[SysConnection]()
 
         while True:
-            var conn = self.ln.accept()
-            self.serve_connection(conn, handler)
-    
-    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
-        """
-        Serve a single connection.
+            _ = self.read_fds.clear_all()
+            _ = self.write_fds.clear_all()
 
-        Args:
-            conn : SysConnection - A connection object that represents a client connection.
-            handler : HTTPService - An object that handles incoming HTTP requests.
+            self.read_fds.set(int(self.ln.fd))
 
-        Raises:
-        If there is an error while serving the connection.
-        """
+            var max_fd = self.ln.fd
+            for i in range(len(self.connections)):
+                var conn = self.connections[i]
+                self.read_fds.set(int(conn.fd))
+                self.write_fds.set(int(conn.fd))
+                
+                if conn.fd > max_fd:
+                    max_fd = conn.fd
+                
+            var timeout = timeval(0, 10000)
+
+            var select_result = select(
+                max_fd + 1,
+                UnsafePointer.address_of(self.read_fds),
+                UnsafePointer.address_of(self.write_fds),
+                UnsafePointer[fd_set](),
+                UnsafePointer.address_of(timeout)
+            )
+            if select_result == -1:
+                print("Select error")
+                return
+            
+            if self.read_fds.is_set(int(self.ln.fd)):
+                var conn = self.ln.accept()
+                try: 
+                    _ = conn.set_non_blocking(True)
+                except e:
+                    print("Error setting connnection to non-blocking mode: ", e)
+                    conn.close()
+                    continue
+                self.connections.append(conn)
+                if conn.fd > max_fd:
+                    max_fd = conn.fd
+                    self.read_fds.set(int(conn.fd))
+            
+            var i = 0
+            while i < len(self.connections):
+                var conn = self.connections[i]
+                if self.read_fds.is_set(int(conn.fd)):
+                    _ = self.handle_read(conn, handler)
+                if self.write_fds.is_set(int(conn.fd)):
+                    _ = self.handle_write(conn)
+                
+                if conn.is_closed():
+                    _ = self.connections.pop(i)
+                else:
+                    i += 1
+
+    fn handle_read[T: HTTPService](inout self, inout conn: SysConnection, handler: T) raises -> None:
+        var max_request_body_size = self.max_request_body_size()
+        if max_request_body_size <= 0:
+            max_request_body_size = default_max_request_body_size
+
         var b = Bytes(capacity=default_buffer_size)
-        var bytes_recv = conn.read(b) 
+        var bytes_recv = conn.read(b)
+        
         if bytes_recv == 0:
             conn.close()
             return
 
-        var buf = buffer.new_buffer(b^)
-        var reader = Reader(buf^)
+        var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
+        var res = handler.func(request)
 
-        var error = Error()
+        var can_upgrade = self.can_upgrade()
         
-        var max_request_body_size = self.max_request_body_size()
-        if max_request_body_size <= 0:
-            max_request_body_size = default_max_request_body_size
+        if not self.tcp_keep_alive and not can_upgrade:
+            _ = res.set_connection_close()
+
+        conn.set_write_buffer(encode(res^))
+
+        # TODO: does this make sense?
+        self.write_fds.set(int(conn.fd))
         
-        var req_number = 0
-        
-        while True:
-            req_number += 1
+        if can_upgrade:
+            self.upgrade_loop.value().process_data(conn, False, Bytes()) # TODO: is_binary is now hardcoded to = False, need to get it from the frame
 
-            if req_number > 1:
-                var b = Bytes(capacity=default_buffer_size)
-                var bytes_recv = conn.read(b)
-                if bytes_recv == 0:
-                    conn.close()
-                    break
-                buf = buffer.new_buffer(b^)
-                reader = Reader(buf^)
+        # if not self.tcp_keep_alive:
+        #     conn.close()
 
-            var header = RequestHeader()
-            var first_line_and_headers_len = 0
-            try:
-                first_line_and_headers_len = header.parse_raw(reader)
-            except e:
-                error = Error("Failed to parse request headers: " + e.__str__())
-
-            var uri = URI(self.address() + String(header.request_uri()))
-            try:
-                uri.parse()
-            except e:
-                error = Error("Failed to parse request line:" + e.__str__())
-            
-            if header.content_length() > 0:
-                if max_request_body_size > 0 and header.content_length() > max_request_body_size:
-                    error = Error("Request body too large")
-            
-            var request = HTTPRequest(
-                    uri,
-                    Bytes(),
-                    header,
-                )
-            
-            try:
-                request.read_body(reader, header.content_length(), first_line_and_headers_len, max_request_body_size)
-            except e:
-                error = Error("Failed to read request body: " + e.__str__())
-            
-            var res = handler.func(request)
-            
-            if not self.tcp_keep_alive:
-                _ = res.set_connection_close()
-            
-            var res_encoded = encode(res)
-
-            _ = conn.write(res_encoded)
-
-            if not self.tcp_keep_alive:
-                conn.close()
-                return
+    fn handle_write(inout self, inout conn: SysConnection) raises -> None:
+        var write_buffer = conn.write_buffer()
+        if write_buffer:
+            var bytes_sent = conn.write(write_buffer)
+            if bytes_sent < len(write_buffer):
+                conn.set_write_buffer(write_buffer[bytes_sent:])
+            else:
+                conn.set_write_buffer(Bytes())

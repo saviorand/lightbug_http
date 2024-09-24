@@ -1,4 +1,5 @@
-from lightbug_http import *
+from lightbug_http import Welcome, SysServer
+from lightbug_http.service import NoUpgrade
 
 fn main() raises:
     var server = SysServer()
