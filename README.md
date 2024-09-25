@@ -67,7 +67,8 @@ Once you have a Mojo project set up locally,
     ```
     or import individual structs and functions, e.g. 
     ```mojo
-    from lightbug_http.http import HTTPService, HTTPRequest, HTTPResponse, OK, NotFound
+    from lightbug_http.service import HTTPService
+    from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
     ```
     there are some default handlers you can play with:
     ```mojo
