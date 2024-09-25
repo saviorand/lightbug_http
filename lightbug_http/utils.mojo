@@ -90,9 +90,15 @@ struct ByteReader:
         self.read_pos += v
 
     @always_inline
-    fn consume(inout self, inout buffer: Bytes):
+    fn consume(inout self, inout buffer: Bytes, bytes_len: Int = -1):
         var pos = self.read_pos
-        self.read_pos = -1
-        var read_len = len(self._inner) - pos
+        var read_len: Int
+        if bytes_len == -1:
+            self.read_pos = -1
+            read_len = len(self._inner) - pos
+        else:
+            self.read_pos += bytes_len
+            read_len = bytes_len
+
         buffer.resize(read_len, 0)
         memcpy(buffer.data, self._inner.data + pos, read_len)

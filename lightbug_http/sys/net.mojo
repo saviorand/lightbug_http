@@ -110,23 +110,16 @@ struct SysListener:
         var their_addr_ptr = Reference[sockaddr](their_addr)
         var sin_size = socklen_t(sizeof[socklen_t]())
         var sin_size_ptr = Reference[socklen_t](sin_size)
-        var new_sockfd = external_call["accept", c_int](
-            self.fd, their_addr_ptr, sin_size_ptr
-        )
+        var new_sockfd = external_call["accept", c_int](self.fd, their_addr_ptr, sin_size_ptr)
 
         # var new_sockfd = accept(
         #     self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         # )
         if new_sockfd == -1:
-            print(
-                "Failed to accept connection, system accept() returned an"
-                " error."
-            )
+            print("Failed to accept connection, system accept() returned an error.")
         var peer = get_peer_name(new_sockfd)
 
-        return SysConnection(
-            self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd
-        )
+        return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
@@ -147,9 +140,7 @@ struct SysListenConfig(ListenConfig):
     fn __init__(inout self, keep_alive: Duration) raises:
         self.__keep_alive = keep_alive
 
-    fn listen(
-        inout self, network: String, address: String
-    ) raises -> SysListener:
+    fn listen(inout self, network: String, address: String) raises -> SysListener:
         var addr = resolve_internet_addr(network, address)
         var address_family = AF_INET
         var ip_buf_size = 4
@@ -173,30 +164,21 @@ struct SysListenConfig(ListenConfig):
         var bind_fail_logged = False
 
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        var conv_status = inet_pton(
-            address_family, to_char_ptr(addr.ip), ip_buf
-        )
+        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
-        var ai = sockaddr_in(
-            address_family, bin_port, raw_ip, StaticTuple[c_char, 8]()
-        )
+        var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
         var ai_ptr = Reference[sockaddr_in](ai)
 
         while not bind_success:
             # var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
-            var bind = external_call["bind", c_int](
-                sockfd, ai_ptr, sizeof[sockaddr_in]()
-            )
+            var bind = external_call["bind", c_int](sockfd, ai_ptr, sizeof[sockaddr_in]())
             if bind == 0:
                 bind_success = True
             else:
                 if not bind_fail_logged:
-                    print(
-                        "Bind attempt failed. The address might be in use or"
-                        " the socket might not be available."
-                    )
+                    print("Bind attempt failed. The address might be in use or the socket might not be available.")
                     print("Retrying. Might take 10-15 seconds.")
                     bind_fail_logged = True
                 print(".", end="", flush=True)
@@ -208,13 +190,7 @@ struct SysListenConfig(ListenConfig):
 
         var listener = SysListener(addr, sockfd)
 
-        print(
-            "\n🔥🐝 Lightbug is listening on "
-            + "http://"
-            + addr.ip
-            + ":"
-            + addr.port.__str__()
-        )
+        print("\n🔥🐝 Lightbug is listening on " + "http://" + addr.ip + ":" + addr.port.__str__())
         print("Ready to accept connections...")
 
         return listener
@@ -358,10 +334,7 @@ struct addrinfo_macos(AnAddrInfo):
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
             print("ai_addr is null")
-            raise Error(
-                "Failed to get IP address. getaddrinfo was called successfully,"
-                " but ai_addr is null."
-            )
+            raise Error("Failed to get IP address. getaddrinfo was called successfully, but ai_addr is null.")
 
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
@@ -429,19 +402,14 @@ struct addrinfo_unix(AnAddrInfo):
         var ai_addr = addrinfo.ai_addr
         if not ai_addr:
             print("ai_addr is null")
-            raise Error(
-                "Failed to get IP address. getaddrinfo was called successfully,"
-                " but ai_addr is null."
-            )
+            raise Error("Failed to get IP address. getaddrinfo was called successfully, but ai_addr is null.")
 
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
         return addr_in.sin_addr
 
 
-fn create_connection(
-    sock: c_int, host: String, port: UInt16
-) raises -> SysConnection:
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
     """
     Connect to a server using a socket.
 
@@ -460,15 +428,10 @@ fn create_connection(
         ip = addrinfo_unix().get_ip_address(host)
 
     # Convert ip address to network byte order.
-    var addr: sockaddr_in = sockaddr_in(
-        AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
-    )
+    var addr: sockaddr_in = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
     var addr_ptr = Reference[sockaddr_in](addr)
 
-    if (
-        external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]())
-        == -1
-    ):
+    if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server")
 

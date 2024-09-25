@@ -35,6 +35,15 @@ fn encode(owned res: HTTPResponse) -> Bytes:
     return res._encoded()
 
 
+struct StatusCode:
+    alias OK = 200
+    alias MOVED_PERMANENTLY = 301
+    alias FOUND = 302
+    alias TEMPORARY_REDIRECT = 307
+    alias PERMANENT_REDIRECT = 308
+    alias NOT_FOUND = 404
+
+
 @value
 struct HTTPRequest(Formattable, Stringable):
     var headers: Headers
@@ -48,9 +57,7 @@ struct HTTPRequest(Formattable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes(
-        addr: String, max_body_size: Int, owned b: Bytes
-    ) raises -> HTTPRequest:
+    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
         var reader = ByteReader(b^)
         var headers = Headers()
         var method: String
@@ -65,16 +72,10 @@ struct HTTPRequest(Formattable, Stringable):
 
         var content_length = headers.content_length()
 
-        if (
-            content_length > 0
-            and max_body_size > 0
-            and content_length > max_body_size
-        ):
+        if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
             raise Error("Request body too large")
 
-        var request = HTTPRequest(
-            uri, headers=headers, method=method, protocol=protocol
-        )
+        var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol)
 
         try:
             request.read_body(reader, content_length, max_body_size)
@@ -103,6 +104,8 @@ struct HTTPRequest(Formattable, Stringable):
         self.set_content_length(len(body))
         if HeaderKey.CONNECTION not in self.headers:
             self.set_connection_close()
+        if HeaderKey.HOST not in self.headers:
+            self.headers[HeaderKey.HOST] = uri.host
 
     fn set_connection_close(inout self):
         self.headers[HeaderKey.CONNECTION] = "close"
@@ -114,20 +117,22 @@ struct HTTPRequest(Formattable, Stringable):
         return self.headers[HeaderKey.CONNECTION] == "close"
 
     @always_inline
-    fn read_body(
-        inout self, inout r: ByteReader, content_length: Int, max_body_size: Int
-    ) raises -> None:
+    fn read_body(inout self, inout r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        r.consume(self.body_raw)
+        r.consume(self.body_raw, content_length)
         self.set_content_length(content_length)
 
     fn format_to(self, inout writer: Formatter):
+        writer.write(self.method, whitespace)
+        path = self.uri.path if len(self.uri.path) > 1 else strSlash
+        if len(self.uri.query_string) > 0:
+            path += "?" + self.uri.query_string
+
+        writer.write(path)
+
         writer.write(
-            self.method,
-            whitespace,
-            self.uri.path if len(self.uri.path) > 1 else strSlash,
             whitespace,
             self.protocol,
             lineBreak,
@@ -147,6 +152,8 @@ struct HTTPRequest(Formattable, Stringable):
         writer.write(self.method)
         writer.write(whitespace)
         var path = self.uri.path if len(self.uri.path) > 1 else strSlash
+        if len(self.uri.query_string) > 0:
+            path += "?" + self.uri.query_string
         writer.write(path)
         writer.write(whitespace)
         writer.write(self.protocol)
@@ -215,8 +222,16 @@ struct HTTPResponse(Formattable, Stringable):
         self.status_text = status_text
         self.protocol = protocol
         self.body_raw = body_bytes
-        self.set_connection_keep_alive()
-        self.set_content_length(len(body_bytes))
+        if HeaderKey.CONNECTION not in self.headers:
+            self.set_connection_keep_alive()
+        if HeaderKey.CONTENT_LENGTH not in self.headers:
+            self.set_content_length(len(body_bytes))
+        if HeaderKey.DATE not in self.headers:
+            try:
+                var current_time = now(utc=True).__str__()
+                self.headers[HeaderKey.DATE] = current_time
+            except:
+                pass
 
     fn get_body_bytes(self) -> Bytes:
         return self.body_raw
@@ -237,8 +252,24 @@ struct HTTPResponse(Formattable, Stringable):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     @always_inline
+    fn content_length(inout self) -> Int:
+        try:
+            return int(self.headers[HeaderKey.CONTENT_LENGTH])
+        except:
+            return 0
+
+    fn is_redirect(self) -> Bool:
+        return (
+            self.status_code == StatusCode.MOVED_PERMANENTLY
+            or self.status_code == StatusCode.FOUND
+            or self.status_code == StatusCode.TEMPORARY_REDIRECT
+            or self.status_code == StatusCode.PERMANENT_REDIRECT
+        )
+
+    @always_inline
     fn read_body(inout self, inout r: ByteReader) raises -> None:
-        r.consume(self.body_raw)
+        r.consume(self.body_raw, self.content_length())
+        self.set_content_length(len(self.body_raw))
 
     fn format_to(self, inout writer: Formatter):
         writer.write(
@@ -251,13 +282,6 @@ struct HTTPResponse(Formattable, Stringable):
             "server: lightbug_http",
             lineBreak,
         )
-
-        if HeaderKey.DATE not in self.headers:
-            try:
-                var current_time = now(utc=True).__str__()
-                write_header(writer, HeaderKey.DATE, current_time)
-            except:
-                pass
 
         self.headers.format_to(writer)
 
@@ -326,9 +350,7 @@ fn OK(body: Bytes, content_type: String) -> HTTPResponse:
     )
 
 
-fn OK(
-    body: Bytes, content_type: String, content_encoding: String
-) -> HTTPResponse:
+fn OK(body: Bytes, content_type: String, content_encoding: String) -> HTTPResponse:
     return HTTPResponse(
         headers=Headers(
             Header(HeaderKey.CONTENT_TYPE, content_type),
