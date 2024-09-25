@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+
+context:
+  version: "13.4.2"
+
+package:
+  name: {{NAME}}
+  version: {{VERSION}}
+
+source:
+  - path: .
+  - path: ../{{LICENSE_FILE}}
+
+build:
+  script:
+    - mkdir -p ${PREFIX}/lib/mojo
+    - magic run mojo package {{NAME}} -o ${PREFIX}/lib/mojo/{{NAME}}.mojopkg
+
+requirements:
+  run:
+    {{DEPENDENCIES}}
+
+about:
+  homepage: {{HOMEPAGE}}
+  license: {{LICENSE}}
+  license_file: {{LICENSE_FILE}}
+  summary: {{DESCRIPTION}}
+  repository: {{REPOSITORY}}
