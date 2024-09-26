@@ -71,7 +71,7 @@ struct FakeClient(Client):
         self.req_host = ""
         self.req_is_tls = False
 
-    fn do(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn do(self, owned req: HTTPRequest) raises -> HTTPResponse:
         return OK(String(defaultExpectedGetResponse))
 
     fn extract(inout self, req: HTTPRequest) raises -> ReqInfo:
