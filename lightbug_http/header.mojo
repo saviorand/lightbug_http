@@ -1,6 +1,6 @@
+from collections import Dict
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
-from collections import Dict
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 from lightbug_http.strings import rChar, nChar, lineBreak, to_string
 
