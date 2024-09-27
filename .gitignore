@@ -13,3 +13,6 @@ install_id
 
 # Rattler
 output
+
+# misc
+.vscode

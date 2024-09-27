@@ -18,9 +18,7 @@ struct Printer(HTTPService):
         var header = req.headers
         print("Request protocol: ", req.protocol)
         print("Request method: ", req.method)
-        print(
-            "Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE])
-        )
+        print("Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE]))
 
         var body = req.body_raw
         print("Request Body: ", to_string(body))

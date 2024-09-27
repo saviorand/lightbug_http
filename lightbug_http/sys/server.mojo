@@ -82,9 +82,7 @@ struct SysServer:
         self.tcp_keep_alive = False
         self.ln = SysListener()
 
-    fn __init__(
-        inout self, max_request_body_size: Int, tcp_keep_alive: Bool
-    ) raises:
+    fn __init__(inout self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -121,9 +119,7 @@ struct SysServer:
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve[
-        T: HTTPService
-    ](inout self, address: String, handler: T) raises -> None:
+    fn listen_and_serve[T: HTTPService](inout self, address: String, handler: T) raises -> None:
         """
         Listen for incoming connections and serve HTTP requests.
 
@@ -136,9 +132,7 @@ struct SysServer:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[
-        T: HTTPService
-    ](inout self, ln: SysListener, handler: T) raises -> None:
+    fn serve[T: HTTPService](inout self, ln: SysListener, handler: T) raises -> None:
         """
         Serve HTTP requests.
 
@@ -155,9 +149,7 @@ struct SysServer:
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
 
-    fn serve_connection[
-        T: HTTPService
-    ](inout self, conn: SysConnection, handler: T) raises -> None:
+    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
         """
         Serve a single connection.
 
@@ -189,9 +181,7 @@ struct SysServer:
                 conn.close()
                 break
 
-            var request = HTTPRequest.from_bytes(
-                self.address(), max_request_body_size, b^
-            )
+            var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
 
             var res = handler.func(request)
 

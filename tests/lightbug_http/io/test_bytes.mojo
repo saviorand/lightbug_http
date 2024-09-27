@@ -3,10 +3,6 @@ from collections import Dict, List
 from lightbug_http.io.bytes import Bytes, bytes_equal, bytes
 
 
-def test_io():
-    test_string_literal_to_bytes()
-
-
 fn test_string_literal_to_bytes() raises:
     var cases = Dict[StringLiteral, Bytes]()
     cases[""] = Bytes()

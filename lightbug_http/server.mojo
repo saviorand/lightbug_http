@@ -17,9 +17,7 @@ trait ServerTrait:
     fn get_concurrency(self) -> Int:
         ...
 
-    fn listen_and_serve(
-        self, address: String, handler: HTTPService
-    ) raises -> None:
+    fn listen_and_serve(self, address: String, handler: HTTPService) raises -> None:
         ...
 
     fn serve(self, ln: Listener, handler: HTTPService) raises -> None:

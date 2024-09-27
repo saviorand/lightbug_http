@@ -14,10 +14,11 @@ repository = "https://github.com/saviorand/lightbug_http"
 build = { cmd = "bash scripts/build.sh nightly", env = {MODULAR_MOJO_IMPORT_PATH = "$CONDA_PREFIX/lib/mojo"} }
 publish = { cmd = "bash scripts/publish.sh mojo-community-nightly", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
 bp = { depends_on=["build", "publish"] }
-test = { cmd = "magic run mojo run_tests.mojo" }
 template = { cmd = "magic run python scripts/templater.py" }
+test = { cmd = "magic run mojo test -I . tests" }
 bench = { cmd = "magic run mojo bench.mojo" }
 bench_server = { cmd = "magic run mojo build bench_server.mojo && ./bench_server ; rm bench_server" }
+format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 
 [dependencies]
 max = ">=24.5.0,<25"

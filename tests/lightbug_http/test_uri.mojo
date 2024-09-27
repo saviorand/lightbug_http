@@ -5,17 +5,6 @@ from lightbug_http.strings import empty_string, to_string
 from lightbug_http.io.bytes import Bytes
 
 
-def test_uri():
-    test_uri_no_parse_defaults()
-    test_uri_parse_http_with_port()
-    test_uri_parse_https_with_port()
-    test_uri_parse_http_with_path()
-    test_uri_parse_https_with_path()
-    test_uri_parse_http_basic()
-    test_uri_parse_http_basic_www()
-    test_uri_parse_http_with_query_string()
-    test_uri_parse_http_with_hash()
-
 
 def test_uri_no_parse_defaults():
     var uri = URI.parse("http://example.com")[URI]

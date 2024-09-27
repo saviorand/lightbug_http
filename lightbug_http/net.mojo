@@ -122,9 +122,7 @@ struct TCPAddr(Addr):
 
     fn string(self) -> String:
         if self.zone != "":
-            return join_host_port(
-                self.ip + "%" + self.zone, self.port.__str__()
-            )
+            return join_host_port(self.ip + "%" + self.zone, self.port.__str__())
         return join_host_port(self.ip, self.port.__str__())
 
 
@@ -145,11 +143,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
             host = host_port.host
             port = host_port.port
             portnum = atol(port.__str__())
-    elif (
-        network == NetworkType.ip.value
-        or network == NetworkType.ip4.value
-        or network == NetworkType.ip6.value
-    ):
+    elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":
             host = address
     elif network == NetworkType.unix.value:
@@ -223,9 +217,7 @@ fn convert_binary_port_to_int(port: UInt16) -> Int:
     return int(ntohs(port))
 
 
-fn convert_binary_ip_to_string(
-    owned ip_address: UInt32, address_family: Int32, address_length: UInt32
-) -> String:
+fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, address_length: UInt32) -> String:
     """Convert a binary IP address to a string by calling inet_ntop.
 
     Args:

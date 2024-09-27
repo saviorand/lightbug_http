@@ -4,12 +4,6 @@ from lightbug_http.header import Headers, Header
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.uri import URI
-from tests.utils import (
-    TestStruct,
-    FakeResponder,
-    new_fake_listener,
-    FakeServer,
-)
 
 alias headers = bytes(
     """GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
@@ -148,43 +142,3 @@ fn lightbug_benchmark_header_parse(inout b: Bencher):
 
     b.iter[header_parse]()
 
-
-fn lightbug_benchmark_server():
-    var server_report = benchmark.run[run_fake_server](max_iters=1)
-    print("Server: ")
-    server_report.print(benchmark.Unit.ms)
-
-
-fn lightbug_benchmark_misc() -> None:
-    var direct_set_report = benchmark.run[init_test_and_set_a_direct](
-        max_iters=1
-    )
-
-    var recreating_set_report = benchmark.run[init_test_and_set_a_copy](
-        max_iters=1
-    )
-
-    print("Direct set: ")
-    direct_set_report.print(benchmark.Unit.ms)
-    print("Recreating set: ")
-    recreating_set_report.print(benchmark.Unit.ms)
-
-
-var GetRequest = HTTPRequest(URI.parse("http://127.0.0.1/path")[URI])
-
-
-fn run_fake_server():
-    var handler = FakeResponder()
-    var listener = new_fake_listener(2, encode(GetRequest))
-    var server = FakeServer(listener, handler)
-    server.serve()
-
-
-fn init_test_and_set_a_copy() -> None:
-    var test = TestStruct("a", "b")
-    _ = test.set_a_copy("c")
-
-
-fn init_test_and_set_a_direct() -> None:
-    var test = TestStruct("a", "b")
-    _ = test.set_a_direct("c")
