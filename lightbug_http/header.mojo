@@ -11,6 +11,7 @@ struct HeaderKey:
     alias CONTENT_TYPE = "content-type"
     alias CONTENT_LENGTH = "content-length"
     alias CONTENT_ENCODING = "content-encoding"
+    alias TRANSFER_ENCODING = "transfer-encoding"
     alias DATE = "date"
     alias LOCATION = "location"
     alias HOST = "host"

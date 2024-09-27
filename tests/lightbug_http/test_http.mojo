@@ -9,7 +9,6 @@ from lightbug_http.strings import to_string
 alias default_server_conn_string = "http://localhost:8080"
 
 
-
 def test_encode_http_request():
     var uri = URI.parse_raises(default_server_conn_string + "/foobar?baz")
     var req = HTTPRequest(
@@ -43,3 +42,8 @@ def test_encode_http_response():
 
     testing.assert_equal(res_encoded, expected_full)
     testing.assert_equal(res_encoded, as_str)
+
+
+# def test_http_version_parse():
+#     var v1 = HttpVersion("HTTP/1.1")
+#     testing.assert_equal(v1, 1.1)
