@@ -23,7 +23,7 @@ format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 [dependencies]
 max = ">=24.5.0,<25"
 gojo = ">=0.1.12"
-small_time = ">=0.1.4.nightly"
+small_time = ">=1.24.6.0.dev2024092705"
 
 [feature.nightly]
 channels = ["conda-forge", "https://conda.modular.com/max-nightly", "https://repo.prefix.dev/mojo-community-nightly", "https://repo.prefix.dev/mojo-community"]
@@ -31,7 +31,7 @@ channels = ["conda-forge", "https://conda.modular.com/max-nightly", "https://rep
 [feature.nightly.dependencies]
 max = ">=24.5.0,<25"
 gojo = ">=0.1.12"
-small_time = ">=0.1.4.nightly"
+small_time = ">=1.24.6.0.dev2024092705"
 
 [environments]
 nightly = ["nightly"]
