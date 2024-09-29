@@ -7,4 +7,4 @@ if [[ "${ENVIRONMENT}" == "--help" ]]; then
     exit 0
 fi
 magic run template -m "${ENVIRONMENT}"
-magic run rattler-build build -r src -c https://conda.modular.com/max -c conda-forge --skip-existing=all
+magic run rattler-build build -r recipes -c https://conda.modular.com/max -c conda-forge --skip-existing=all
