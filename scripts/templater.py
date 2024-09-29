@@ -1,7 +1,11 @@
+import os
 import tomllib
 import argparse
 from typing import Any
 
+script_dir = os.path.dirname(os.path.abspath(__file__))
+repo_dir = os.path.dirname(script_dir)
+template_path = os.path.join(repo_dir, 'recipes', 'recipe.tmpl')
 
 def build_dependency_list(dependencies: dict[str, str]) -> list[str]:
     deps: list[str] = []
@@ -37,7 +41,7 @@ def main():
         config = tomllib.load(f)
 
     recipe: str
-    with open('recipes/template.tmpl', 'r') as f:
+    with open(template_path, 'r') as f:
         recipe = f.read()
 
     # Replace the placeholders in the recipe with the project configuration.
