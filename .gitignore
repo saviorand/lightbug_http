@@ -13,6 +13,7 @@ install_id
 
 # Rattler
 output
+recipes/recipe.yaml
 
 # misc
 .vscode
