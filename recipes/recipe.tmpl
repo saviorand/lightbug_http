@@ -8,13 +8,13 @@ package:
   version: {{VERSION}}
 
 source:
-  - path: ./lightbug_http
-  - path: ./{{LICENSE_FILE}}
+  - path: ../lightbug_http
+  - path: ../{{LICENSE_FILE}}
 
 build:
   script:
     - mkdir -p ${PREFIX}/lib/mojo
-    - magic run mojo package {{NAME}} -o ${PREFIX}/lib/mojo/{{NAME}}.mojopkg
+    - magic run mojo package . -o ${PREFIX}/lib/mojo/{{NAME}}.mojopkg
 
 requirements:
   run:
