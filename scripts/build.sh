@@ -8,4 +8,3 @@ if [[ "${ENVIRONMENT}" == "--help" ]]; then
 fi
 magic run template -m "${ENVIRONMENT}"
 rattler-build build -r src -c https://conda.modular.com/max -c conda-forge --skip-existing=all
-rm recipes/recipe.yaml
