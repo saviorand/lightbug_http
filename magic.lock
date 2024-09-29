@@ -165,7 +165,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/safetensors-0.4.5-py312h12e396e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/shellingham-1.5.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.16.0-pyh6c4a22f_0.tar.bz2
-      - conda: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-0.1.4.nightly-hb0f4dca_0.conda
+      - conda: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-1.24.6.0.dev2024092705-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/snappy-1.2.1-ha2e4443_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sse-starlette-2.1.3-pyhd8ed1ab_0.conda
@@ -338,7 +338,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/safetensors-0.4.5-py312he431725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/shellingham-1.5.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.16.0-pyh6c4a22f_0.tar.bz2
-      - conda: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-0.1.4.nightly-h60d57d3_0.conda
+      - conda: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-1.24.6.0.dev2024092705-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/snappy-1.2.1-hd02b534_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sse-starlette-2.1.3-pyhd8ed1ab_0.conda
@@ -530,7 +530,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/safetensors-0.4.5-py312h12e396e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/shellingham-1.5.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.16.0-pyh6c4a22f_0.tar.bz2
-      - conda: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-0.1.4.nightly-hb0f4dca_0.conda
+      - conda: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-1.24.6.0.dev2024092705-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/snappy-1.2.1-ha2e4443_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sse-starlette-2.1.3-pyhd8ed1ab_0.conda
@@ -703,7 +703,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/safetensors-0.4.5-py312he431725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/shellingham-1.5.4-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/six-1.16.0-pyh6c4a22f_0.tar.bz2
-      - conda: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-0.1.4.nightly-h60d57d3_0.conda
+      - conda: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-1.24.6.0.dev2024092705-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/snappy-1.2.1-hd02b534_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sse-starlette-2.1.3-pyhd8ed1ab_0.conda
@@ -5168,32 +5168,32 @@ packages:
   timestamp: 1620240338595
 - kind: conda
   name: small_time
-  version: 0.1.4.nightly
+  version: 1.24.6.0.dev2024092705
   build: h60d57d3_0
   subdir: osx-arm64
-  url: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-0.1.4.nightly-h60d57d3_0.conda
-  sha256: cf7b2dea0adb57ae488fe10e006e745f2f57007cab5caa895009c53a8e99d07d
+  url: https://repo.prefix.dev/mojo-community-nightly/osx-arm64/small_time-1.24.6.0.dev2024092705-h60d57d3_0.conda
+  sha256: 759eab4ec632e8cd494b31b8b8fc7700ead85b2ef970230853fd6bc4cc5527e9
   depends:
-  - max >=24.5.0
+  - max >=24.6.0.dev2024092705
   arch: arm64
   platform: osx
   license: MIT
-  size: 404821
-  timestamp: 1727203841025
+  size: 415929
+  timestamp: 1727467393810
 - kind: conda
   name: small_time
-  version: 0.1.4.nightly
+  version: 1.24.6.0.dev2024092705
   build: hb0f4dca_0
   subdir: linux-64
-  url: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-0.1.4.nightly-hb0f4dca_0.conda
-  sha256: 05dd3a0136b2aa85718c337f6d3ba8b9b9eb212d83aac584704d1a53b7b2a0b8
+  url: https://repo.prefix.dev/mojo-community-nightly/linux-64/small_time-1.24.6.0.dev2024092705-hb0f4dca_0.conda
+  sha256: 5c526f3f3aa589b885abcbb9e471c344acf92f6fc6f4ad3ac25e083f8e3b6723
   depends:
-  - max >=24.6.0.dev2024092405
+  - max >=24.6.0.dev2024092705
   arch: x86_64
   platform: linux
   license: MIT
-  size: 407370
-  timestamp: 1727279717489
+  size: 415850
+  timestamp: 1727467382540
 - kind: conda
   name: snappy
   version: 1.2.1
