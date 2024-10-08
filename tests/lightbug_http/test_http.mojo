@@ -1,7 +1,7 @@
 import testing
 from collections import Dict, List
 from lightbug_http.io.bytes import Bytes, bytes
-from lightbug_http.http import HTTPRequest, HTTPResponse, encode
+from lightbug_http.http import HTTPRequest, HTTPResponse, encode, HttpVersion
 from lightbug_http.header import Header, Headers, HeaderKey
 from lightbug_http.uri import URI
 from lightbug_http.strings import to_string
@@ -44,6 +44,8 @@ def test_encode_http_response():
     testing.assert_equal(res_encoded, as_str)
 
 
-# def test_http_version_parse():
-#     var v1 = HttpVersion("HTTP/1.1")
-#     testing.assert_equal(v1, 1.1)
+def test_http_version_parse():
+    var v1 = HttpVersion("HTTP/1.1")
+    testing.assert_equal(v1, 1)
+    var v2 = HttpVersion("HTTP/2")
+    testing.assert_equal(v2, 2)

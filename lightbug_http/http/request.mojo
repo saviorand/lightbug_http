@@ -15,12 +15,6 @@ from lightbug_http.strings import (
     to_string,
 )
 
-
-@always_inline
-fn encode(owned req: HTTPRequest) -> Bytes:
-    return req._encoded()
-
-
 @value
 struct HTTPRequest(Formattable, Stringable):
     var headers: Headers
