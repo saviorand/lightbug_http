@@ -250,7 +250,6 @@ struct SysConnection(Connection):
 
     fn write(self, buf: Bytes) raises -> Int:
         var content = to_string(buf)
-        print("Content: " + content)
         var bytes_sent = send(self.fd, content.unsafe_ptr(), len(content), 0)
         if bytes_sent == -1:
             print("Failed to send response")

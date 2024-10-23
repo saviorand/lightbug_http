@@ -88,10 +88,10 @@ struct Client:
         var bytes_sent = conn.write(encode(req))
         if bytes_sent == -1:
             raise Error("Failed to send message")
-
+        
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
-        print("new_buf:", String(new_buf))
+
         if bytes_recv == 0:
             conn.close()
         try:
