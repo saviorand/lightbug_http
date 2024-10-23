@@ -106,10 +106,10 @@ Once you have a Mojo project set up locally,
    ```
 6. Start a server listening on a port with your service like so. 
     ```mojo
-    from lightbug_http import Welcome, SysServer
+    from lightbug_http import Welcome, Server
 
     fn main() raises:
-        var server = SysServer()
+        var server = Server()
         var handler = Welcome()
         server.listen_and_serve("0.0.0.0:8080", handler)
     ```
@@ -180,9 +180,9 @@ Create a file, e.g `client.mojo` with the following code. Run `magic run mojo cl
 
 ```mojo
 from lightbug_http import *
-from lightbug_http.sys.client import MojoClient
+from lightbug_http.client import Client
 
-fn test_request(inout client: MojoClient) raises -> None:
+fn test_request(inout client: Client) raises -> None:
     var uri = URI.parse_raises("http://httpbin.org/status/404")
     var headers = Header("Host", "httpbin.org")
 
@@ -207,7 +207,7 @@ fn test_request(inout client: MojoClient) raises -> None:
 
 fn main() -> None:
     try:
-        var client = MojoClient()
+        var client = Client()
         test_request(client)
     except e:
         print(e)
@@ -216,7 +216,7 @@ fn main() -> None:
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.
 
 ## Switching between pure Mojo and Python implementations
-By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `SysServer` with the following line:
+By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `Server` with the following line:
 ```mojo
 from lightbug_http.python.server import PythonServer
 ```

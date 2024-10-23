@@ -1,10 +1,10 @@
 from lightbug_http import *
-from lightbug_http.sys.client import MojoClient
+from lightbug_http.client import Client
 
 
-fn test_request(inout client: MojoClient) raises -> None:
-    var uri = URI.parse_raises("http://httpbin.org/status/404")
-    var headers = Header("Host", "httpbin.org")
+fn test_request(inout client: Client) raises -> None:
+    var uri = URI.parse_raises("http://google.com")
+    var headers = Headers(Header("Host", "google.com"), Header("User-Agent", "curl/8.1.2"), Header("Accept", "*/*"))
 
     var request = HTTPRequest(uri, headers)
     var response = client.do(request^)
@@ -27,7 +27,7 @@ fn test_request(inout client: MojoClient) raises -> None:
 
 fn main() -> None:
     try:
-        var client = MojoClient()
+        var client = Client()
         test_request(client)
     except e:
         print(e)
