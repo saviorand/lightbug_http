@@ -15,6 +15,7 @@ struct HeaderKey:
     alias DATE = "date"
     alias LOCATION = "location"
     alias HOST = "host"
+    alias SERVER = "server"
 
 
 @value
