@@ -125,16 +125,10 @@ struct HTTPResponse(Formattable, Stringable):
         self.set_content_length(len(self.body_raw))
 
     fn format_to(self, inout writer: Formatter):
-        writer.write(
-            self.protocol,
-            whitespace,
-            self.status_code,
-            whitespace,
-            self.status_text,
-            lineBreak,
-            "server: lightbug_http",
-            lineBreak,
-        )
+        writer.write(self.protocol, whitespace, self.status_code, whitespace, self.status_text, lineBreak)
+
+        if HeaderKey.SERVER not in self.headers:
+            writer.write("server: lightbug_http", lineBreak)
 
         self.headers.format_to(writer)
 

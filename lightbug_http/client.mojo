@@ -1,4 +1,4 @@
-from lightbug_http.libc import (
+from .libc import (
     c_int,
     AF_INET,
     SOCK_STREAM,
@@ -9,11 +9,13 @@ from lightbug_http.libc import (
     close,
 )
 from lightbug_http.strings import to_string
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.utils import ByteReader
-from lightbug_http.net import create_connection, default_buffer_size
+from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
+from lightbug_http.net import create_connection, SysConnection
+from lightbug_http.io.bytes import Bytes
+from lightbug_http.utils import ByteReader
+from collections import Dict
 
 
 struct Client:
@@ -21,17 +23,29 @@ struct Client:
     var port: Int
     var name: String
 
+    var _connections: Dict[String, SysConnection]
+
     fn __init__(inout self) raises:
         self.host = "127.0.0.1"
         self.port = 8888
         self.name = "lightbug_http_client"
+        self._connections = Dict[String, SysConnection]()
 
     fn __init__(inout self, host: StringLiteral, port: Int) raises:
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
+        self._connections = Dict[String, SysConnection]()
 
-    fn do(self, owned req: HTTPRequest) raises -> HTTPResponse:
+    fn __del__(owned self):
+        for conn in self._connections.values():
+            try:
+                conn[].close()
+            except:
+                # TODO: Add an optional debug log entry here
+                pass
+
+    fn do(inout self, owned req: HTTPRequest) raises -> HTTPResponse:
         """
         The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
@@ -83,31 +97,47 @@ struct Client:
             else:
                 port = 80
 
-        # TODO: Actually handle persistent connections
-        var conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
+        var conn: SysConnection
+        var cached_connection = False
+        if host_str in self._connections:
+            conn = self._connections[host_str]
+            cached_connection = True
+        else:
+            conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
+            self._connections[host_str] = conn
+
         var bytes_sent = conn.write(encode(req))
         if bytes_sent == -1:
+            # Maybe peer reset ungracefully, so try a fresh connection
+            self._close_conn(host_str)
+            if cached_connection:
+                return self.do(req^)
             raise Error("Failed to send message")
-        
+
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
 
         if bytes_recv == 0:
-            conn.close()
+            self._close_conn(host_str)
+            if cached_connection:
+                return self.do(req^)
+            raise Error("No response received")
         try:
             var res = HTTPResponse.from_bytes(new_buf^)
             if res.is_redirect():
-                conn.close()
+                self._close_conn(host_str)
                 return self._handle_redirect(req^, res^)
+            if res.connection_close():
+                self._close_conn(host_str)
             return res
         except e:
-            conn.close()
+            self._close_conn(host_str)
             raise e
 
         return HTTPResponse(Bytes())
 
     fn _handle_redirect(
-        self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
+        inout self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
         var new_uri: URI
         var new_location = original_response.headers[HeaderKey.LOCATION]
@@ -119,3 +149,7 @@ struct Client:
             new_uri.path = new_location
         original_req.uri = new_uri
         return self.do(original_req^)
+
+    fn _close_conn(inout self, host: String) raises:
+        self._connections[host].close()
+        _ = self._connections.pop(host)
