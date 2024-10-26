@@ -15,6 +15,7 @@ from lightbug_http.strings import (
     to_string,
 )
 
+
 @value
 struct HTTPRequest(Formattable, Stringable):
     var headers: Headers

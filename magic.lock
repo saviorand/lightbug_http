@@ -12,7 +12,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-h4bc722e_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ca-certificates-2024.8.30-hbcca054_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.1.7-unix_pyh707e725_0.conda
-      - conda: https://repo.prefix.dev/mojo-community/linux-64/gojo-0.1.9-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.5.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_metadata-8.5.0-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.2-pyhd8ed1ab_0.conda
@@ -71,7 +70,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/bzip2-1.0.8-h99b78c6_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ca-certificates-2024.8.30-hf0a4a13_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.1.7-unix_pyh707e725_0.conda
-      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/gojo-0.1.9-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.5.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_metadata-8.5.0-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.2-pyhd8ed1ab_0.conda
@@ -216,34 +214,6 @@ packages:
   license_family: BSD
   size: 84437
   timestamp: 1692311973840
-- kind: conda
-  name: gojo
-  version: 0.1.9
-  build: h60d57d3_0
-  subdir: osx-arm64
-  url: https://repo.prefix.dev/mojo-community/osx-arm64/gojo-0.1.9-h60d57d3_0.conda
-  sha256: 4c268d0d8d5f1b78a547e78a3db9e8037143918cd1d696f5adb5db55942cef5e
-  depends:
-  - max >=24.5.0,<24.6.0
-  arch: arm64
-  platform: osx
-  license: MIT
-  size: 1009999
-  timestamp: 1726268309700
-- kind: conda
-  name: gojo
-  version: 0.1.9
-  build: hb0f4dca_0
-  subdir: linux-64
-  url: https://repo.prefix.dev/mojo-community/linux-64/gojo-0.1.9-hb0f4dca_0.conda
-  sha256: 9a49e21b4269368a6d906769bd041b8b91b99da3375d7944f7d8ddd73392c2f0
-  depends:
-  - max >=24.5.0,<24.6.0
-  arch: x86_64
-  platform: linux
-  license: MIT
-  size: 1011206
-  timestamp: 1726268249824
 - kind: conda
   name: importlib-metadata
   version: 8.5.0
