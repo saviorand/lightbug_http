@@ -12,6 +12,9 @@ from lightbug_http.strings import (
     lineBreak,
     to_string,
 )
+from collections import Optional
+from utils import StringSlice
+from lightbug_http.net import SysConnection, default_buffer_size
 
 
 struct StatusCode:
@@ -33,7 +36,7 @@ struct HTTPResponse(Formattable, Stringable):
     var protocol: String
 
     @staticmethod
-    fn from_bytes(owned b: Bytes) raises -> HTTPResponse:
+    fn from_bytes(owned b: Bytes, conn: Optional[SysConnection] = None) raises -> HTTPResponse:
         var reader = ByteReader(b^)
 
         var headers = Headers()
@@ -43,6 +46,7 @@ struct HTTPResponse(Formattable, Stringable):
 
         try:
             protocol, status_code, status_text = headers.parse_raw(reader)
+            reader.skip_newlines()
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
 
@@ -53,6 +57,18 @@ struct HTTPResponse(Formattable, Stringable):
             status_code=int(status_code),
             status_text=status_text,
         )
+
+        if response.headers[HeaderKey.TRANSFER_ENCODING] == "chunked":
+            var b = Bytes()
+            reader.consume(b)
+
+            var buff = Bytes(capacity=default_buffer_size)
+            while conn.value().read(buff) > 0:
+                b += buff
+                buff.resize(0)
+
+            response.read_chunks(b^)
+            return response
 
         try:
             response.read_body(reader)
@@ -111,6 +127,7 @@ struct HTTPResponse(Formattable, Stringable):
         except:
             return 0
 
+    @always_inline
     fn is_redirect(self) -> Bool:
         return (
             self.status_code == StatusCode.MOVED_PERMANENTLY
@@ -123,6 +140,19 @@ struct HTTPResponse(Formattable, Stringable):
     fn read_body(inout self, inout r: ByteReader) raises -> None:
         r.consume(self.body_raw, self.content_length())
         self.set_content_length(len(self.body_raw))
+
+    fn read_chunks(inout self, owned chunks: Bytes) raises:
+        var reader = ByteReader(chunks^)
+
+        while True:
+            var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
+            if size == 0:
+                break
+            var data = Bytes()
+            reader.consume(data, size)
+            reader.skip_newlines()
+            self.set_content_length(self.content_length() + len(data))
+            self.body_raw += data
 
     fn format_to(self, inout writer: Formatter):
         writer.write(self.protocol, whitespace, self.status_code, whitespace, self.status_text, lineBreak)

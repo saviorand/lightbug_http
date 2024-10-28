@@ -12,10 +12,7 @@ fn test_request(inout client: Client) raises -> None:
     # print status code
     print("Response:", response.status_code)
 
-    # print parsed headers (only some are parsed for now)
-    print("Content-Type:", response.headers["Content-Type"])
-    print("Content-Length", response.headers["Content-Length"])
-    print("Server:", to_string(response.headers["Server"]))
+    print(response.headers)
 
     print(
         "Is connection set to connection-close? ", response.connection_close()
