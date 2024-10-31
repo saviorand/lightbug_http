@@ -86,6 +86,11 @@ struct ByteReader:
             self.increment()
 
     @always_inline
+    fn skip_newlines(inout self):
+        while self.peek() == BytesConstant.rChar:
+            self.increment(2)
+
+    @always_inline
     fn increment(inout self, v: Int = 1):
         self.read_pos += v
 

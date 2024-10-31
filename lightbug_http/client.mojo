@@ -123,7 +123,7 @@ struct Client:
                 return self.do(req^)
             raise Error("No response received")
         try:
-            var res = HTTPResponse.from_bytes(new_buf^)
+            var res = HTTPResponse.from_bytes(new_buf^, conn)
             if res.is_redirect():
                 self._close_conn(host_str)
                 return self._handle_redirect(req^, res^)
@@ -151,5 +151,6 @@ struct Client:
         return self.do(original_req^)
 
     fn _close_conn(inout self, host: String) raises:
-        self._connections[host].close()
-        _ = self._connections.pop(host)
+        if host in self._connections:
+            self._connections[host].close()
+            _ = self._connections.pop(host)
