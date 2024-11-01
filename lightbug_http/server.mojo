@@ -160,12 +160,6 @@ struct Server:
         Raises:
         If there is an error while serving the connection.
         """
-        # var b = Bytes(capacity=default_buffer_size)
-        # var bytes_recv = conn.read(b)
-        # if bytes_recv == 0:
-        #     conn.close()
-        #     return
-
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
@@ -185,11 +179,12 @@ struct Server:
 
             var res = handler.func(request)
 
-            if not self.tcp_keep_alive:
-                _ = res.set_connection_close()
+            var close_connection = (not self.tcp_keep_alive) or request.connection_close()
 
-            _ = conn.write(encode(res^))
+            if close_connection:
+                res.set_connection_close()
 
-            if not self.tcp_keep_alive:
+            var written = conn.write(encode(res^))
+
+            if close_connection or written == -1:
                 conn.close()
-                return

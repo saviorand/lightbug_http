@@ -25,13 +25,13 @@ struct Client:
 
     var _connections: Dict[String, SysConnection]
 
-    fn __init__(inout self) raises:
+    fn __init__(inout self):
         self.host = "127.0.0.1"
         self.port = 8888
         self.name = "lightbug_http_client"
         self._connections = Dict[String, SysConnection]()
 
-    fn __init__(inout self, host: StringLiteral, port: Int) raises:
+    fn __init__(inout self, host: StringLiteral, port: Int):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
