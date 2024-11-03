@@ -1,8 +1,8 @@
 from testing import assert_equal, assert_true
 from lightbug_http.utils import ByteReader
 from lightbug_http.header import Headers, Header
+from lightbug_http.cookie import Cookie
 from lightbug_http.io.bytes import Bytes, bytes
-
 
 
 def test_header_case_insensitive():
@@ -54,3 +54,9 @@ def test_parse_response_header():
     assert_equal(header["Content-Length"], "1234")
     assert_equal(header["Connection"], "close")
     assert_equal(header["Trailer"], "end-of-message")
+
+
+def test_cookie_header():
+    var headers = Headers(Cookie("mycookie", "myvalue").to_header())
+    assert_true = ("Set-Cookie" in headers)
+    assert_equal(headers["Set-Cookie"], "mycookie=myvalue")

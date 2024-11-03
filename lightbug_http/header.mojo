@@ -16,6 +16,8 @@ struct HeaderKey:
     alias LOCATION = "location"
     alias HOST = "host"
     alias SERVER = "server"
+    alias SET_COOKIE = "set-cookie"
+    alias COOKIE = "cookie"
 
 
 @value
@@ -78,6 +80,9 @@ struct Headers(Formattable, Stringable):
             return int(self[HeaderKey.CONTENT_LENGTH])
         except:
             return 0
+
+    fn update_header(inout self, header: Header) -> None:
+        self[header.key] = self[header.value]
 
     fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String):
         var first_byte = r.peek()
