@@ -42,7 +42,10 @@ struct HTTPRequest(Formattable, Stringable):
             method, uri_str, protocol = headers.parse_raw(reader)
         except e:
             raise Error("Failed to parse request headers: " + e.__str__())
-        cookies.parse_cookies(headers)
+        try:
+            cookies.parse_cookies(headers)
+        except e:
+            raise Error("Failed to parse cookies" + str(e))
         var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
