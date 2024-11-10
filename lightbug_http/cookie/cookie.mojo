@@ -86,7 +86,7 @@ struct Cookie(CollectionElement):
         self.partitioned = partitioned
 
     fn __str__(self) -> String:
-        return "Name: " self.name + " Value: " + self.value
+        return "Name: " +  self.name + " Value: " + self.value
 
     fn __copyinit__(inout self: Cookie, existing: Cookie):
         self.name = existing.name
