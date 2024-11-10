@@ -36,7 +36,7 @@ struct Cookie(CollectionElement):
         if len(parts) < 1:
             raise Error("invalid Cookie")
 
-        var cookie = Cookie("", parts[0])
+        var cookie = Cookie("", parts[0], path=str("/"))
         if Cookie.EQUAL in parts[0]:
             var name_value = parts[0].split(Cookie.EQUAL)
             cookie.name = name_value[0]
@@ -62,6 +62,7 @@ struct Cookie(CollectionElement):
                 var expires =  Expiration.from_string(part.removeprefix(Cookie.EXPIRES + Cookie.EQUAL))
                 if expires:
                     cookie.expires = expires.value()
+
         return cookie
 
     fn __init__(

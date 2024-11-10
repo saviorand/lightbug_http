@@ -4,7 +4,7 @@ from collections import Dict, List
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode, HttpVersion
 from lightbug_http.header import Header, Headers, HeaderKey
-from lightbug_http.cookie import Cookie, ResponseCookieJar, RequestCookieJar, Duration
+from lightbug_http.cookie import Cookie, ResponseCookieJar, RequestCookieJar, Duration, ResponseCookieKey
 from lightbug_http.uri import URI
 from lightbug_http.strings import to_string
 
@@ -47,8 +47,8 @@ def test_encode_http_response():
     res.headers[HeaderKey.DATE] = "2024-06-02T13:41:50.766880+00:00"
 
     res.cookies = ResponseCookieJar(
-        Cookie(name="session_id", value="123", path=str("/"), secure=True),
-        Cookie(name="other_session_id", value="123", path=str("/"), secure=True, max_age=Duration(minutes=10)),
+        Cookie(name="session_id", value="123", path=str("/api"), secure=True),
+        Cookie(name="session_id", value="abc", path=str("/"), secure=True, max_age=Duration(minutes=10)),
         Cookie(name="token", value="123", domain=str("localhost"), path=str("/api"), http_only=True)
     )
     var as_str = str(res)
@@ -59,8 +59,8 @@ def test_encode_http_response():
         "content-type: application/octet-stream\r\n"
         "connection: keep-alive\r\ncontent-length: 13\r\n"
         "date: 2024-06-02T13:41:50.766880+00:00\r\n"
-        "set-cookie: session_id=123; Path=/; Secure\r\n"
-        "set-cookie: other_session_id=123; Max-Age=600; Path=/; Secure\r\n"
+        "set-cookie: session_id=123; Path=/api; Secure\r\n"
+        "set-cookie: session_id=abc; Max-Age=600; Path=/; Secure\r\n"
         "set-cookie: token=123; Domain=localhost; Path=/api; HttpOnly\r\n"
         "\r\n"
         "Hello, World!"
@@ -81,10 +81,11 @@ def test_decoding_http_response():
     ).as_bytes()
 
     var response = HTTPResponse.from_bytes(res)
+    var expected_cookie_key = ResponseCookieKey("session_id", "", "/")
 
     assert_equal(1, len(response.cookies))
-    assert_true("session_id" in response.cookies, msg="request should contain a session_id header")
-    var session_id = response.cookies.get("session_id")
+    assert_true(expected_cookie_key in response.cookies, msg="request should contain a session_id header")
+    var session_id = response.cookies.get(expected_cookie_key)
     assert_true(session_id is not None)
     assert_equal(session_id.value().path.value(), "/")
     assert_equal(200, response.status_code)

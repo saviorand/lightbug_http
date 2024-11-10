@@ -1,7 +1,6 @@
 from testing import assert_equal, assert_true
 from lightbug_http.utils import ByteReader
 from lightbug_http.header import Headers, Header
-from lightbug_http.cookie import Cookie
 from lightbug_http.io.bytes import Bytes, bytes
 
 

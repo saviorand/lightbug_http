@@ -1,37 +1,63 @@
-from collections import Optional, List, Dict
+from collections import Optional, List, Dict, KeyElement
 from small_time import SmallTime, TimeZone
 from small_time.small_time import strptime
 from lightbug_http.strings import to_string, lineBreak
 from lightbug_http.header import HeaderKey, write_header
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 
+
+@value
+struct ResponseCookieKey(KeyElement):
+    var name: String
+    var domain: String
+    var path: String
+
+    fn __ne__(self: Self, other: Self) -> Bool:
+        return not (self == other)
+
+    fn __eq__(self: Self, other: Self) -> Bool:
+        return self.name == other.name and self.domain == other.domain and self.path == other.path
+
+    fn __moveinit__(inout self: Self, owned existing: Self):
+        self.name = existing.name
+        self.domain = existing.domain
+        self.path = existing.path
+
+    fn __copyinit__(inout self: Self, existing: Self):
+        self.name = existing.name
+        self.domain = existing.domain
+        self.path = existing.path
+
+    fn __hash__(self: Self) -> UInt:
+        return hash(self.name + "~" + self.domain + "~" + self.path)
+
 @value
 struct ResponseCookieJar(Formattable, Stringable):
-    var _inner: Dict[String, Cookie]
+    var _inner: Dict[ResponseCookieKey, Cookie]
 
     fn __init__(inout self):
-        self._inner = Dict[String, Cookie]()
+        self._inner = Dict[ResponseCookieKey, Cookie]()
 
     fn __init__(inout self, *cookies: Cookie):
-        self._inner = Dict[String, Cookie]()
+        self._inner = Dict[ResponseCookieKey, Cookie]()
         for cookie in cookies:
             self.set_cookie(cookie[])
 
     @always_inline
-    fn __setitem__(inout self, key: String, value: Cookie):
+    fn __setitem__(inout self, key: ResponseCookieKey, value: Cookie):
         self._inner[key] = value
 
-    fn __getitem__(self, key: String) raises -> Cookie:
+    fn __getitem__(self, key: ResponseCookieKey) raises -> Cookie:
         return self._inner[key]
 
-    fn get(self, key: String) -> Optional[Cookie]:
+    fn get(self, key: ResponseCookieKey) -> Optional[Cookie]:
         try:
             return self[key]
         except:
             return None
 
     @always_inline
-    fn __contains__(self, key: String) -> Bool:
+    fn __contains__(self, key: ResponseCookieKey) -> Bool:
         return key in self._inner
 
     fn __str__(self) -> String:
@@ -42,7 +68,7 @@ struct ResponseCookieJar(Formattable, Stringable):
 
     @always_inline
     fn set_cookie(inout self, cookie: Cookie):
-        self[cookie.name] = cookie
+        self[ResponseCookieKey(cookie.name, cookie.domain.or_else(""), cookie.path.or_else("/"))] = cookie
 
     @always_inline
     fn empty(self) -> Bool:

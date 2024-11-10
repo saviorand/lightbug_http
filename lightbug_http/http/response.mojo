@@ -49,7 +49,6 @@ struct HTTPResponse(Formattable, Stringable):
         try:
             var properties =  headers.parse_raw(reader)
             protocol, status_code, status_text = properties[0], properties[1], properties[2]
-            # protocol, status_code, status_text, cookies = headers.parse_raw(reader)
             cookies.from_headers(properties[3])
             reader.skip_newlines()
         except e:
