@@ -7,7 +7,6 @@ from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 
 @value
 struct ResponseCookieJar(Formattable, Stringable):
-    # TODO Key must be a cookie key (containing all attributes except, epxires and max age)
     var _inner: Dict[String, Cookie]
 
     fn __init__(inout self):
