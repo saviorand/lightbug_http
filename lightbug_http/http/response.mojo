@@ -29,7 +29,7 @@ struct StatusCode:
 @value
 struct HTTPResponse(Formattable, Stringable):
     var headers: Headers
-    var cookies: SetCookies
+    var cookies: ResponseCookieJar
     var body_raw: Bytes
 
     var status_code: Int
@@ -41,7 +41,7 @@ struct HTTPResponse(Formattable, Stringable):
         var reader = ByteReader(b^)
 
         var headers = Headers()
-        var cookies = SetCookies()
+        var cookies = ResponseCookieJar()
         var protocol: String
         var status_code: String
         var status_text: String
@@ -50,13 +50,10 @@ struct HTTPResponse(Formattable, Stringable):
             var properties =  headers.parse_raw(reader)
             protocol, status_code, status_text = properties[0], properties[1], properties[2]
             # protocol, status_code, status_text, cookies = headers.parse_raw(reader)
+            cookies.from_headers(properties[3])
             reader.skip_newlines()
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
-        try:
-            cookies.from_headers(properties[3])
-        except e:
-            raise Error("Failed parsing cookies: " + str(e))
         var response = HTTPResponse(
             Bytes(),
             headers=headers,
@@ -88,7 +85,7 @@ struct HTTPResponse(Formattable, Stringable):
         inout self,
         body_bytes: Bytes,
         headers: Headers = Headers(),
-        cookies: SetCookies = SetCookies(),
+        cookies: ResponseCookieJar = ResponseCookieJar(),
         status_code: Int = 200,
         status_text: String = "OK",
         protocol: String = strHttp11,
@@ -171,6 +168,7 @@ struct HTTPResponse(Formattable, Stringable):
             writer.write("server: lightbug_http", lineBreak)
 
         self.headers.format_to(writer)
+        self.cookies.format_to(writer)
 
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))

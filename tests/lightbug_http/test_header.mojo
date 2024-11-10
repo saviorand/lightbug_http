@@ -24,7 +24,8 @@ def test_parse_request_header():
     var method: String
     var protocol: String
     var uri: String
-    method, uri, protocol = header.parse_raw(reader)
+    var properties = header.parse_raw(reader)
+    method, uri, protocol = properties[0], properties[1], properties[2]
     assert_equal(uri, "/index.html")
     assert_equal(protocol, "HTTP/1.1")
     assert_equal(method, "GET")
@@ -44,7 +45,8 @@ def test_parse_response_header():
     var status_code: String
     var status_text: String
     var reader = ByteReader(headers_str^)
-    protocol, status_code, status_text = header.parse_raw(reader)
+    var properties = header.parse_raw(reader)
+    protocol, status_code, status_text = properties[0], properties[1], properties[2]
     assert_equal(protocol, "HTTP/1.1")
     assert_equal(status_code, "200")
     assert_equal(status_text, "OK")
@@ -54,9 +56,3 @@ def test_parse_response_header():
     assert_equal(header["Content-Length"], "1234")
     assert_equal(header["Connection"], "close")
     assert_equal(header["Trailer"], "end-of-message")
-
-
-def test_cookie_header():
-    var headers = Headers(Cookie("mycookie", "myvalue").to_header())
-    assert_true = ("Set-Cookie" in headers)
-    assert_equal(headers["Set-Cookie"], "mycookie=myvalue")

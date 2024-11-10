@@ -1,6 +1,6 @@
 from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
-from lightbug_http.cookie import Cookies
+from lightbug_http.cookie import RequestCookieJar
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.bytes import Bytes, bytes, Byte
@@ -20,7 +20,7 @@ from lightbug_http.strings import (
 @value
 struct HTTPRequest(Formattable, Stringable):
     var headers: Headers
-    var cookies: Cookies
+    var cookies: RequestCookieJar
     var uri: URI
     var body_raw: Bytes
 
@@ -34,7 +34,7 @@ struct HTTPRequest(Formattable, Stringable):
     fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
         var reader = ByteReader(b^)
         var headers = Headers()
-        var cookies = Cookies()
+        var cookies = RequestCookieJar()
         var cookie_list = List[String]()
         var method: String
         var protocol: String
@@ -69,7 +69,7 @@ struct HTTPRequest(Formattable, Stringable):
         inout self,
         uri: URI,
         headers: Headers = Headers(),
-        cookies: Cookies = Cookies(),
+        cookies: RequestCookieJar = RequestCookieJar(),
         method: String = "GET",
         protocol: String = strHttp11,
         body: Bytes = Bytes(),

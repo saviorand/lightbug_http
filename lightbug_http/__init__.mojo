@@ -1,7 +1,7 @@
 from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
 from lightbug_http.uri import URI
 from lightbug_http.header import Header, Headers, HeaderKey
-from lightbug_http.cookie import Cookie, Cookies, SetCookies
+from lightbug_http.cookie import Cookie, RequestCookieJar, ResponseCookieJar
 from lightbug_http.service import HTTPService, Welcome
 from lightbug_http.server import Server
 from lightbug_http.strings import to_string
