@@ -8,7 +8,7 @@ fn test_set_cookie() raises:
             name="mycookie",
             value="myvalue",
             max_age=Duration(minutes=20),
-            expires=Expiration.dateTime(SmallTime(2037, 1, 22, 12, 0, 10, 0)),
+            expires=Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)),
             path=str("/"),
             domain=str("localhost"),
             secure=True,
@@ -38,6 +38,6 @@ fn test_set_cookie_partial_arguments() raises:
 
 fn test_expires_http_timestamp_format() raises:
     var expected = "Thu, 22 Jan 2037 12:00:10 GMT"
-    var http_date = Expiration.DateTime(SmallTime(2037, 1, 22, 12, 0, 10, 0)).http_date_timestamp()
+    var http_date = Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)).http_date_timestamp()
     assert_true(http_date is not None, msg="Http date is None")
     assert_equal(expected , http_date.value())

@@ -29,6 +29,7 @@ struct StatusCode:
 @value
 struct HTTPResponse(Formattable, Stringable):
     var headers: Headers
+    var cookies: SetCookies
     var body_raw: Bytes
 
     var status_code: Int
@@ -40,19 +41,26 @@ struct HTTPResponse(Formattable, Stringable):
         var reader = ByteReader(b^)
 
         var headers = Headers()
+        var cookies = SetCookies()
         var protocol: String
         var status_code: String
         var status_text: String
 
         try:
-            protocol, status_code, status_text = headers.parse_raw(reader)
+            var properties =  headers.parse_raw(reader)
+            protocol, status_code, status_text = properties[0], properties[1], properties[2]
+            # protocol, status_code, status_text, cookies = headers.parse_raw(reader)
             reader.skip_newlines()
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
-
+        try:
+            cookies.from_headers(properties[3])
+        except e:
+            raise Error("Failed parsing cookies: " + str(e))
         var response = HTTPResponse(
             Bytes(),
             headers=headers,
+            cookies=cookies,
             protocol=protocol,
             status_code=int(status_code),
             status_text=status_text,
@@ -80,11 +88,13 @@ struct HTTPResponse(Formattable, Stringable):
         inout self,
         body_bytes: Bytes,
         headers: Headers = Headers(),
+        cookies: SetCookies = SetCookies(),
         status_code: Int = 200,
         status_text: String = "OK",
         protocol: String = strHttp11,
     ):
         self.headers = headers
+        self.cookies = cookies
         if HeaderKey.CONTENT_TYPE not in self.headers:
             self.headers[HeaderKey.CONTENT_TYPE] = "application/octet-stream"
         self.status_code = status_code
@@ -189,6 +199,7 @@ struct HTTPResponse(Formattable, Stringable):
                 pass
 
         self.headers.encode_to(writer)
+        self.cookies.encode_to(writer)
 
         writer.write(lineBreak)
         writer.write(self.body_raw)

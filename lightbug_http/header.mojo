@@ -84,7 +84,7 @@ struct Headers(Formattable, Stringable):
     fn update_header(inout self, header: Header) -> None:
         self[header.key] = self[header.value]
 
-    fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String):
+    fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Failed to read first byte from response header")
@@ -94,6 +94,7 @@ struct Headers(Formattable, Stringable):
         var second = r.read_word()
         r.increment()
         var third = r.read_line()
+        var cookies = List[String]()
 
         while not is_newline(r.peek()):
             var key = r.read_until(BytesConstant.colon)
@@ -102,8 +103,13 @@ struct Headers(Formattable, Stringable):
                 r.increment()
             # TODO (bgreni): Handle possible trailing whitespace
             var value = r.read_line()
-            self._inner[to_string(key^).lower()] = to_string(value^)
-        return (to_string(first^), to_string(second^), to_string(third^))
+            var k = to_string(key^).lower()
+            if k == HeaderKey.SET_COOKIE:
+                cookies.append(to_string(value^))
+                continue
+
+            self._inner[k] = to_string(value^)
+        return (to_string(first^), to_string(second^), to_string(third^), cookies)
 
     fn format_to(self, inout writer: Formatter):
         for header in self._inner.items():
