@@ -42,7 +42,6 @@ struct HTTPRequest(Formattable, Stringable):
         try:
             var rest =  headers.parse_raw(reader)
             method, uri_str, protocol = rest[0], rest[1], rest[2]
-            # method, uri_str, protocol, var cookie_list = headers.parse_raw(reader)
         except e:
             raise Error("Failed to parse request headers: " + e.__str__())
         try:
