@@ -13,6 +13,11 @@ struct RequestCookieJar(Formattable, Stringable):
     fn __init__(inout self):
         self._inner = Dict[String, String]()
 
+    fn __init__(inout self, *cookies: Cookie):
+        self._inner = Dict[String, String]()
+        for cookie in cookies:
+            self._inner[cookie[].name] = cookie[].value
+
     fn parse_cookies(inout self, headers: Headers) raises:
         var cookie_header = headers[HeaderKey.COOKIE]
         if not cookie_header:
@@ -56,13 +61,15 @@ struct RequestCookieJar(Formattable, Stringable):
             header_value.append(cookie[].key + equal + cookie[].value)
         return Header(HeaderKey.COOKIE, "; ".join(header_value))
 
-
-    fn write_cookie(self, inout writer: Formatter, key: String, value: String):
-        writer.write(key + ": ", value, lineBreak)
+    fn encode_to(inout self, inout writer: ByteWriter):
+        var header = self.to_header()
+        if header:
+            write_header(writer, header.value().key, header.value().value)
 
     fn format_to(self, inout writer: Formatter):
-        for cookie in self._inner.items():
-            self.write_cookie(writer, cookie[].key, cookie[].value)
+        var header = self.to_header()
+        if header:
+            write_header(writer, header.value().key, header.value().value)
 
     fn __str__(self) -> String:
         return to_string(self)

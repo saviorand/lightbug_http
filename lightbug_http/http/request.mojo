@@ -123,6 +123,7 @@ struct HTTPRequest(Formattable, Stringable):
         )
 
         self.headers.format_to(writer)
+        self.cookies.format_to(writer)
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
@@ -144,6 +145,7 @@ struct HTTPRequest(Formattable, Stringable):
         writer.write(lineBreak)
 
         self.headers.encode_to(writer)
+        self.cookies.encode_to(writer)
         writer.write(lineBreak)
 
         writer.write(self.body_raw)
