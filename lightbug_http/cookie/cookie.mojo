@@ -90,7 +90,7 @@ struct Cookie(CollectionElement):
         self.partitioned = partitioned
 
     fn __str__(self) -> String:
-        return self.path.value() if self.path else "no path"
+        return "Name: " self.name + " Value: " + self.value
 
     fn __copyinit__(inout self: Cookie, existing: Cookie):
         self.name = existing.name
