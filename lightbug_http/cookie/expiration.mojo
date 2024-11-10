@@ -37,7 +37,7 @@ struct Expiration:
 
         # TODO fix this it breaks time and space (replacing timezone might add or remove something sometimes)
         var dt = self.datetime.value()
-        dt.tz =  TimeZone(0, "GMT")
+        dt.tz = TZ_GMT
         return Optional[String](dt.format(HTTP_DATE_FORMAT))
 
     fn __eq__(self, other: Self) -> Bool:
