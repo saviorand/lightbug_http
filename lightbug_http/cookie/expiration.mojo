@@ -17,7 +17,7 @@ struct Expiration:
     @staticmethod
     fn from_string(str: String) -> Optional[Self]:
         try:
-            return Self.from_datetime(strptime(str, HTTP_DATE_FORMAT, TimeZone(0, "GMT")))
+            return Self.from_datetime(strptime(str, HTTP_DATE_FORMAT, TZ_GMT))
         except:
             return None
 
