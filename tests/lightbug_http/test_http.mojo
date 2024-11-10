@@ -76,10 +76,8 @@ def test_decoding_http_response():
     assert_equal(1, len(response.cookies))
     assert_true("session_id" in response.cookies, msg="request should contain a session_id header")
     var session_id = response.cookies.get("session_id")
-    if session_id:
-        print(str(session_id.value()))
-    # assert_equal("/", response.cookies["session_id"].path.value())
-    assert_true(False)
+    assert_true(session_id is not None)
+    assert_equal(session_id.value().path.value(), "/")
     assert_equal(200, response.status_code)
     assert_equal("OK", response.status_text)
 
