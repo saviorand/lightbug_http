@@ -81,9 +81,6 @@ struct Headers(Formattable, Stringable):
         except:
             return 0
 
-    fn update_header(inout self, header: Header) -> None:
-        self[header.key] = self[header.value]
-
     fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()
         if not first_byte:
