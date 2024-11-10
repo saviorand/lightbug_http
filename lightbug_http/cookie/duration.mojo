@@ -1,4 +1,3 @@
-
 @value
 struct Duration():
     var total_seconds: Int

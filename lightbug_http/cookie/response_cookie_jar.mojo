@@ -1,9 +1,7 @@
 from collections import Optional, List, Dict, KeyElement
-from small_time import SmallTime, TimeZone
-from small_time.small_time import strptime
-from lightbug_http.strings import to_string, lineBreak
+from lightbug_http.strings import to_string
 from lightbug_http.header import HeaderKey, write_header
-from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
+from lightbug_http.utils import ByteWriter
 
 
 @value
@@ -11,6 +9,16 @@ struct ResponseCookieKey(KeyElement):
     var name: String
     var domain: String
     var path: String
+
+    fn __init__(
+        inout self,
+        name: String,
+        domain: Optional[String] = Optional[String](None),
+        path: Optional[String] = Optional[String](None)
+    ):
+        self.name = name
+        self.domain = domain.or_else("")
+        self.path = path.or_else("/")
 
     fn __ne__(self: Self, other: Self) -> Bool:
         return not (self == other)
@@ -60,6 +68,10 @@ struct ResponseCookieJar(Formattable, Stringable):
     fn __contains__(self, key: ResponseCookieKey) -> Bool:
         return key in self._inner
 
+    @always_inline
+    fn __contains__(self, key: Cookie) -> Bool:
+        return ResponseCookieKey(key.name, key.domain, key.path) in self
+
     fn __str__(self) -> String:
         return to_string(self)
 
@@ -68,7 +80,7 @@ struct ResponseCookieJar(Formattable, Stringable):
 
     @always_inline
     fn set_cookie(inout self, cookie: Cookie):
-        self[ResponseCookieKey(cookie.name, cookie.domain.or_else(""), cookie.path.or_else("/"))] = cookie
+        self[ResponseCookieKey(cookie.name, cookie.domain, cookie.path)] = cookie
 
     @always_inline
     fn empty(self) -> Bool:

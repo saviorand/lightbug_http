@@ -42,14 +42,20 @@ struct RequestCookieJar(Formattable, Stringable):
 
     @always_inline
     fn __contains__(self, key: String) -> Bool:
-        return key.lower() in self._inner
+        return key in self._inner
+
+    fn __contains__(self, key: Cookie) -> Bool:
+        return key.name in self
 
     @always_inline
-    fn __getitem__(self, key: String) -> Optional[String]:
+    fn __getitem__(self, key: String) raises -> String:
+        return self._inner[key.lower()]
+
+    fn get(self, key: String) -> Optional[String]:
         try:
-            return self._inner[key.lower()]
+            return self[key]
         except:
-            return None
+            return Optional[String](None)
 
     fn to_header(self) -> Optional[Header]:
         alias equal = "="
