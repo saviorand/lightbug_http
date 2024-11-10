@@ -10,7 +10,6 @@ from lightbug_http.strings import to_string
 
 alias default_server_conn_string = "http://localhost:8080"
 
-
 def test_encode_http_request():
     var uri = URI.parse_raises(default_server_conn_string + "/foobar?baz")
     var req = HTTPRequest(
