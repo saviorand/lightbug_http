@@ -1,5 +1,6 @@
 from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
+from lightbug_http.cookie import RequestCookieJar
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.bytes import Bytes, bytes, Byte
@@ -19,6 +20,7 @@ from lightbug_http.strings import (
 @value
 struct HTTPRequest(Formattable, Stringable):
     var headers: Headers
+    var cookies: RequestCookieJar
     var uri: URI
     var body_raw: Bytes
 
@@ -32,14 +34,20 @@ struct HTTPRequest(Formattable, Stringable):
     fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
         var reader = ByteReader(b^)
         var headers = Headers()
+        var cookies = RequestCookieJar()
+        var cookie_list = List[String]()
         var method: String
         var protocol: String
         var uri_str: String
         try:
-            method, uri_str, protocol = headers.parse_raw(reader)
+            var rest =  headers.parse_raw(reader)
+            method, uri_str, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("Failed to parse request headers: " + e.__str__())
-
+        try:
+            cookies.parse_cookies(headers)
+        except e:
+            raise Error("Failed to parse cookies" + str(e))
         var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
@@ -47,7 +55,7 @@ struct HTTPRequest(Formattable, Stringable):
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
             raise Error("Request body too large")
 
-        var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol)
+        var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol, cookies=cookies)
 
         try:
             request.read_body(reader, content_length, max_body_size)
@@ -60,6 +68,7 @@ struct HTTPRequest(Formattable, Stringable):
         inout self,
         uri: URI,
         headers: Headers = Headers(),
+        cookies: RequestCookieJar = RequestCookieJar(),
         method: String = "GET",
         protocol: String = strHttp11,
         body: Bytes = Bytes(),
@@ -67,6 +76,7 @@ struct HTTPRequest(Formattable, Stringable):
         timeout: Duration = Duration(),
     ):
         self.headers = headers
+        self.cookies = cookies
         self.method = method
         self.protocol = protocol
         self.uri = uri
@@ -78,6 +88,7 @@ struct HTTPRequest(Formattable, Stringable):
             self.set_connection_close()
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
+
 
     fn set_connection_close(inout self):
         self.headers[HeaderKey.CONNECTION] = "close"
@@ -111,6 +122,7 @@ struct HTTPRequest(Formattable, Stringable):
         )
 
         self.headers.format_to(writer)
+        self.cookies.format_to(writer)
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
@@ -132,6 +144,7 @@ struct HTTPRequest(Formattable, Stringable):
         writer.write(lineBreak)
 
         self.headers.encode_to(writer)
+        self.cookies.encode_to(writer)
         writer.write(lineBreak)
 
         writer.write(self.body_raw)

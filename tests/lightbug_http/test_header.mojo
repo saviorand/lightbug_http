@@ -4,7 +4,6 @@ from lightbug_http.header import Headers, Header
 from lightbug_http.io.bytes import Bytes, bytes
 
 
-
 def test_header_case_insensitive():
     var headers = Headers(Header("Host", "SomeHost"))
     assert_true("host" in headers)
@@ -24,7 +23,8 @@ def test_parse_request_header():
     var method: String
     var protocol: String
     var uri: String
-    method, uri, protocol = header.parse_raw(reader)
+    var properties = header.parse_raw(reader)
+    method, uri, protocol = properties[0], properties[1], properties[2]
     assert_equal(uri, "/index.html")
     assert_equal(protocol, "HTTP/1.1")
     assert_equal(method, "GET")
@@ -44,7 +44,8 @@ def test_parse_response_header():
     var status_code: String
     var status_text: String
     var reader = ByteReader(headers_str^)
-    protocol, status_code, status_text = header.parse_raw(reader)
+    var properties = header.parse_raw(reader)
+    protocol, status_code, status_text = properties[0], properties[1], properties[2]
     assert_equal(protocol, "HTTP/1.1")
     assert_equal(status_code, "200")
     assert_equal(status_text, "OK")
