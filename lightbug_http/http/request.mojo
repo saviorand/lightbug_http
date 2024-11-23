@@ -85,7 +85,7 @@ struct HTTPRequest(Formattable, Stringable):
         self.timeout = timeout
         self.set_content_length(len(body))
         if HeaderKey.CONNECTION not in self.headers:
-            self.set_connection_close()
+            self.headers[HeaderKey.CONNECTION] = "keep-alive"
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
 

@@ -134,7 +134,7 @@ struct NoTLSListener:
         _ = shutdown(self.fd, SHUT_RDWR)
         var close_status = close(self.fd)
         if close_status == -1:
-            print("Failed to close new_sockfd")
+            print("Failed to close listener")
 
     fn addr(self) -> TCPAddr:
         return self.__addr
@@ -260,7 +260,7 @@ struct SysConnection(Connection):
         _ = shutdown(self.fd, SHUT_RDWR)
         var close_status = close(self.fd)
         if close_status == -1:
-            print("Failed to close new_sockfd")
+            print("Failed to close connection")
 
     fn local_addr(inout self) raises -> TCPAddr:
         return self.laddr
