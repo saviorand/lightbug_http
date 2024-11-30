@@ -5,6 +5,8 @@ from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.sync import Duration
 from lightbug_http.strings import (
+    Encodable,
+    Parsable,
     strHttp11,
     strHttp,
     strSlash,
@@ -13,16 +15,6 @@ from lightbug_http.strings import (
     to_string,
 )
 
-# Define common traits for modular behavior
-trait Encodable:
-    fn encode(self) -> Bytes:
-        ...
-
-trait Parsable:
-    fn parse(inout self, reader: ByteReader) raises -> None:
-        ...
-
-# Optimized HTTPRequest Struct
 @value
 struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stringable, Encodable):
     var headers: HeaderType
@@ -36,7 +28,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
     var server_is_tls: Bool
     var timeout: Duration
 
-    # Static method to construct HTTPRequest from raw bytes
     @staticmethod
     fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest[HeaderType, CookieType]:
         var reader = ByteReader(b^)
@@ -78,7 +69,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
 
         return request
 
-    # Constructor with default values
     fn __init__(
         inout self,
         uri: URI,
@@ -105,7 +95,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
 
-    # Utility functions for header manipulation
     fn set_connection_close(inout self):
         self.headers[HeaderKey.CONNECTION] = "close"
 
@@ -115,7 +104,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
     fn connection_close(self) -> Bool:
         return self.headers[HeaderKey.CONNECTION] == "close"
 
-    # Body reading optimized with memory limits
     @always_inline
     fn read_body(inout self, inout r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
         if content_length > max_body_size:
@@ -124,7 +112,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
         r.consume(self.body_raw, content_length)
         self.set_content_length(content_length)
 
-    # Format request to a human-readable string
     fn format_to(self, inout writer: Formatter):
         writer.write(self.method, whitespace)
         var path = self.uri.path if len(self.uri.path) > 1 else strSlash
@@ -139,7 +126,6 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    # Encode the request to bytes for transmission
     fn encode(self) -> Bytes:
         var writer = ByteWriter()
         writer.write(self.method)
@@ -159,6 +145,5 @@ struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stri
 
         return writer.consume()
 
-    # Convert to a human-readable string
     fn __str__(self) -> String:
         return to_string(self)

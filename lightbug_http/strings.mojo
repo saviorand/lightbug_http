@@ -1,6 +1,14 @@
 from utils import Span
-from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.bytes import Bytes, bytes, byte
+from lightbug_http.utils import ByteReader
+
+trait Encodable:
+    fn encode(self) -> Bytes:
+        ...
+
+trait Parsable:
+    fn parse(inout self, reader: ByteReader) raises -> None:
+        ...
 
 alias strSlash = "/"
 alias strHttp = "http"
