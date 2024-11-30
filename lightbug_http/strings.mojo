@@ -1,4 +1,4 @@
-from utils import Span
+from utils import Span, StringSlice
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.bytes import Bytes, bytes, byte
 
@@ -107,12 +107,10 @@ fn to_string(b: Span[UInt8]) -> String:
     Args:
         b: The Span of bytes to convert to a String.
     """
-    var bytes = List[UInt8, True](b)
-    bytes.append(0)
-    return String(bytes^)
+    return String(StringSlice(unsafe_from_utf8=b))
 
 
-fn to_string(owned bytes: List[UInt8, True]) -> String:
+fn to_string(owned bytes: Bytes) -> String:
     """Creates a String from the provided List of bytes.
     If you do not transfer ownership of the List, the List will be copied.
 

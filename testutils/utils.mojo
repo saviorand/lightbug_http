@@ -134,7 +134,7 @@ struct FakeServer(ServerTrait):
 
 @value
 struct FakeResponder(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var method = req.method
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)

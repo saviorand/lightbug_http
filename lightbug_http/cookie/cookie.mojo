@@ -1,6 +1,7 @@
 from collections import Optional
 from lightbug_http.header import HeaderKey
 
+
 struct Cookie(CollectionElement):
     alias EXPIRES = "Expires"
     alias MAX_AGE = "Max-Age"
@@ -24,7 +25,6 @@ struct Cookie(CollectionElement):
     var domain: Optional[String]
     var path: Optional[String]
     var max_age: Optional[Duration]
-
 
     @staticmethod
     fn from_set_header(header_str: String) raises -> Self:
@@ -55,7 +55,7 @@ struct Cookie(CollectionElement):
             elif part.startswith(Cookie.MAX_AGE):
                 cookie.max_age = Duration.from_string(part.removeprefix(Cookie.MAX_AGE + Cookie.EQUAL))
             elif part.startswith(Cookie.EXPIRES):
-                var expires =  Expiration.from_string(part.removeprefix(Cookie.EXPIRES + Cookie.EQUAL))
+                var expires = Expiration.from_string(part.removeprefix(Cookie.EXPIRES + Cookie.EQUAL))
                 if expires:
                     cookie.expires = expires.value()
 
@@ -86,7 +86,7 @@ struct Cookie(CollectionElement):
         self.partitioned = partitioned
 
     fn __str__(self) -> String:
-        return "Name: " +  self.name + " Value: " + self.value
+        return "Name: " + self.name + " Value: " + self.value
 
     fn __copyinit__(inout self: Cookie, existing: Cookie):
         self.name = existing.name
@@ -120,7 +120,6 @@ struct Cookie(CollectionElement):
         return Header(HeaderKey.SET_COOKIE, self.build_header_value())
 
     fn build_header_value(self) -> String:
-
         var header_value = self.name + Cookie.EQUAL + self.value
         if self.expires.is_datetime():
             var v = self.expires.http_date_timestamp()

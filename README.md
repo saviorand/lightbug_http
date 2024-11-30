@@ -51,44 +51,57 @@ Learn how to get up and running with Mojo on the [Modular website](https://www.m
 Once you have a Mojo project set up locally,
 
 1. Add the `mojo-community` channel to your `mojoproject.toml`, e.g:
+
    ```toml
    [project]
    channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo-community"]
    ```
+
 2. Add `lightbug_http` as a dependency:
+
    ```toml
    [dependencies]
    lightbug_http = ">=0.1.5"
    ```
+
 3. Run `magic install` at the root of your project, where `mojoproject.toml` is located
 4. Lightbug should now be installed as a dependency. You can import all the default imports at once, e.g:
+
     ```mojo
     from lightbug_http import *
     ```
+
     or import individual structs and functions, e.g. 
+
     ```mojo
     from lightbug_http.service import HTTPService
     from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
     ```
+
     there are some default handlers you can play with:
+
     ```mojo
     from lightbug_http.service import Printer # prints request details to console
     from lightbug_http.service import Welcome # serves an HTML file with an image (currently requires manually adding files to static folder, details below)
     from lightbug_http.service import ExampleRouter # serves /, /first, /second, and /echo routes
     ```
+
 5. Add your handler in `lightbug.🔥` by passing a struct that satisfies the following trait:
+
    ```mojo
    trait HTTPService:
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         ...
    ```
+
    For example, to make a `Printer` service that prints some details about the request to console:
+
    ```mojo
     from lightbug_http import *
 
     @value
     struct Printer(HTTPService):
-        fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+        fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
             var uri = req.uri
             print("Request URI: ", to_string(uri.request_uri))
 
@@ -104,7 +117,9 @@ Once you have a Mojo project set up locally,
 
             return OK(body)
    ```
-6. Start a server listening on a port with your service like so. 
+
+6. Start a server listening on a port with your service like so.
+
     ```mojo
     from lightbug_http import Welcome, Server
 
@@ -113,20 +128,22 @@ Once you have a Mojo project set up locally,
         var handler = Welcome()
         server.listen_and_serve("0.0.0.0:8080", handler)
     ```
+
 Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
 Now send a request `0.0.0.0:8080`. You should see some details about the request printed out to the console.
-   
+
 Congrats 🥳 You're using Lightbug!
 
 
 Routing is not in scope for this library, but you can easily set up routes yourself:
+
 ```mojo
 from lightbug_http import *
 
 @value
 struct ExampleRouter(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var body = req.body_raw
         var uri = req.uri
 
@@ -156,7 +173,7 @@ from lightbug_http import *
 
 @value
 struct Welcome(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
 
         if uri.path == "/":
@@ -216,10 +233,13 @@ fn main() -> None:
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.
 
 ## Switching between pure Mojo and Python implementations
+
 By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `Server` with the following line:
+
 ```mojo
 from lightbug_http.python.server import PythonServer
 ```
+
 You can then use all the regular server commands in the same way as with the default server.
 Note: as of September, 2024, `PythonServer` and `PythonClient` throw a compilation error when starting. There's an open [issue](https://github.com/saviorand/lightbug_http/issues/41) to fix this - contributions welcome!
 

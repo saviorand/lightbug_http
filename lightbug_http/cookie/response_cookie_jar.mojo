@@ -14,7 +14,7 @@ struct ResponseCookieKey(KeyElement):
         inout self,
         name: String,
         domain: Optional[String] = Optional[String](None),
-        path: Optional[String] = Optional[String](None)
+        path: Optional[String] = Optional[String](None),
     ):
         self.name = name
         self.domain = domain.or_else("")
@@ -38,6 +38,7 @@ struct ResponseCookieKey(KeyElement):
 
     fn __hash__(self: Self) -> UInt:
         return hash(self.name + "~" + self.domain + "~" + self.path)
+
 
 @value
 struct ResponseCookieJar(Formattable, Stringable):
@@ -76,7 +77,7 @@ struct ResponseCookieJar(Formattable, Stringable):
         return to_string(self)
 
     fn __len__(self) -> Int:
-       return len(self._inner)
+        return len(self._inner)
 
     @always_inline
     fn set_cookie(inout self, cookie: Cookie):
@@ -85,7 +86,6 @@ struct ResponseCookieJar(Formattable, Stringable):
     @always_inline
     fn empty(self) -> Bool:
         return len(self) == 0
-
 
     fn from_headers(inout self, headers: List[String]) raises:
         for header in headers:
@@ -97,10 +97,9 @@ struct ResponseCookieJar(Formattable, Stringable):
     fn encode_to(inout self, inout writer: ByteWriter):
         for cookie in self._inner.values():
             var v = cookie[].build_header_value()
-            write_header(writer, HeaderKey.SET_COOKIE , v)
-
+            write_header(writer, HeaderKey.SET_COOKIE, v)
 
     fn format_to(self, inout writer: Formatter):
         for cookie in self._inner.values():
             var v = cookie[].build_header_value()
-            write_header(writer, HeaderKey.SET_COOKIE , v)
+            write_header(writer, HeaderKey.SET_COOKIE, v)

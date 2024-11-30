@@ -40,7 +40,7 @@ struct HTTPRequest(Formattable, Stringable):
         var protocol: String
         var uri_str: String
         try:
-            var rest =  headers.parse_raw(reader)
+            var rest = headers.parse_raw(reader)
             method, uri_str, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("Failed to parse request headers: " + e.__str__())
@@ -88,7 +88,6 @@ struct HTTPRequest(Formattable, Stringable):
             self.headers[HeaderKey.CONNECTION] = "keep-alive"
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
-
 
     fn set_connection_close(inout self):
         self.headers[HeaderKey.CONNECTION] = "close"

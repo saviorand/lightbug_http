@@ -1,14 +1,8 @@
 @value
-struct Duration():
+struct Duration:
     var total_seconds: Int
 
-    fn __init__(
-        inout self,
-        seconds: Int = 0,
-        minutes: Int = 0,
-        hours: Int = 0,
-        days: Int = 0
-    ):
+    fn __init__(inout self, seconds: Int = 0, minutes: Int = 0, hours: Int = 0, days: Int = 0):
         self.total_seconds = seconds
         self.total_seconds += minutes * 60
         self.total_seconds += hours * 60 * 60
