@@ -3,24 +3,22 @@ from lightbug_http.header import Headers, HeaderKey, Header, write_header
 from lightbug_http.cookie import RequestCookieJar
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
-from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.io.sync import Duration
 from lightbug_http.strings import (
+    Encodable,
+    Parsable,
     strHttp11,
     strHttp,
     strSlash,
     whitespace,
-    rChar,
-    nChar,
     lineBreak,
     to_string,
 )
 
-
 @value
-struct HTTPRequest(Formattable, Stringable):
-    var headers: Headers
-    var cookies: RequestCookieJar
+struct HTTPRequest[HeaderType: Parsable, CookieType: Parsable](Formattable, Stringable, Encodable):
+    var headers: HeaderType
+    var cookies: CookieType
     var uri: URI
     var body_raw: Bytes
 
@@ -31,31 +29,38 @@ struct HTTPRequest(Formattable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
+    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest[HeaderType, CookieType]:
         var reader = ByteReader(b^)
-        var headers = Headers()
-        var cookies = RequestCookieJar()
-        var cookie_list = List[String]()
+        var headers = HeaderType()
+        var cookies = CookieType()
         var method: String
         var protocol: String
         var uri_str: String
+
         try:
-            var rest =  headers.parse_raw(reader)
+            var rest = headers.parse_raw(reader)
             method, uri_str, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("Failed to parse request headers: " + e.__str__())
+
         try:
-            cookies.parse_cookies(headers)
+            cookies.parse(reader)
         except e:
-            raise Error("Failed to parse cookies" + str(e))
+            raise Error("Failed to parse cookies: " + e.__str__())
+
         var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
-
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
             raise Error("Request body too large")
 
-        var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol, cookies=cookies)
+        var request = HTTPRequest(
+            uri,
+            headers=headers,
+            cookies=cookies,
+            method=method,
+            protocol=protocol,
+        )
 
         try:
             request.read_body(reader, content_length, max_body_size)
@@ -67,8 +72,8 @@ struct HTTPRequest(Formattable, Stringable):
     fn __init__(
         inout self,
         uri: URI,
-        headers: Headers = Headers(),
-        cookies: RequestCookieJar = RequestCookieJar(),
+        headers: HeaderType = HeaderType(),
+        cookies: CookieType = CookieType(),
         method: String = "GET",
         protocol: String = strHttp11,
         body: Bytes = Bytes(),
@@ -84,11 +89,11 @@ struct HTTPRequest(Formattable, Stringable):
         self.server_is_tls = server_is_tls
         self.timeout = timeout
         self.set_content_length(len(body))
+
         if HeaderKey.CONNECTION not in self.headers:
             self.headers[HeaderKey.CONNECTION] = "keep-alive"
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
-
 
     fn set_connection_close(inout self):
         self.headers[HeaderKey.CONNECTION] = "close"
@@ -109,29 +114,19 @@ struct HTTPRequest(Formattable, Stringable):
 
     fn format_to(self, inout writer: Formatter):
         writer.write(self.method, whitespace)
-        path = self.uri.path if len(self.uri.path) > 1 else strSlash
+        var path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
             path += "?" + self.uri.query_string
 
         writer.write(path)
-
-        writer.write(
-            whitespace,
-            self.protocol,
-            lineBreak,
-        )
+        writer.write(whitespace, self.protocol, lineBreak)
 
         self.headers.format_to(writer)
         self.cookies.format_to(writer)
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    fn _encoded(inout self) -> Bytes:
-        """Encodes request as bytes.
-
-        This method consumes the data in this request and it should
-        no longer be considered valid.
-        """
+    fn encode(self) -> Bytes:
         var writer = ByteWriter()
         writer.write(self.method)
         writer.write(whitespace)
@@ -146,7 +141,6 @@ struct HTTPRequest(Formattable, Stringable):
         self.headers.encode_to(writer)
         self.cookies.encode_to(writer)
         writer.write(lineBreak)
-
         writer.write(self.body_raw)
 
         return writer.consume()
