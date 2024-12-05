@@ -5,6 +5,7 @@ from lightbug_http.strings import to_string, lineBreak
 from lightbug_http.header import HeaderKey, write_header
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 
+
 @value
 struct RequestCookieJar(Formattable, Stringable):
     var _inner: Dict[String, String]
@@ -33,7 +34,6 @@ struct RequestCookieJar(Formattable, Stringable):
 
             # TODO value must be "unquoted"
             self._inner[key] = value
-
 
     @always_inline
     fn empty(self) -> Bool:

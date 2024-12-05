@@ -1,8 +1,11 @@
 alias HTTP_DATE_FORMAT = "ddd, DD MMM YYYY HH:mm:ss ZZZ"
 alias TZ_GMT = TimeZone(0, "GMT")
 
+from small_time import SmallTime
+
+
 @value
-struct Expiration:
+struct Expiration(CollectionElement):
     var variant: UInt8
     var datetime: Optional[SmallTime]
 
@@ -15,7 +18,7 @@ struct Expiration:
         return Self(variant=1, datetime=time)
 
     @staticmethod
-    fn from_string(str: String) -> Optional[Self]:
+    fn from_string(str: String) -> Optional[Expiration]:
         try:
             return Self.from_datetime(strptime(str, HTTP_DATE_FORMAT, TZ_GMT))
         except:
@@ -44,5 +47,10 @@ struct Expiration:
         if self.variant != other.variant:
             return False
         if self.variant == 1:
-            return self.datetime == other.datetime
+            if bool(self.datetime) != bool(other.datetime):
+                return False
+            elif not bool(self.datetime) and not bool(other.datetime):
+                return True
+            return self.datetime.value().isoformat() == other.datetime.value().isoformat()
+            
         return True

@@ -119,7 +119,7 @@ struct Server:
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve[T: HTTPService](inout self, address: String, handler: T) raises -> None:
+    fn listen_and_serve[T: HTTPService](inout self, address: String, inout handler: T) raises -> None:
         """
         Listen for incoming connections and serve HTTP requests.
 
@@ -132,7 +132,7 @@ struct Server:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[T: HTTPService](inout self, ln: NoTLSListener, handler: T) raises -> None:
+    fn serve[T: HTTPService](inout self, ln: NoTLSListener, inout handler: T) raises -> None:
         """
         Serve HTTP requests.
 
@@ -149,7 +149,7 @@ struct Server:
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
 
-    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, handler: T) raises -> None:
+    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, inout handler: T) raises -> None:
         """
         Serve a single connection.
 

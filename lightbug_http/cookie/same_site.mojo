@@ -1,6 +1,6 @@
 @value
-struct SameSite():
-    var value : UInt8
+struct SameSite:
+    var value: UInt8
 
     alias none = SameSite(0)
     alias lax = SameSite(1)

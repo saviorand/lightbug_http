@@ -5,13 +5,13 @@ from lightbug_http.header import HeaderKey
 
 
 trait HTTPService:
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         ...
 
 
 @value
 struct Printer(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
         print("Request URI: ", to_string(uri.request_uri))
 
@@ -28,7 +28,7 @@ struct Printer(HTTPService):
 
 @value
 struct Welcome(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
 
         if uri.path == "/":
@@ -48,7 +48,7 @@ struct Welcome(HTTPService):
 
 @value
 struct ExampleRouter(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var body = req.body_raw
         var uri = req.uri
 
@@ -66,7 +66,7 @@ struct ExampleRouter(HTTPService):
 
 @value
 struct TechEmpowerRouter(HTTPService):
-    fn func(self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
 
         if uri.path == "/plaintext":
@@ -75,3 +75,15 @@ struct TechEmpowerRouter(HTTPService):
             return OK('{"message": "Hello, World!"}', "application/json")
 
         return OK("Hello world!")  # text/plain is the default
+
+
+@value
+struct Counter(HTTPService):
+    var counter: Int
+
+    fn __init__(inout self):
+        self.counter = 0
+
+    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+        self.counter += 1
+        return OK("I have been called: " + str(self.counter) + " times")
