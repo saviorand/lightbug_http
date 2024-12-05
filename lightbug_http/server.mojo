@@ -4,6 +4,7 @@ from lightbug_http.strings import NetworkType
 from lightbug_http.utils import ByteReader
 from lightbug_http.net import NoTLSListener, default_buffer_size, NoTLSListener, SysConnection, SysNet
 from lightbug_http.http import HTTPRequest, encode
+from lightbug_http.http.common_response import InternalError
 from lightbug_http.uri import URI
 from lightbug_http.header import Headers
 from lightbug_http.service import HTTPService
@@ -119,7 +120,7 @@ struct Server:
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve[T: HTTPService](inout self, address: String, inout handler: T) raises -> None:
+    fn listen_and_serve[T: HTTPService](inout self, address: String, inout handler: T) raises:
         """
         Listen for incoming connections and serve HTTP requests.
 
@@ -132,7 +133,7 @@ struct Server:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[T: HTTPService](inout self, ln: NoTLSListener, inout handler: T) raises -> None:
+    fn serve[T: HTTPService](inout self, ln: NoTLSListener, inout handler: T) raises:
         """
         Serve HTTP requests.
 
@@ -141,7 +142,7 @@ struct Server:
             handler : HTTPService - An object that handles incoming HTTP requests.
 
         Raises:
-        If there is an error while serving requests.
+            If there is an error while serving requests.
         """
         self.ln = ln
 
@@ -158,7 +159,7 @@ struct Server:
             handler : HTTPService - An object that handles incoming HTTP requests.
 
         Raises:
-        If there is an error while serving the connection.
+            If there is an error while serving the connection.
         """
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
@@ -177,7 +178,13 @@ struct Server:
 
             var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
 
-            var res = handler.func(request)
+            var res: HTTPResponse
+            try:
+                res = handler.func(request)
+            except:
+                _ = conn.write(encode(InternalError()))
+                conn.close()
+                return
 
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
 

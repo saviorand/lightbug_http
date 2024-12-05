@@ -24,6 +24,7 @@ struct StatusCode:
     alias TEMPORARY_REDIRECT = 307
     alias PERMANENT_REDIRECT = 308
     alias NOT_FOUND = 404
+    alias INTERNAL_ERROR = 500
 
 
 @value

@@ -52,5 +52,5 @@ struct Expiration(CollectionElement):
             elif not bool(self.datetime) and not bool(other.datetime):
                 return True
             return self.datetime.value().isoformat() == other.datetime.value().isoformat()
-            
+
         return True
