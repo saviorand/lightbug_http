@@ -146,7 +146,7 @@ struct ListenConfig:
     fn __init__(inout self) raises:
         self.__keep_alive = default_tcp_keep_alive
 
-    fn __init__(inout self, keep_alive: Duration) raises:
+    fn __init__(inout self, keep_alive: Duration):
         self.__keep_alive = keep_alive
 
     fn listen(inout self, network: String, address: String) raises -> NoTLSListener:
@@ -272,10 +272,10 @@ struct SysConnection(Connection):
 struct SysNet:
     var __lc: ListenConfig
 
-    fn __init__(inout self) raises:
+    fn __init__(inout self):
         self.__lc = ListenConfig(default_tcp_keep_alive)
 
-    fn __init__(inout self, keep_alive: Duration) raises:
+    fn __init__(inout self, keep_alive: Duration):
         self.__lc = ListenConfig(keep_alive)
 
     fn listen(inout self, network: String, addr: String) raises -> NoTLSListener:

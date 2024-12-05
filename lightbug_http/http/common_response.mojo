@@ -43,3 +43,12 @@ fn NotFound(path: String) -> HTTPResponse:
         headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
         body_bytes=bytes("path " + path + " not found"),
     )
+
+
+fn InternalError() -> HTTPResponse:
+    return HTTPResponse(
+        bytes("Failed to process request"),
+        status_code=500,
+        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
+        status_text="Internal Server Error",
+    )
