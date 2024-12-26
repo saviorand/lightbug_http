@@ -17,4 +17,4 @@ format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 
 [dependencies]
 max = ">=24.6.0,<25"
-small_time = "0.1.3"
+small_time = "0.1.6"

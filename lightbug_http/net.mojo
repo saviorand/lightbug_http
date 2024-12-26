@@ -121,7 +121,7 @@ struct NoTLSListener:
         var sin_size = socklen_t(sizeof[socklen_t]())
         var sin_size_ptr = OwnedPointer[socklen_t](sin_size)
         var new_sockfd = external_call["accept", c_int](self.fd, their_addr_ptr, sin_size_ptr)
-
+        # TODO: was removed when switching to 24.5, add this back
         # var new_sockfd = accept(
         #     self.fd, their_addr_ptr, UnsafePointer[socklen_t].address_of(sin_size)
         # )
@@ -178,7 +178,6 @@ struct ListenConfig:
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
-        # var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
         var addr_struct = in_addr(s_addr=raw_ip)
 
         var ai = sockaddr_in(
@@ -191,6 +190,7 @@ struct ListenConfig:
         var ai_ptr = OwnedPointer[sockaddr_in](ai)
 
         while not bind_success:
+            # TODO: was removed when switching to 24.5, add this back
             # var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
             var bind = external_call["bind", c_int](sockfd, ai_ptr, sizeof[sockaddr_in]())
             if bind == 0:

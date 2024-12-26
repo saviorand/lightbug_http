@@ -1,6 +1,6 @@
 from collections import Optional, List, Dict
-# from small_time import SmallTime, TimeZone
-# from small_time.small_time import strptime
+from small_time import SmallTime, TimeZone
+from small_time.small_time import strptime
 from lightbug_http.strings import to_string, lineBreak
 from lightbug_http.header import HeaderKey, write_header
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space

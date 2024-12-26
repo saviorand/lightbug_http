@@ -1,4 +1,4 @@
-# from small_time.small_time import now
+from small_time.small_time import now
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.bytes import Bytes, bytes, Byte
@@ -102,12 +102,12 @@ struct HTTPResponse(Writable, Stringable):
             self.set_connection_keep_alive()
         if HeaderKey.CONTENT_LENGTH not in self.headers:
             self.set_content_length(len(body_bytes))
-        # if HeaderKey.DATE not in self.headers:
-            # try:
-            #     var current_time = now(utc=True).__str__()
-            #     self.headers[HeaderKey.DATE] = current_time
-            # except:
-                # pass
+        if HeaderKey.DATE not in self.headers:
+            try:
+                var current_time = now(utc=True).__str__()
+                self.headers[HeaderKey.DATE] = current_time
+            except:
+                pass
 
     fn get_body_bytes(self) -> Bytes:
         return self.body_raw
@@ -189,12 +189,12 @@ struct HTTPResponse(Writable, Stringable):
         writer.write("server: lightbug_http")
         writer.write(lineBreak)
 
-        # if HeaderKey.DATE not in self.headers:
-        #     try:
-        #         var current_time = now(utc=True).__str__()
-        #         write_header(writer, HeaderKey.DATE, current_time)
-        #     except:
-        #         pass
+        if HeaderKey.DATE not in self.headers:
+            try:
+                var current_time = now(utc=True).__str__()
+                write_header(writer, HeaderKey.DATE, current_time)
+            except:
+                pass
 
         self.headers.encode_to(writer)
         self.cookies.encode_to(writer)
