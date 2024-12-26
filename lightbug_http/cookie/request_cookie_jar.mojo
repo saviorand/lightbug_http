@@ -1,13 +1,13 @@
 from collections import Optional, List, Dict
-from small_time import SmallTime, TimeZone
-from small_time.small_time import strptime
+# from small_time import SmallTime, TimeZone
+# from small_time.small_time import strptime
 from lightbug_http.strings import to_string, lineBreak
 from lightbug_http.header import HeaderKey, write_header
 from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 
 
 @value
-struct RequestCookieJar(Formattable, Stringable):
+struct RequestCookieJar(Writable, Stringable):
     var _inner: Dict[String, String]
 
     fn __init__(inout self):
@@ -71,7 +71,7 @@ struct RequestCookieJar(Formattable, Stringable):
         if header:
             write_header(writer, header.value().key, header.value().value)
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         var header = self.to_header()
         if header:
             write_header(writer, header.value().key, header.value().value)

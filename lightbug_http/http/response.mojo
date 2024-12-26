@@ -1,4 +1,4 @@
-from small_time.small_time import now
+# from small_time.small_time import now
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.bytes import Bytes, bytes, Byte
@@ -28,7 +28,7 @@ struct StatusCode:
 
 
 @value
-struct HTTPResponse(Formattable, Stringable):
+struct HTTPResponse(Writable, Stringable):
     var headers: Headers
     var cookies: ResponseCookieJar
     var body_raw: Bytes
@@ -102,12 +102,12 @@ struct HTTPResponse(Formattable, Stringable):
             self.set_connection_keep_alive()
         if HeaderKey.CONTENT_LENGTH not in self.headers:
             self.set_content_length(len(body_bytes))
-        if HeaderKey.DATE not in self.headers:
-            try:
-                var current_time = now(utc=True).__str__()
-                self.headers[HeaderKey.DATE] = current_time
-            except:
-                pass
+        # if HeaderKey.DATE not in self.headers:
+            # try:
+            #     var current_time = now(utc=True).__str__()
+            #     self.headers[HeaderKey.DATE] = current_time
+            # except:
+                # pass
 
     fn get_body_bytes(self) -> Bytes:
         return self.body_raw
@@ -161,14 +161,14 @@ struct HTTPResponse(Formattable, Stringable):
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         writer.write(self.protocol, whitespace, self.status_code, whitespace, self.status_text, lineBreak)
 
         if HeaderKey.SERVER not in self.headers:
             writer.write("server: lightbug_http", lineBreak)
 
-        self.headers.format_to(writer)
-        self.cookies.format_to(writer)
+        self.headers.write_to(writer)
+        self.cookies.write_to(writer)
 
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
@@ -189,12 +189,12 @@ struct HTTPResponse(Formattable, Stringable):
         writer.write("server: lightbug_http")
         writer.write(lineBreak)
 
-        if HeaderKey.DATE not in self.headers:
-            try:
-                var current_time = now(utc=True).__str__()
-                write_header(writer, HeaderKey.DATE, current_time)
-            except:
-                pass
+        # if HeaderKey.DATE not in self.headers:
+        #     try:
+        #         var current_time = now(utc=True).__str__()
+        #         write_header(writer, HeaderKey.DATE, current_time)
+        #     except:
+        #         pass
 
         self.headers.encode_to(writer)
         self.cookies.encode_to(writer)

@@ -2,7 +2,7 @@ from python import PythonObject
 from lightbug_http.strings import nChar, rChar, to_string
 
 alias Byte = UInt8
-alias Bytes = List[Byte, True]
+alias Bytes = List[Byte]
 
 
 @always_inline

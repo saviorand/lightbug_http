@@ -18,7 +18,7 @@ from lightbug_http.strings import (
 
 
 @value
-struct HTTPRequest(Formattable, Stringable):
+struct HTTPRequest(Writable, Stringable):
     var headers: Headers
     var cookies: RequestCookieJar
     var uri: URI
@@ -106,7 +106,7 @@ struct HTTPRequest(Formattable, Stringable):
         r.consume(self.body_raw, content_length)
         self.set_content_length(content_length)
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         writer.write(self.method, whitespace)
         path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
@@ -120,8 +120,8 @@ struct HTTPRequest(Formattable, Stringable):
             lineBreak,
         )
 
-        self.headers.format_to(writer)
-        self.cookies.format_to(writer)
+        self.headers.write_to(writer)
+        self.cookies.write_to(writer)
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 

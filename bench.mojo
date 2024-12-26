@@ -25,7 +25,7 @@ fn main():
 
 fn run_benchmark():
     try:
-        var config = BenchConfig(warmup_iters=100)
+        var config = BenchConfig()
         config.verbose_timing = True
         config.tabular_view = True
         var m = Bench(config)

@@ -27,7 +27,7 @@ struct Header:
 
 
 @always_inline
-fn write_header(inout writer: Formatter, key: String, value: String):
+fn write_header[T: Writer](inout writer: T, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
 
@@ -40,7 +40,7 @@ fn write_header(inout writer: ByteWriter, key: String, inout value: String):
 
 
 @value
-struct Headers(Formattable, Stringable):
+struct Headers(Writable, Stringable):
     """Represents the header key/values in an http request/response.
 
     Header keys are normalized to lowercase
@@ -108,7 +108,7 @@ struct Headers(Formattable, Stringable):
             self._inner[k] = to_string(value^)
         return (to_string(first^), to_string(second^), to_string(third^), cookies)
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
 

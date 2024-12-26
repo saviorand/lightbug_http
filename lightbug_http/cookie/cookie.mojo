@@ -17,7 +17,7 @@ struct Cookie(CollectionElement):
 
     var name: String
     var value: String
-    var expires: Expiration
+    # var expires: Expiration
     var secure: Bool
     var http_only: Bool
     var partitioned: Bool
@@ -54,10 +54,10 @@ struct Cookie(CollectionElement):
                 cookie.path = part.removeprefix(Cookie.PATH + Cookie.EQUAL)
             elif part.startswith(Cookie.MAX_AGE):
                 cookie.max_age = Duration.from_string(part.removeprefix(Cookie.MAX_AGE + Cookie.EQUAL))
-            elif part.startswith(Cookie.EXPIRES):
-                var expires = Expiration.from_string(part.removeprefix(Cookie.EXPIRES + Cookie.EQUAL))
-                if expires:
-                    cookie.expires = expires.value()
+            # elif part.startswith(Cookie.EXPIRES):
+            #     var expires = Expiration.from_string(part.removeprefix(Cookie.EXPIRES + Cookie.EQUAL))
+            #     if expires:
+            #         cookie.expires = expires.value()
 
         return cookie
 
@@ -65,7 +65,7 @@ struct Cookie(CollectionElement):
         inout self,
         name: String,
         value: String,
-        expires: Expiration = Expiration.session(),
+        # expires: Expiration = Expiration.session(),
         max_age: Optional[Duration] = Optional[Duration](None),
         domain: Optional[String] = Optional[String](None),
         path: Optional[String] = Optional[String](None),
@@ -76,7 +76,7 @@ struct Cookie(CollectionElement):
     ):
         self.name = name
         self.value = value
-        self.expires = expires
+        # self.expires = expires
         self.max_age = max_age
         self.domain = domain
         self.path = path
@@ -92,7 +92,7 @@ struct Cookie(CollectionElement):
         self.name = existing.name
         self.value = existing.value
         self.max_age = existing.max_age
-        self.expires = existing.expires
+        # self.expires = existing.expires
         self.domain = existing.domain
         self.path = existing.path
         self.secure = existing.secure
@@ -104,7 +104,7 @@ struct Cookie(CollectionElement):
         self.name = existing.name
         self.value = existing.value
         self.max_age = existing.max_age
-        self.expires = existing.expires
+        # self.expires = existing.expires
         self.domain = existing.domain
         self.path = existing.path
         self.secure = existing.secure
@@ -114,17 +114,17 @@ struct Cookie(CollectionElement):
 
     fn clear_cookie(inout self):
         self.max_age = Optional[Duration](None)
-        self.expires = Expiration.invalidate()
+        # self.expires = Expiration.invalidate()
 
     fn to_header(self) -> Header:
         return Header(HeaderKey.SET_COOKIE, self.build_header_value())
 
     fn build_header_value(self) -> String:
         var header_value = self.name + Cookie.EQUAL + self.value
-        if self.expires.is_datetime():
-            var v = self.expires.http_date_timestamp()
-            if v:
-                header_value += Cookie.SEPERATOR + Cookie.EXPIRES + Cookie.EQUAL + v.value()
+        # if self.expires.is_datetime():
+        #     var v = self.expires.http_date_timestamp()
+        #     if v:
+        #         header_value += Cookie.SEPERATOR + Cookie.EXPIRES + Cookie.EQUAL + v.value()
         if self.max_age:
             header_value += Cookie.SEPERATOR + Cookie.MAX_AGE + Cookie.EQUAL + str(self.max_age.value().total_seconds)
         if self.domain:

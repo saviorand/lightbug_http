@@ -12,7 +12,7 @@ from lightbug_http.strings import (
 
 
 @value
-struct URI(Formattable, Stringable):
+struct URI(Writable, Stringable):
     var __path_original: String
     var scheme: String
     var path: String
@@ -63,7 +63,7 @@ struct URI(Formattable, Stringable):
             s += "?" + self.query_string
         return s
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         writer.write(str(self))
 
     fn is_https(self) -> Bool:

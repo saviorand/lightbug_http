@@ -1,5 +1,6 @@
-from utils import StaticTuple
+from utils import StaticTuple, StringRef
 from time import sleep
+from memory import UnsafePointer, OwnedPointer
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call
 from lightbug_http.strings import NetworkType
@@ -116,9 +117,9 @@ struct NoTLSListener:
 
     fn accept(self) raises -> SysConnection:
         var their_addr = sockaddr(0, StaticTuple[c_char, 14]())
-        var their_addr_ptr = Reference[sockaddr](their_addr)
+        var their_addr_ptr = OwnedPointer[sockaddr](their_addr)
         var sin_size = socklen_t(sizeof[socklen_t]())
-        var sin_size_ptr = Reference[socklen_t](sin_size)
+        var sin_size_ptr = OwnedPointer[socklen_t](sin_size)
         var new_sockfd = external_call["accept", c_int](self.fd, their_addr_ptr, sin_size_ptr)
 
         # var new_sockfd = accept(
@@ -177,8 +178,17 @@ struct ListenConfig:
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
-        var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
-        var ai_ptr = Reference[sockaddr_in](ai)
+        # var ai = sockaddr_in(address_family, bin_port, raw_ip, StaticTuple[c_char, 8]())
+        var addr_struct = in_addr(s_addr=raw_ip)
+
+        var ai = sockaddr_in(
+            sin_family=address_family,
+            sin_port=bin_port,
+            sin_addr=addr_struct,
+            sin_zero=StaticTuple[c_char, 8]()
+        )
+
+        var ai_ptr = OwnedPointer[sockaddr_in](ai)
 
         while not bind_success:
             # var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
@@ -192,7 +202,7 @@ struct ListenConfig:
                     bind_fail_logged = True
                 print(".", end="", flush=True)
                 _ = shutdown(sockfd, SHUT_RDWR)
-                sleep(1)
+                sleep(UInt(1))
 
         if listen(sockfd, c_int(128)) == -1:
             print("Listen failed.\n on sockfd " + sockfd.__str__())
@@ -321,7 +331,7 @@ struct addrinfo_macos(AnAddrInfo):
             in_addr - The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = Reference(Self())
+        var servinfo = OwnedPointer(Self())
         var servname = UnsafePointer[Int8]()
 
         var hints = Self()
@@ -332,7 +342,7 @@ struct addrinfo_macos(AnAddrInfo):
         var error = external_call[
             "getaddrinfo",
             Int32,
-        ](host_ptr, servname, Reference(hints), Reference(servinfo))
+        ](host_ptr, servname, OwnedPointer(hints), Pointer.address_of(servinfo))
 
         if error != 0:
             print("getaddrinfo failed with error code: " + error.__str__())
@@ -438,7 +448,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
 
     # Convert ip address to network byte order.
     var addr: sockaddr_in = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
-    var addr_ptr = Reference[sockaddr_in](addr)
+    var addr_ptr = OwnedPointer[sockaddr_in](addr)
 
     if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)

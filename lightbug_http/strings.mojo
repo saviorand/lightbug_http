@@ -1,4 +1,5 @@
-from utils import Span, StringSlice
+from utils import StringSlice
+from memory import Span
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.bytes import Bytes, bytes, byte
 
@@ -94,11 +95,8 @@ struct Message:
     alias http_start = Message("http.response.start")
 
 
-fn to_string[T: Formattable](value: T) -> String:
-    var s = String()
-    var formatter = s._unsafe_to_formatter()
-    value.format_to(formatter)
-    return s
+fn to_string[T: Writable](value: T) -> String:
+    return String.write(value)
 
 
 fn to_string(b: Span[UInt8]) -> String:

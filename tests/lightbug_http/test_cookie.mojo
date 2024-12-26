@@ -1,5 +1,7 @@
-from lightbug_http.cookie import SameSite, Cookie, Expiration, Duration
-from small_time.small_time import SmallTime, now
+from lightbug_http.cookie import SameSite, Cookie, Duration
+# from lightbug_http.cookie import Expiration
+
+# from small_time.small_time import SmallTime, now
 from testing import assert_true, assert_equal
 from collections import Optional
 
@@ -8,7 +10,7 @@ fn test_set_cookie() raises:
             name="mycookie",
             value="myvalue",
             max_age=Duration(minutes=20),
-            expires=Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)),
+            # expires=Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)),
             path=str("/"),
             domain=str("localhost"),
             secure=True,
@@ -36,8 +38,8 @@ fn test_set_cookie_partial_arguments() raises:
     assert_equal( header_value, expected)
 
 
-fn test_expires_http_timestamp_format() raises:
-    var expected = "Thu, 22 Jan 2037 12:00:10 GMT"
-    var http_date = Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)).http_date_timestamp()
-    assert_true(http_date is not None, msg="Http date is None")
-    assert_equal(expected , http_date.value())
+# fn test_expires_http_timestamp_format() raises:
+    # var expected = "Thu, 22 Jan 2037 12:00:10 GMT"
+    # var http_date = Expiration.from_datetime(SmallTime(2037, 1, 22, 12, 0, 10, 0)).http_date_timestamp()
+    # assert_true(http_date is not None, msg="Http date is None")
+    # assert_equal(expected , http_date.value())
