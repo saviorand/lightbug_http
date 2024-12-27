@@ -117,9 +117,9 @@ struct NoTLSListener:
 
     fn accept(self) raises -> SysConnection:
         var their_addr = sockaddr(0, StaticTuple[c_char, 14]())
-        var their_addr_ptr = OwnedPointer[sockaddr](their_addr)
+        var their_addr_ptr = Pointer.address_of(their_addr)
         var sin_size = socklen_t(sizeof[socklen_t]())
-        var sin_size_ptr = OwnedPointer[socklen_t](sin_size)
+        var sin_size_ptr = Pointer.address_of(sin_size)
         var new_sockfd = external_call["accept", c_int](self.fd, their_addr_ptr, sin_size_ptr)
         # TODO: was removed when switching to 24.5, add this back
         # var new_sockfd = accept(
@@ -187,7 +187,7 @@ struct ListenConfig:
             sin_zero=StaticTuple[c_char, 8]()
         )
 
-        var ai_ptr = OwnedPointer[sockaddr_in](ai)
+        var ai_ptr = Pointer.address_of(ai)
 
         while not bind_success:
             # TODO: was removed when switching to 24.5, add this back
@@ -328,7 +328,7 @@ struct addrinfo_macos(AnAddrInfo):
             host: String - The host to get the IP from.
 
         Returns:
-            in_addr - The IP address.
+            The IP address.
         """
         var host_ptr = to_char_ptr(host)
         var servinfo = OwnedPointer(Self())
@@ -342,7 +342,7 @@ struct addrinfo_macos(AnAddrInfo):
         var error = external_call[
             "getaddrinfo",
             Int32,
-        ](host_ptr, servname, OwnedPointer(hints), Pointer.address_of(servinfo))
+        ](host_ptr, servname, Pointer.address_of(hints), Pointer.address_of(servinfo))
 
         if error != 0:
             print("getaddrinfo failed with error code: " + error.__str__())
@@ -448,7 +448,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
 
     # Convert ip address to network byte order.
     var addr: sockaddr_in = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
-    var addr_ptr = OwnedPointer[sockaddr_in](addr)
+    var addr_ptr = Pointer.address_of(addr)
 
     if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
         _ = shutdown(sock, SHUT_RDWR)
