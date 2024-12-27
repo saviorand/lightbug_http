@@ -338,21 +338,19 @@ struct addrinfo_macos(AnAddrInfo):
         hints.ai_socktype = SOCK_STREAM
         hints.ai_flags = AI_PASSIVE
         
-        var servinfo = Pointer.address_of(Self())
+        var servinfo = Self()
         var result_storage = Pointer.address_of(servinfo)
-        result_storage[] = servinfo
         
         var error = external_call[
             "getaddrinfo",
             Int32,
-        ](host_ptr, servname, Pointer.address_of(hints), result_storage[])
+        ](host_ptr, servname, Pointer.address_of(hints), Pointer.address_of(result_storage))
 
         if error != 0:
             print("getaddrinfo failed with error code: " + error.__str__())
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
-        servinfo = result_storage[]
-        var addrinfo = servinfo[]
+        var addrinfo = result_storage[]
         
         var ai_addr = addrinfo.ai_addr
 
@@ -447,6 +445,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
         Int32 - The socket file descriptor.
     """
     var ip: in_addr
+    @parameter
     if os_is_macos():
         ip = addrinfo_macos().get_ip_address(host)
     else:

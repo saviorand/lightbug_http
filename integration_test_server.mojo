@@ -6,7 +6,7 @@ struct IntegerationTestService(HTTPService):
         var p = req.uri.path
         if p == "/redirect":
             return HTTPResponse(
-                "get off my lawn".as_bytes_slice(),
+                "get off my lawn".as_bytes(),
                 headers=Headers(
                     Header(HeaderKey.LOCATION, "/rd-destination")
                 ),
