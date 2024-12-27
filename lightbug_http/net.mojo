@@ -331,29 +331,35 @@ struct addrinfo_macos(AnAddrInfo):
             The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = OwnedPointer(Self())
-        var servname = UnsafePointer[Int8]()
-
+        var servname = Pointer[Int8].address_of(0)
+        
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
         hints.ai_flags = AI_PASSIVE
-
+        
+        var servinfo = Pointer.address_of(Self())
+        var result_storage = Pointer.address_of(servinfo)
+        result_storage[] = servinfo
+        
         var error = external_call[
             "getaddrinfo",
             Int32,
-        ](host_ptr, servname, Pointer.address_of(hints), Pointer.address_of(servinfo))
+        ](host_ptr, servname, Pointer.address_of(hints), result_storage[])
 
         if error != 0:
             print("getaddrinfo failed with error code: " + error.__str__())
             raise Error("Failed to get IP address. getaddrinfo failed.")
 
+        servinfo = result_storage[]
         var addrinfo = servinfo[]
-
+        
         var ai_addr = addrinfo.ai_addr
+
         if not ai_addr:
             print("ai_addr is null")
             raise Error("Failed to get IP address. getaddrinfo was called successfully, but ai_addr is null.")
+
 
         var addr_in = ai_addr.bitcast[sockaddr_in]()[]
 
