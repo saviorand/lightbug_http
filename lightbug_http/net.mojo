@@ -398,18 +398,43 @@ struct addrinfo_unix(AnAddrInfo):
             host: String - The host to get IP from.
 
         Returns:
-            UInt32 - The IP address.
+            in_addr - The IP address.
         """
-        var host_ptr = to_char_ptr(host)
-        var servinfo_ptr = UnsafePointer[Self].alloc(1)
-        servinfo_ptr.init_pointee_copy(Self())
-
+        var host_bytes = host.as_bytes()
+        var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
+        
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
-        hints.ai_flags = AI_PASSIVE
+        hints.ai_flags = 0
+        hints.ai_protocol = 0
 
-        return servinfo_ptr[].get_ip_address(host)
+        var result: UnsafePointer[Self] = UnsafePointer[Self]()
+        var result_ptr = UnsafePointer[UnsafePointer[Self]].address_of(result)
+
+        var error = getaddrinfo[Self](
+            host_ptr,
+            UnsafePointer[c_char](),
+            UnsafePointer[Self].address_of(hints),
+            result_ptr
+        )
+        
+        if error != 0:
+            raise Error("Failed to get IP address. getaddrinfo failed with error code: " + error.__str__())
+
+        if not result:
+            raise Error("Failed to get IP address. Result pointer is null.")
+
+        var addrinfo = result[]
+        if not addrinfo.ai_addr:
+            freeaddrinfo(result)
+            raise Error("ai_addr is null")
+
+        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]()[]
+        var ip_addr = addr_in.sin_addr
+        
+        freeaddrinfo(result)
+        return ip_addr
 
 
 fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
