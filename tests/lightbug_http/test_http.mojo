@@ -93,6 +93,6 @@ def test_decoding_http_response():
 
 def test_http_version_parse():
     var v1 = HttpVersion("HTTP/1.1")
-    testing.assert_equal(v1, 1)
+    testing.assert_equal(v1._v, 1)
     var v2 = HttpVersion("HTTP/2")
-    testing.assert_equal(v2, 2)
+    testing.assert_equal(v2._v, 2)

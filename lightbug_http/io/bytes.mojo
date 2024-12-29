@@ -1,8 +1,8 @@
-from python import PythonObject
 from lightbug_http.strings import nChar, rChar, to_string
+from memory import UnsafePointer
 
 alias Byte = UInt8
-alias Bytes = List[Byte, True]
+alias Bytes = List[Byte]
 
 
 @always_inline
@@ -56,5 +56,5 @@ struct UnsafeString:
         self.len = l
 
     fn to_string(self) -> String:
-        var s = String(self.data, self.len)
+        var s = String(ptr=self.data, length=self.len)
         return s

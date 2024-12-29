@@ -1,8 +1,7 @@
-alias HTTP_DATE_FORMAT = "ddd, DD MMM YYYY HH:mm:ss ZZZ"
-alias TZ_GMT = TimeZone(0, "GMT")
-
 from small_time import SmallTime
 
+alias HTTP_DATE_FORMAT = "ddd, DD MMM YYYY HH:mm:ss ZZZ"
+alias TZ_GMT = TimeZone(0, "GMT")
 
 @value
 struct Expiration(CollectionElement):

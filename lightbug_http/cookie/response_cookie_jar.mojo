@@ -41,7 +41,7 @@ struct ResponseCookieKey(KeyElement):
 
 
 @value
-struct ResponseCookieJar(Formattable, Stringable):
+struct ResponseCookieJar(Writable, Stringable):
     var _inner: Dict[ResponseCookieKey, Cookie]
 
     fn __init__(inout self):
@@ -99,7 +99,7 @@ struct ResponseCookieJar(Formattable, Stringable):
             var v = cookie[].build_header_value()
             write_header(writer, HeaderKey.SET_COOKIE, v)
 
-    fn format_to(self, inout writer: Formatter):
+    fn write_to[T: Writer](self, inout writer: T):
         for cookie in self._inner.values():
             var v = cookie[].build_header_value()
             write_header(writer, HeaderKey.SET_COOKIE, v)

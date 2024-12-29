@@ -166,6 +166,7 @@ struct Server:
             max_request_body_size = default_max_request_body_size
 
         var req_number = 0
+        var is_closed = False
 
         while True:
             req_number += 1
@@ -173,7 +174,9 @@ struct Server:
             b = Bytes(capacity=default_buffer_size)
             bytes_recv = conn.read(b)
             if bytes_recv == 0:
-                conn.close()
+                if not is_closed:
+                    conn.close()
+                    is_closed = True
                 break
 
             var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
@@ -182,8 +185,10 @@ struct Server:
             try:
                 res = handler.func(request)
             except:
-                _ = conn.write(encode(InternalError()))
-                conn.close()
+                if not is_closed:
+                    _ = conn.write(encode(InternalError()))
+                    conn.close()
+                    is_closed = True
                 return
 
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
@@ -194,4 +199,8 @@ struct Server:
             var written = conn.write(encode(res^))
 
             if close_connection or written == -1:
-                conn.close()
+                if not is_closed:
+                    conn.close()
+                    is_closed = True
+                break
+

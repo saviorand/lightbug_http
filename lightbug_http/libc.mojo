@@ -1,7 +1,7 @@
 from utils import StaticTuple
 from sys.ffi import external_call
 from sys.info import sizeof
-from memory import memcpy
+from memory import memcpy, UnsafePointer
 from lightbug_http.io.bytes import Bytes
 
 alias IPPROTO_IPV6 = 41
@@ -97,7 +97,7 @@ fn to_char_ptr(s: Bytes) -> UnsafePointer[c_char]:
 
 
 fn c_charptr_to_string(s: UnsafePointer[c_char]) -> String:
-    return String(s.bitcast[UInt8](), strlen(s))
+    return String(ptr=s.bitcast[UInt8](), length=strlen(s))
 
 
 fn cftob(val: c_int) -> Bool:
@@ -631,7 +631,7 @@ fn accept(
     ](socket, address, address_len)
 
 
-fn connect(socket: c_int, address: Reference[sockaddr], address_len: socklen_t) -> c_int:
+fn connect(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function
     Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     Fn signature: int connect(int socket, const struct sockaddr *address, socklen_t address_len).
