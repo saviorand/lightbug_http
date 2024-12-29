@@ -26,6 +26,7 @@ from .libc import (
     SHUT_RDWR,
     htons,
     ntohs,
+    ntohl,
     inet_pton,
     inet_ntop,
     to_char_ptr,
@@ -316,22 +317,18 @@ struct addrinfo_macos(AnAddrInfo):
     fn get_ip_address(self, host: String) raises -> in_addr:
         print("Resolving host:", host)
         
-        # Convert string to bytes and get raw pointer
         var host_bytes = host.as_bytes()
         var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
         
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
-        # Remove AI_PASSIVE since we're not creating a listening socket
-        hints.ai_flags = 0  # Changed from AI_PASSIVE
+        hints.ai_flags = 0
         hints.ai_protocol = 0
 
-        # Use direct memory for result pointer
         var result: UnsafePointer[Self] = UnsafePointer[Self]()
         var result_ptr = UnsafePointer[UnsafePointer[Self]].address_of(result)
 
-        print("Calling getaddrinfo for:", host)
         var error = getaddrinfo[Self](
             host_ptr,
             UnsafePointer[c_char](),
@@ -340,30 +337,29 @@ struct addrinfo_macos(AnAddrInfo):
         )
         
         if error != 0:
-            print("getaddrinfo error:", error)
             raise Error("Failed to get IP address. getaddrinfo failed with error code: " + error.__str__())
 
         if not result:
             raise Error("Failed to get IP address. Result pointer is null.")
 
-        # Extract the IP address and print intermediate values
         var addrinfo = result[]
-        print("addrinfo family:", addrinfo.ai_family)
-        print("addrinfo socktype:", addrinfo.ai_socktype)
-        
         if not addrinfo.ai_addr:
             freeaddrinfo(result)
             raise Error("ai_addr is null")
 
         var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]()[]
-        print("sin_family:", addr_in.sin_family)
-        print("sin_port:", addr_in.sin_port)
         var ip_addr = addr_in.sin_addr
-        print("sin_addr:", ip_addr.s_addr)
         
-        # Cleanup
+        # Print the IP address in dotted decimal format
+        var ip_host_order = ntohl(ip_addr.s_addr)
+        print("IP Address:", 
+            (ip_host_order >> 24) & 0xFF, ".",
+            (ip_host_order >> 16) & 0xFF, ".",
+            (ip_host_order >> 8) & 0xFF, ".",
+            ip_host_order & 0xFF
+        )
+        
         freeaddrinfo(result)
-        
         return ip_addr
 
 
@@ -435,17 +431,28 @@ struct addrinfo_unix(AnAddrInfo):
         return servinfo_ptr[].get_ip_address(host)
 
 
-fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:    
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
+    print("Creating connection to", host, "port", port)
+    
     @parameter
     if os_is_macos():
         ip = addrinfo_macos().get_ip_address(host)
     else:
         ip = addrinfo_unix().get_ip_address(host)
-    
-    var addr = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
+
+    var addr = sockaddr_in(AF_INET, htons(port), in_addr(ip.s_addr), StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
+
+    # Print address in human-readable format
+    var ip_host_order = ntohl(addr.sin_addr.s_addr)
+    print("Connecting to IP:",
+        (ip_host_order >> 24) & 0xFF, ".",
+        (ip_host_order >> 16) & 0xFF, ".",
+        (ip_host_order >> 8) & 0xFF, ".",
+        ip_host_order & 0xFF,
+        ":", ntohs(addr.sin_port)
+    )
 
     var addr_ptr = Pointer.address_of(addr)
-    
     var connect_result = external_call[
         "connect",
         c_int,
@@ -457,7 +464,6 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     if connect_result == -1:
         _ = shutdown(sock, SHUT_RDWR)
         raise Error("Failed to connect to server.")
-
 
     var laddr = TCPAddr()
     var raddr = TCPAddr(host, int(port))
