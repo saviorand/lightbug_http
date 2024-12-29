@@ -3,9 +3,8 @@ from lightbug_http.client import Client
 
 
 fn test_request(inout client: Client) raises -> None:
-    var uri = URI.parse_raises("http://google.com")
-    var headers = Headers(Header("Host", "google.com"), Header("User-Agent", "curl/8.1.2"), Header("Accept", "*/*"))
-
+    var uri = URI.parse_raises("http://httpbin.org/status/404")
+    var headers = Headers(Header("Host", "httpbin.org"))
     var request = HTTPRequest(uri, headers)
     var response = client.do(request^)
 

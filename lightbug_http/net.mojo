@@ -295,6 +295,10 @@ struct SysNet:
 @value
 @register_passable("trivial")
 struct addrinfo_macos(AnAddrInfo):
+    """
+    For MacOS, I had to swap the order of ai_canonname and ai_addr.
+    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
+    """
     var ai_flags: c_int
     var ai_family: c_int
     var ai_socktype: c_int
@@ -315,6 +319,14 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_next = UnsafePointer[c_void]()
 
     fn get_ip_address(self, host: String) raises -> in_addr:       
+        """
+        Returns an IP address based on the host.
+        This is a MacOS-specific implementation.
+        Args:
+            host: String - The host to get the IP from.
+        Returns:
+            in_addr - The IP address.
+        """
         var host_bytes = host.as_bytes()
         var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
         
@@ -350,24 +362,6 @@ struct addrinfo_macos(AnAddrInfo):
         
         freeaddrinfo(result)
         return ip_addr
-
-fn getaddrinfo[T: AnAddrInfo](
-    nodename: UnsafePointer[c_char],
-    servname: UnsafePointer[c_char],
-    hints: UnsafePointer[T],
-    res: UnsafePointer[UnsafePointer[T]]
-) -> c_int:
-    return external_call[
-        "getaddrinfo",
-        c_int,
-        UnsafePointer[c_char],
-        UnsafePointer[c_char],
-        UnsafePointer[T],
-        UnsafePointer[UnsafePointer[T]]
-    ](nodename, servname, hints, res)
-
-fn freeaddrinfo[T: AnAddrInfo](ptr: UnsafePointer[T]):
-    external_call["freeaddrinfo", NoneType, UnsafePointer[T]](ptr)
  
 @value
 @register_passable("trivial")
@@ -418,7 +412,16 @@ struct addrinfo_unix(AnAddrInfo):
         return servinfo_ptr[].get_ip_address(host)
 
 
-fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:    
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
+    """
+    Connect to a server using a socket.
+    Args:
+        sock: Int32 - The socket file descriptor.
+        host: String - The host to connect to.
+        port: UInt16 - The port to connect to.
+    Returns:
+        Int32 - The socket file descriptor.
+    """
     @parameter
     if os_is_macos():
         ip = addrinfo_macos().get_ip_address(host)
@@ -632,3 +635,21 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
         port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
     )
 
+
+fn getaddrinfo[T: AnAddrInfo](
+    nodename: UnsafePointer[c_char],
+    servname: UnsafePointer[c_char],
+    hints: UnsafePointer[T],
+    res: UnsafePointer[UnsafePointer[T]]
+) -> c_int:
+    return external_call[
+        "getaddrinfo",
+        c_int,
+        UnsafePointer[c_char],
+        UnsafePointer[c_char],
+        UnsafePointer[T],
+        UnsafePointer[UnsafePointer[T]]
+    ](nodename, servname, hints, res)
+
+fn freeaddrinfo[T: AnAddrInfo](ptr: UnsafePointer[T]):
+    external_call["freeaddrinfo", NoneType, UnsafePointer[T]](ptr)
