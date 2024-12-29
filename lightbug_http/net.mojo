@@ -314,9 +314,7 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_next = UnsafePointer[c_void]()
 
-    fn get_ip_address(self, host: String) raises -> in_addr:
-        print("Resolving host:", host)
-        
+    fn get_ip_address(self, host: String) raises -> in_addr:       
         var host_bytes = host.as_bytes()
         var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
         
@@ -350,18 +348,8 @@ struct addrinfo_macos(AnAddrInfo):
         var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]()[]
         var ip_addr = addr_in.sin_addr
         
-        # Print the IP address in dotted decimal format
-        var ip_host_order = ntohl(ip_addr.s_addr)
-        print("IP Address:", 
-            (ip_host_order >> 24) & 0xFF, ".",
-            (ip_host_order >> 16) & 0xFF, ".",
-            (ip_host_order >> 8) & 0xFF, ".",
-            ip_host_order & 0xFF
-        )
-        
         freeaddrinfo(result)
         return ip_addr
-
 
 fn getaddrinfo[T: AnAddrInfo](
     nodename: UnsafePointer[c_char],
@@ -380,7 +368,6 @@ fn getaddrinfo[T: AnAddrInfo](
 
 fn freeaddrinfo[T: AnAddrInfo](ptr: UnsafePointer[T]):
     external_call["freeaddrinfo", NoneType, UnsafePointer[T]](ptr)
-
  
 @value
 @register_passable("trivial")
@@ -431,9 +418,7 @@ struct addrinfo_unix(AnAddrInfo):
         return servinfo_ptr[].get_ip_address(host)
 
 
-fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
-    print("Creating connection to", host, "port", port)
-    
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:    
     @parameter
     if os_is_macos():
         ip = addrinfo_macos().get_ip_address(host)
@@ -441,17 +426,6 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
         ip = addrinfo_unix().get_ip_address(host)
 
     var addr = sockaddr_in(AF_INET, htons(port), in_addr(ip.s_addr), StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
-
-    # Print address in human-readable format
-    var ip_host_order = ntohl(addr.sin_addr.s_addr)
-    print("Connecting to IP:",
-        (ip_host_order >> 24) & 0xFF, ".",
-        (ip_host_order >> 16) & 0xFF, ".",
-        (ip_host_order >> 8) & 0xFF, ".",
-        ip_host_order & 0xFF,
-        ":", ntohs(addr.sin_port)
-    )
-
     var addr_ptr = Pointer.address_of(addr)
     var connect_result = external_call[
         "connect",
