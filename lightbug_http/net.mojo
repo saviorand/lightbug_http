@@ -291,15 +291,9 @@ struct SysNet:
     fn listen(inout self, network: String, addr: String) raises -> NoTLSListener:
         return self.__lc.listen(network, addr)
 
-
 @value
 @register_passable("trivial")
 struct addrinfo_macos(AnAddrInfo):
-    """
-    For MacOS, I had to swap the order of ai_canonname and ai_addr.
-    https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
-    """
-
     var ai_flags: c_int
     var ai_family: c_int
     var ai_socktype: c_int
@@ -320,50 +314,78 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_next = UnsafePointer[c_void]()
 
     fn get_ip_address(self, host: String) raises -> in_addr:
-        """
-        Returns an IP address based on the host.
-        This is a MacOS-specific implementation.
-
-        Args:
-            host: String - The host to get the IP from.
-
-        Returns:
-            The IP address.
-        """
-        var host_ptr = to_char_ptr(host)
-        var servname = Pointer[Int8].address_of(0)
+        print("Resolving host:", host)
+        
+        # Convert string to bytes and get raw pointer
+        var host_bytes = host.as_bytes()
+        var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
         
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
-        hints.ai_flags = AI_PASSIVE
-        
-        var servinfo = Self()
-        var result_storage = Pointer.address_of(servinfo)
-        
-        var error = external_call[
-            "getaddrinfo",
-            Int32,
-        ](host_ptr, servname, Pointer.address_of(hints), Pointer.address_of(result_storage))
+        # Remove AI_PASSIVE since we're not creating a listening socket
+        hints.ai_flags = 0  # Changed from AI_PASSIVE
+        hints.ai_protocol = 0
 
+        # Use direct memory for result pointer
+        var result: UnsafePointer[Self] = UnsafePointer[Self]()
+        var result_ptr = UnsafePointer[UnsafePointer[Self]].address_of(result)
+
+        print("Calling getaddrinfo for:", host)
+        var error = getaddrinfo[Self](
+            host_ptr,
+            UnsafePointer[c_char](),
+            UnsafePointer[Self].address_of(hints),
+            result_ptr
+        )
+        
         if error != 0:
-            print("getaddrinfo failed with error code: " + error.__str__())
-            raise Error("Failed to get IP address. getaddrinfo failed.")
+            print("getaddrinfo error:", error)
+            raise Error("Failed to get IP address. getaddrinfo failed with error code: " + error.__str__())
 
-        var addrinfo = result_storage[]
+        if not result:
+            raise Error("Failed to get IP address. Result pointer is null.")
+
+        # Extract the IP address and print intermediate values
+        var addrinfo = result[]
+        print("addrinfo family:", addrinfo.ai_family)
+        print("addrinfo socktype:", addrinfo.ai_socktype)
         
-        var ai_addr = addrinfo.ai_addr
+        if not addrinfo.ai_addr:
+            freeaddrinfo(result)
+            raise Error("ai_addr is null")
 
-        if not ai_addr:
-            print("ai_addr is null")
-            raise Error("Failed to get IP address. getaddrinfo was called successfully, but ai_addr is null.")
+        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]()[]
+        print("sin_family:", addr_in.sin_family)
+        print("sin_port:", addr_in.sin_port)
+        var ip_addr = addr_in.sin_addr
+        print("sin_addr:", ip_addr.s_addr)
+        
+        # Cleanup
+        freeaddrinfo(result)
+        
+        return ip_addr
 
 
-        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
+fn getaddrinfo[T: AnAddrInfo](
+    nodename: UnsafePointer[c_char],
+    servname: UnsafePointer[c_char],
+    hints: UnsafePointer[T],
+    res: UnsafePointer[UnsafePointer[T]]
+) -> c_int:
+    return external_call[
+        "getaddrinfo",
+        c_int,
+        UnsafePointer[c_char],
+        UnsafePointer[c_char],
+        UnsafePointer[T],
+        UnsafePointer[UnsafePointer[T]]
+    ](nodename, servname, hints, res)
 
-        return addr_in.sin_addr
+fn freeaddrinfo[T: AnAddrInfo](ptr: UnsafePointer[T]):
+    external_call["freeaddrinfo", NoneType, UnsafePointer[T]](ptr)
 
-
+ 
 @value
 @register_passable("trivial")
 struct addrinfo_unix(AnAddrInfo):
@@ -402,62 +424,40 @@ struct addrinfo_unix(AnAddrInfo):
             UInt32 - The IP address.
         """
         var host_ptr = to_char_ptr(host)
-        var servinfo = UnsafePointer[Self]().alloc(1)
-        servinfo.init_pointee_move(Self())
+        var servinfo_ptr = UnsafePointer[Self].alloc(1)
+        servinfo_ptr.init_pointee_copy(Self())
 
         var hints = Self()
         hints.ai_family = AF_INET
         hints.ai_socktype = SOCK_STREAM
         hints.ai_flags = AI_PASSIVE
 
-        var error = getaddrinfo[Self](
-            host_ptr,
-            UnsafePointer[UInt8](),
-            UnsafePointer.address_of(hints),
-            UnsafePointer.address_of(servinfo),
-        )
-        if error != 0:
-            print("getaddrinfo failed")
-            raise Error("Failed to get IP address. getaddrinfo failed.")
-
-        var addrinfo = servinfo[]
-
-        var ai_addr = addrinfo.ai_addr
-        if not ai_addr:
-            print("ai_addr is null")
-            raise Error("Failed to get IP address. getaddrinfo was called successfully, but ai_addr is null.")
-
-        var addr_in = ai_addr.bitcast[sockaddr_in]()[]
-
-        return addr_in.sin_addr
+        return servinfo_ptr[].get_ip_address(host)
 
 
-fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
-    """
-    Connect to a server using a socket.
-
-    Args:
-        sock: Int32 - The socket file descriptor.
-        host: String - The host to connect to.
-        port: UInt16 - The port to connect to.
-
-    Returns:
-        Int32 - The socket file descriptor.
-    """
-    var ip: in_addr
+fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:    
     @parameter
     if os_is_macos():
         ip = addrinfo_macos().get_ip_address(host)
     else:
         ip = addrinfo_unix().get_ip_address(host)
+    
+    var addr = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
 
-    # Convert ip address to network byte order.
-    var addr: sockaddr_in = sockaddr_in(AF_INET, htons(port), ip, StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
     var addr_ptr = Pointer.address_of(addr)
+    
+    var connect_result = external_call[
+        "connect",
+        c_int,
+        c_int,
+        Pointer[is_mutable=True, type=sockaddr_in, origin=__origin_of(addr)],
+        socklen_t
+    ](sock, addr_ptr, sizeof[sockaddr_in]())
 
-    if external_call["connect", c_int](sock, addr_ptr, sizeof[sockaddr_in]()) == -1:
+    if connect_result == -1:
         _ = shutdown(sock, SHUT_RDWR)
-        raise Error("Failed to connect to server")
+        raise Error("Failed to connect to server.")
+
 
     var laddr = TCPAddr()
     var raddr = TCPAddr(host, int(port))
@@ -652,27 +652,3 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
         port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
     )
 
-
-fn getaddrinfo[
-    T: AnAddrInfo
-](
-    nodename: UnsafePointer[c_char],
-    servname: UnsafePointer[c_char],
-    hints: UnsafePointer[T],
-    res: UnsafePointer[UnsafePointer[T]],
-) -> c_int:
-    """
-    Overwrites the existing libc `getaddrinfo` function to use the AnAddrInfo trait.
-
-    Libc POSIX `getaddrinfo` function
-    Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
-    Fn signature: int getaddrinfo(const char *restrict nodename, const char *restrict servname, const struct addrinfo *restrict hints, struct addrinfo **restrict res).
-    """
-    return external_call[
-        "getaddrinfo",
-        c_int,  # FnName, RetType
-        UnsafePointer[c_char],
-        UnsafePointer[c_char],
-        UnsafePointer[T],  # Args
-        UnsafePointer[UnsafePointer[T]],  # Args
-    ](nodename, servname, hints, res)
