@@ -249,8 +249,6 @@ struct SysConnection(Connection):
         buf.size += bytes_recv
         if bytes_recv == 0:
             return 0
-        if bytes_recv < buf.capacity:
-            return bytes_recv
         return bytes_recv
 
     fn write(self, owned msg: String) raises -> Int:

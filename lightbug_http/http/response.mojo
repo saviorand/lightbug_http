@@ -1,7 +1,7 @@
 from small_time.small_time import now
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
-from lightbug_http.io.bytes import Bytes, bytes, Byte
+from lightbug_http.io.bytes import Bytes, bytes, Byte, byte
 from lightbug_http.strings import (
     strHttp11,
     strHttp,
@@ -70,8 +70,15 @@ struct HTTPResponse(Writable, Stringable):
             var buff = Bytes(capacity=default_buffer_size)
             while conn.value().read(buff) > 0:
                 b += buff
-                buff.resize(0)
 
+                if buff[-5] == byte('0') and buff[-4] == byte('\r')
+                    and buff[-3] == byte('\n')
+                    and buff[-2] == byte('\r')
+                    and buff[-1] == byte('\n'):
+                    break
+
+
+                buff.resize(0)
             response.read_chunks(b^)
             return response
 
@@ -150,7 +157,6 @@ struct HTTPResponse(Writable, Stringable):
 
     fn read_chunks(inout self, owned chunks: Bytes) raises:
         var reader = ByteReader(chunks^)
-
         while True:
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
