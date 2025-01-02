@@ -34,11 +34,11 @@ struct UnsafeString:
     var data: UnsafePointer[UInt8]
     var len: Int
 
-    fn __init__(out self) -> None:
+    fn __init__(out self):
         self.data = UnsafePointer[UInt8]()
         self.len = 0
 
-    fn __init__(out self, str: StringLiteral) -> None:
+    fn __init__(out self, str: StringLiteral):
         var l = str.__len__()
         var s = String(str)
         var p = UnsafePointer[UInt8].alloc(l)
@@ -47,7 +47,7 @@ struct UnsafeString:
         self.data = p
         self.len = l
 
-    fn __init__(out self, str: String) -> None:
+    fn __init__(out self, str: String):
         var l = str.__len__()
         var p = UnsafePointer[UInt8].alloc(l)
         for i in range(l):

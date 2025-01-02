@@ -361,7 +361,7 @@ struct addrinfo:
     var ai_canonname: UnsafePointer[c_char]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__(out self) -> None:
+    fn __init__(out self):
         self.ai_flags = 0
         self.ai_family = 0
         self.ai_socktype = 0

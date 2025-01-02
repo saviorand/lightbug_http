@@ -396,7 +396,7 @@ struct addrinfo_unix(AnAddrInfo):
             host: String - The host to get IP from.
 
         Returns:
-            in_addr - The IP address.
+            The IP address.
         """
         var host_bytes = host.as_bytes()
         var host_ptr = host_bytes.unsafe_ptr().bitcast[c_char]()
