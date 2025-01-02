@@ -11,7 +11,7 @@ struct ResponseCookieKey(KeyElement):
     var path: String
 
     fn __init__(
-        inout self,
+        mut self,
         name: String,
         domain: Optional[String] = Optional[String](None),
         path: Optional[String] = Optional[String](None),
@@ -26,12 +26,12 @@ struct ResponseCookieKey(KeyElement):
     fn __eq__(self: Self, other: Self) -> Bool:
         return self.name == other.name and self.domain == other.domain and self.path == other.path
 
-    fn __moveinit__(inout self: Self, owned existing: Self):
+    fn __moveinit__(out self: Self, owned existing: Self):
         self.name = existing.name
         self.domain = existing.domain
         self.path = existing.path
 
-    fn __copyinit__(inout self: Self, existing: Self):
+    fn __copyinit__(out self: Self, existing: Self):
         self.name = existing.name
         self.domain = existing.domain
         self.path = existing.path
@@ -44,16 +44,16 @@ struct ResponseCookieKey(KeyElement):
 struct ResponseCookieJar(Writable, Stringable):
     var _inner: Dict[ResponseCookieKey, Cookie]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self._inner = Dict[ResponseCookieKey, Cookie]()
 
-    fn __init__(inout self, *cookies: Cookie):
+    fn __init__(out self, *cookies: Cookie):
         self._inner = Dict[ResponseCookieKey, Cookie]()
         for cookie in cookies:
             self.set_cookie(cookie[])
 
     @always_inline
-    fn __setitem__(inout self, key: ResponseCookieKey, value: Cookie):
+    fn __setitem__(mut self, key: ResponseCookieKey, value: Cookie):
         self._inner[key] = value
 
     fn __getitem__(self, key: ResponseCookieKey) raises -> Cookie:
@@ -80,26 +80,26 @@ struct ResponseCookieJar(Writable, Stringable):
         return len(self._inner)
 
     @always_inline
-    fn set_cookie(inout self, cookie: Cookie):
+    fn set_cookie(mut self, cookie: Cookie):
         self[ResponseCookieKey(cookie.name, cookie.domain, cookie.path)] = cookie
 
     @always_inline
     fn empty(self) -> Bool:
         return len(self) == 0
 
-    fn from_headers(inout self, headers: List[String]) raises:
+    fn from_headers(mut self, headers: List[String]) raises:
         for header in headers:
             try:
                 self.set_cookie(Cookie.from_set_header(header[]))
             except:
                 raise Error("Failed to parse cookie header string " + header[])
 
-    fn encode_to(inout self, inout writer: ByteWriter):
+    fn encode_to(mut self, mut writer: ByteWriter):
         for cookie in self._inner.values():
             var v = cookie[].build_header_value()
             write_header(writer, HeaderKey.SET_COOKIE, v)
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         for cookie in self._inner.values():
             var v = cookie[].build_header_value()
             write_header(writer, HeaderKey.SET_COOKIE, v)

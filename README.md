@@ -90,7 +90,7 @@ Once you have a Mojo project set up locally,
 
    ```mojo
    trait HTTPService:
-    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         ...
    ```
 
@@ -101,7 +101,7 @@ Once you have a Mojo project set up locally,
 
     @value
     struct Printer(HTTPService):
-        fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+        fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
             var uri = req.uri
             print("Request URI: ", to_string(uri.request_uri))
 
@@ -143,7 +143,7 @@ from lightbug_http import *
 
 @value
 struct ExampleRouter(HTTPService):
-    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         var body = req.body_raw
         var uri = req.uri
 
@@ -173,7 +173,7 @@ from lightbug_http import *
 
 @value
 struct Welcome(HTTPService):
-    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         var uri = req.uri
 
         if uri.path == "/":
@@ -199,7 +199,7 @@ Create a file, e.g `client.mojo` with the following code. Run `magic run mojo cl
 from lightbug_http import *
 from lightbug_http.client import Client
 
-fn test_request(inout client: Client) raises -> None:
+fn test_request(mut client: Client) raises -> None:
     var uri = URI.parse_raises("http://httpbin.org/status/404")
     var headers = Header("Host", "httpbin.org")
 

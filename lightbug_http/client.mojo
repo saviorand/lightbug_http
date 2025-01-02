@@ -25,13 +25,13 @@ struct Client:
 
     var _connections: Dict[String, SysConnection]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.host = "127.0.0.1"
         self.port = 8888
         self.name = "lightbug_http_client"
         self._connections = Dict[String, SysConnection]()
 
-    fn __init__(inout self, host: StringLiteral, port: Int):
+    fn __init__(out self, host: StringLiteral, port: Int):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
@@ -45,7 +45,7 @@ struct Client:
                 # TODO: Add an optional debug log entry here
                 pass
 
-    fn do(inout self, owned req: HTTPRequest) raises -> HTTPResponse:
+    fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """
         The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
@@ -137,7 +137,7 @@ struct Client:
         return HTTPResponse(Bytes())
 
     fn _handle_redirect(
-        inout self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
+        mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
         var new_uri: URI
         var new_location = original_response.headers[HeaderKey.LOCATION]
@@ -150,7 +150,7 @@ struct Client:
         original_req.uri = new_uri
         return self.do(original_req^)
 
-    fn _close_conn(inout self, host: String) raises:
+    fn _close_conn(mut self, host: String) raises:
         if host in self._connections:
             self._connections[host].close()
             _ = self._connections.pop(host)

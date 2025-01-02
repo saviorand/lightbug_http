@@ -27,12 +27,12 @@ struct Header:
 
 
 @always_inline
-fn write_header[T: Writer](inout writer: T, key: String, value: String):
+fn write_header[T: Writer](mut writer: T, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
 
 @always_inline
-fn write_header(inout writer: ByteWriter, key: String, inout value: String):
+fn write_header(mut writer: ByteWriter, key: String, mut value: String):
     var k = key + ": "
     writer.write(k)
     writer.write(value)
@@ -48,10 +48,10 @@ struct Headers(Writable, Stringable):
 
     var _inner: Dict[String, String]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self._inner = Dict[String, String]()
 
-    fn __init__(inout self, owned *headers: Header):
+    fn __init__(out self, owned *headers: Header):
         self._inner = Dict[String, String]()
         for header in headers:
             self[header[].key.lower()] = header[].value
@@ -72,7 +72,7 @@ struct Headers(Writable, Stringable):
             return String()
 
     @always_inline
-    fn __setitem__(inout self, key: String, value: String):
+    fn __setitem__(mut self, key: String, value: String):
         self._inner[key.lower()] = value
 
     fn content_length(self) -> Int:
@@ -81,7 +81,7 @@ struct Headers(Writable, Stringable):
         except:
             return 0
 
-    fn parse_raw(inout self, inout r: ByteReader) raises -> (String, String, String, List[String]):
+    fn parse_raw(mut self, mut r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Failed to read first byte from response header")
@@ -108,11 +108,11 @@ struct Headers(Writable, Stringable):
             self._inner[k] = to_string(value^)
         return (to_string(first^), to_string(second^), to_string(third^), cookies)
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
 
-    fn encode_to(inout self, inout writer: ByteWriter):
+    fn encode_to(mut self, mut writer: ByteWriter):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
 

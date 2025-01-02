@@ -33,7 +33,7 @@ struct Server:
 
     var ln: NoTLSListener
 
-    fn __init__(inout self) raises:
+    fn __init__(out self) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -43,7 +43,7 @@ struct Server:
         self.tcp_keep_alive = False
         self.ln = NoTLSListener()
 
-    fn __init__(inout self, tcp_keep_alive: Bool) raises:
+    fn __init__(out self, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -53,7 +53,7 @@ struct Server:
         self.tcp_keep_alive = tcp_keep_alive
         self.ln = NoTLSListener()
 
-    fn __init__(inout self, own_address: String) raises:
+    fn __init__(out self, own_address: String) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = own_address
@@ -63,7 +63,7 @@ struct Server:
         self.tcp_keep_alive = False
         self.ln = NoTLSListener()
 
-    fn __init__(inout self, error_handler: ErrorHandler) raises:
+    fn __init__(out self, error_handler: ErrorHandler) raises:
         self.error_handler = error_handler
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -73,7 +73,7 @@ struct Server:
         self.tcp_keep_alive = False
         self.ln = NoTLSListener()
 
-    fn __init__(inout self, max_request_body_size: Int) raises:
+    fn __init__(out self, max_request_body_size: Int) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -83,7 +83,7 @@ struct Server:
         self.tcp_keep_alive = False
         self.ln = NoTLSListener()
 
-    fn __init__(inout self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
+    fn __init__(out self, max_request_body_size: Int, tcp_keep_alive: Bool) raises:
         self.error_handler = ErrorHandler()
         self.name = "lightbug_http"
         self.__address = "127.0.0.1"
@@ -96,14 +96,14 @@ struct Server:
     fn address(self) -> String:
         return self.__address
 
-    fn set_address(inout self, own_address: String) -> Self:
+    fn set_address(mut self, own_address: String) -> Self:
         self.__address = own_address
         return self
 
     fn max_request_body_size(self) -> Int:
         return self.__max_request_body_size
 
-    fn set_max_request_body_size(inout self, size: Int) -> Self:
+    fn set_max_request_body_size(mut self, size: Int) -> Self:
         self.__max_request_body_size = size
         return self
 
@@ -120,7 +120,7 @@ struct Server:
             concurrency = DefaultConcurrency
         return concurrency
 
-    fn listen_and_serve[T: HTTPService](inout self, address: String, inout handler: T) raises:
+    fn listen_and_serve[T: HTTPService](mut self, address: String, mut handler: T) raises:
         """
         Listen for incoming connections and serve HTTP requests.
 
@@ -133,7 +133,7 @@ struct Server:
         _ = self.set_address(address)
         self.serve(listener, handler)
 
-    fn serve[T: HTTPService](inout self, ln: NoTLSListener, inout handler: T) raises:
+    fn serve[T: HTTPService](mut self, ln: NoTLSListener, mut handler: T) raises:
         """
         Serve HTTP requests.
 
@@ -150,7 +150,7 @@ struct Server:
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
 
-    fn serve_connection[T: HTTPService](inout self, conn: SysConnection, inout handler: T) raises -> None:
+    fn serve_connection[T: HTTPService](mut self, conn: SysConnection, mut handler: T) raises -> None:
         """
         Serve a single connection.
 

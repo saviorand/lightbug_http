@@ -50,13 +50,13 @@ alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
 trait Connection(Movable):
-    fn __init__(inout self, laddr: String, raddr: String) raises:
+    fn __init__(out self, laddr: String, raddr: String) raises:
         ...
 
-    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
+    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr) raises:
         ...
 
-    fn read(self, inout buf: Bytes) raises -> Int:
+    fn read(self, mut buf: Bytes) raises -> Int:
         ...
 
     fn write(self, buf: Bytes) raises -> Int:
@@ -65,7 +65,7 @@ trait Connection(Movable):
     fn close(self) raises:
         ...
 
-    fn local_addr(inout self) raises -> TCPAddr:
+    fn local_addr(mut self) raises -> TCPAddr:
         ...
 
     fn remote_addr(self) raises -> TCPAddr:
@@ -73,10 +73,10 @@ trait Connection(Movable):
 
 
 trait Addr(CollectionElement):
-    fn __init__(inout self):
+    fn __init__(out self):
         ...
 
-    fn __init__(inout self, ip: String, port: Int):
+    fn __init__(out self, ip: String, port: Int):
         ...
 
     fn network(self) -> String:
@@ -104,15 +104,15 @@ struct NoTLSListener:
     var fd: c_int
     var __addr: TCPAddr
 
-    fn __init__(inout self) raises:
+    fn __init__(out self) raises:
         self.__addr = TCPAddr("localhost", 8080)
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(inout self, addr: TCPAddr) raises:
+    fn __init__(out self, addr: TCPAddr) raises:
         self.__addr = addr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(inout self, addr: TCPAddr, fd: c_int) raises:
+    fn __init__(out self, addr: TCPAddr, fd: c_int) raises:
         self.__addr = addr
         self.fd = fd
 
@@ -145,13 +145,13 @@ struct NoTLSListener:
 struct ListenConfig:
     var __keep_alive: Duration
 
-    fn __init__(inout self) raises:
+    fn __init__(out self) raises:
         self.__keep_alive = default_tcp_keep_alive
 
-    fn __init__(inout self, keep_alive: Duration):
+    fn __init__(out self, keep_alive: Duration):
         self.__keep_alive = keep_alive
 
-    fn listen(inout self, network: String, address: String) raises -> NoTLSListener:
+    fn listen(mut self, network: String, address: String) raises -> NoTLSListener:
         var addr = resolve_internet_addr(network, address)
         var address_family = AF_INET
         var ip_buf_size = 4
@@ -222,22 +222,22 @@ struct SysConnection(Connection):
     var raddr: TCPAddr
     var laddr: TCPAddr
 
-    fn __init__(inout self, laddr: String, raddr: String) raises:
+    fn __init__(out self, laddr: String, raddr: String) raises:
         self.raddr = resolve_internet_addr(NetworkType.tcp4.value, raddr)
         self.laddr = resolve_internet_addr(NetworkType.tcp4.value, laddr)
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
+    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr) raises:
         self.raddr = raddr
         self.laddr = laddr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int) raises:
+    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int) raises:
         self.raddr = raddr
         self.laddr = laddr
         self.fd = fd
 
-    fn read(self, inout buf: Bytes) raises -> Int:
+    fn read(self, mut buf: Bytes) raises -> Int:
         var bytes_recv = recv(
             self.fd,
             buf.unsafe_ptr().offset(buf.size),
@@ -271,7 +271,7 @@ struct SysConnection(Connection):
         if close_status == -1:
             print("Failed to close connection")
 
-    fn local_addr(inout self) raises -> TCPAddr:
+    fn local_addr(mut self) raises -> TCPAddr:
         return self.laddr
 
     fn remote_addr(self) raises -> TCPAddr:
@@ -281,13 +281,13 @@ struct SysConnection(Connection):
 struct SysNet:
     var __lc: ListenConfig
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.__lc = ListenConfig(default_tcp_keep_alive)
 
-    fn __init__(inout self, keep_alive: Duration):
+    fn __init__(out self, keep_alive: Duration):
         self.__lc = ListenConfig(keep_alive)
 
-    fn listen(inout self, network: String, addr: String) raises -> NoTLSListener:
+    fn listen(mut self, network: String, addr: String) raises -> NoTLSListener:
         return self.__lc.listen(network, addr)
 
 @value
@@ -306,7 +306,7 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_addr: UnsafePointer[sockaddr]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.ai_flags = 0
         self.ai_family = 0
         self.ai_socktype = 0
@@ -377,7 +377,7 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_canonname: UnsafePointer[c_char]
     var ai_next: UnsafePointer[c_void]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.ai_flags = 0
         self.ai_family = 0
         self.ai_socktype = 0
@@ -481,12 +481,12 @@ struct TCPAddr(Addr):
     var port: Int
     var zone: String  # IPv6 addressing zone
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.ip = String("127.0.0.1")
         self.port = 8000
         self.zone = ""
 
-    fn __init__(inout self, ip: String, port: Int):
+    fn __init__(out self, ip: String, port: Int):
         self.ip = ip
         self.port = port
         self.zone = ""
@@ -541,7 +541,7 @@ struct HostPort:
     var host: String
     var port: String
 
-    fn __init__(inout self, host: String, port: String):
+    fn __init__(out self, host: String, port: String):
         self.host = host
         self.port = port
 

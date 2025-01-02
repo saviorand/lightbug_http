@@ -17,30 +17,30 @@ fn is_space(b: Byte) -> Bool:
 struct ByteWriter:
     var _inner: Bytes
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self._inner = Bytes(capacity=default_buffer_size)
 
     @always_inline
-    fn write(inout self, owned b: Bytes):
+    fn write(mut self, owned b: Bytes):
         self._inner.extend(b^)
 
     @always_inline
-    fn write(inout self, inout s: String):
+    fn write(mut self, mut s: String):
         # kind of cursed but seems to work?
         _ = s._buffer.pop()
         self._inner.extend(s._buffer^)
         s._buffer = s._buffer_type()
 
     @always_inline
-    fn write(inout self, s: StringLiteral):
+    fn write(mut self, s: StringLiteral):
         var str = String(s)
         self.write(str)
 
     @always_inline
-    fn write(inout self, b: Byte):
+    fn write(mut self, b: Byte):
         self._inner.append(b)
 
-    fn consume(inout self) -> Bytes:
+    fn consume(mut self) -> Bytes:
         var ret = self._inner^
         self._inner = Bytes()
         return ret^
@@ -50,7 +50,7 @@ struct ByteReader:
     var _inner: Bytes
     var read_pos: Int
 
-    fn __init__(inout self, owned b: Bytes):
+    fn __init__(out self, owned b: Bytes):
         self._inner = b^
         self.read_pos = 0
 
@@ -59,17 +59,17 @@ struct ByteReader:
             return 0
         return self._inner[self.read_pos]
 
-    fn read_until(inout self, char: Byte) -> Bytes:
+    fn read_until(mut self, char: Byte) -> Bytes:
         var start = self.read_pos
         while self.peek() != char:
             self.increment()
         return self._inner[start : self.read_pos]
 
     @always_inline
-    fn read_word(inout self) -> Bytes:
+    fn read_word(mut self) -> Bytes:
         return self.read_until(BytesConstant.whitespace)
 
-    fn read_line(inout self) -> Bytes:
+    fn read_line(mut self) -> Bytes:
         var start = self.read_pos
         while not is_newline(self.peek()):
             self.increment()
@@ -81,21 +81,21 @@ struct ByteReader:
         return ret
 
     @always_inline
-    fn skip_whitespace(inout self):
+    fn skip_whitespace(mut self):
         while is_space(self.peek()):
             self.increment()
 
     @always_inline
-    fn skip_newlines(inout self):
+    fn skip_newlines(mut self):
         while self.peek() == BytesConstant.rChar:
             self.increment(2)
 
     @always_inline
-    fn increment(inout self, v: Int = 1):
+    fn increment(mut self, v: Int = 1):
         self.read_pos += v
 
     @always_inline
-    fn consume(inout self, inout buffer: Bytes, bytes_len: Int = -1):
+    fn consume(mut self, mut buffer: Bytes, bytes_len: Int = -1):
         var pos = self.read_pos
         var read_len: Int
         if bytes_len == -1:

@@ -89,7 +89,7 @@ struct HTTPResponse(Writable, Stringable):
             raise Error("Failed to read request body: " + e.__str__())
 
     fn __init__(
-        inout self,
+        mut self,
         body_bytes: Bytes,
         headers: Headers = Headers(),
         cookies: ResponseCookieJar = ResponseCookieJar(),
@@ -120,22 +120,22 @@ struct HTTPResponse(Writable, Stringable):
         return self.body_raw
 
     @always_inline
-    fn set_connection_close(inout self):
+    fn set_connection_close(mut self):
         self.headers[HeaderKey.CONNECTION] = "close"
 
     @always_inline
-    fn set_connection_keep_alive(inout self):
+    fn set_connection_keep_alive(mut self):
         self.headers[HeaderKey.CONNECTION] = "keep-alive"
 
     fn connection_close(self) -> Bool:
         return self.headers[HeaderKey.CONNECTION] == "close"
 
     @always_inline
-    fn set_content_length(inout self, l: Int):
+    fn set_content_length(mut self, l: Int):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     @always_inline
-    fn content_length(inout self) -> Int:
+    fn content_length(mut self) -> Int:
         try:
             return int(self.headers[HeaderKey.CONTENT_LENGTH])
         except:
@@ -151,11 +151,11 @@ struct HTTPResponse(Writable, Stringable):
         )
 
     @always_inline
-    fn read_body(inout self, inout r: ByteReader) raises -> None:
+    fn read_body(mut self, mut r: ByteReader) raises -> None:
         r.consume(self.body_raw, self.content_length())
         self.set_content_length(len(self.body_raw))
 
-    fn read_chunks(inout self, owned chunks: Bytes) raises:
+    fn read_chunks(mut self, owned chunks: Bytes) raises:
         var reader = ByteReader(chunks^)
         while True:
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
@@ -167,7 +167,7 @@ struct HTTPResponse(Writable, Stringable):
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         writer.write(self.protocol, whitespace, self.status_code, whitespace, self.status_text, lineBreak)
 
         if HeaderKey.SERVER not in self.headers:
@@ -179,7 +179,7 @@ struct HTTPResponse(Writable, Stringable):
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    fn _encoded(inout self) -> Bytes:
+    fn _encoded(mut self) -> Bytes:
         """Encodes response as bytes.
 
         This method consumes the data in this request and it should

@@ -62,7 +62,7 @@ struct Cookie(CollectionElement):
         return cookie
 
     fn __init__(
-        inout self,
+        mut self,
         name: String,
         value: String,
         expires: Expiration = Expiration.session(),
@@ -88,7 +88,7 @@ struct Cookie(CollectionElement):
     fn __str__(self) -> String:
         return "Name: " + self.name + " Value: " + self.value
 
-    fn __copyinit__(inout self: Cookie, existing: Cookie):
+    fn __copyinit__(out self: Cookie, existing: Cookie):
         self.name = existing.name
         self.value = existing.value
         self.max_age = existing.max_age
@@ -100,7 +100,7 @@ struct Cookie(CollectionElement):
         self.same_site = existing.same_site
         self.partitioned = existing.partitioned
 
-    fn __moveinit__(inout self: Cookie, owned existing: Cookie):
+    fn __moveinit__(out self: Cookie, owned existing: Cookie):
         self.name = existing.name
         self.value = existing.value
         self.max_age = existing.max_age
@@ -112,7 +112,7 @@ struct Cookie(CollectionElement):
         self.same_site = existing.same_site
         self.partitioned = existing.partitioned
 
-    fn clear_cookie(inout self):
+    fn clear_cookie(mut self):
         self.max_age = Optional[Duration](None)
         self.expires = Expiration.invalidate()
 

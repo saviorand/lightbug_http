@@ -2,7 +2,7 @@ from lightbug_http import *
 
 @value
 struct IntegerationTestService(HTTPService):
-    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         var p = req.uri.path
         if p == "/redirect":
             return HTTPResponse(

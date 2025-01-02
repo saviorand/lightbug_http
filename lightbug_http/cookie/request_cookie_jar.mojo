@@ -10,15 +10,15 @@ from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
 struct RequestCookieJar(Writable, Stringable):
     var _inner: Dict[String, String]
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self._inner = Dict[String, String]()
 
-    fn __init__(inout self, *cookies: Cookie):
+    fn __init__(out self, *cookies: Cookie):
         self._inner = Dict[String, String]()
         for cookie in cookies:
             self._inner[cookie[].name] = cookie[].value
 
-    fn parse_cookies(inout self, headers: Headers) raises:
+    fn parse_cookies(mut self, headers: Headers) raises:
         var cookie_header = headers[HeaderKey.COOKIE]
         if not cookie_header:
             return None
@@ -66,12 +66,12 @@ struct RequestCookieJar(Writable, Stringable):
             header_value.append(cookie[].key + equal + cookie[].value)
         return Header(HeaderKey.COOKIE, "; ".join(header_value))
 
-    fn encode_to(inout self, inout writer: ByteWriter):
+    fn encode_to(mut self, mut writer: ByteWriter):
         var header = self.to_header()
         if header:
             write_header(writer, header.value().key, header.value().value)
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         var header = self.to_header()
         if header:
             write_header(writer, header.value().key, header.value().value)
