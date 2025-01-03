@@ -1,9 +1,8 @@
-from utils import StaticTuple, StringRef
+from utils import StaticTuple
 from time import sleep
 from memory import UnsafePointer, OwnedPointer
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call
-from lightbug_http.strings import NetworkType
 from lightbug_http.strings import NetworkType, to_string
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
@@ -29,7 +28,6 @@ from .libc import (
     ntohl,
     inet_pton,
     inet_ntop,
-    to_char_ptr,
     socket,
     connect,
     setsockopt,
@@ -42,6 +40,7 @@ from .libc import (
     close,
     getsockname,
     getpeername,
+    INET_ADDRSTRLEN
 )
 
 
@@ -112,7 +111,7 @@ struct NoTLSListener:
         self.__addr = addr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(out self, addr: TCPAddr, fd: c_int) raises:
+    fn __init__(out self, addr: TCPAddr, fd: c_int):
         self.__addr = addr
         self.fd = fd
 
@@ -134,9 +133,11 @@ struct NoTLSListener:
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
-        var close_status = close(self.fd)
-        if close_status == -1:
-            print("Failed to close listener")
+        try:
+            close(self.fd)
+        except:
+            print("Failed to close listener.")
+            raise
 
     fn addr(self) -> TCPAddr:
         return self.__addr
@@ -145,10 +146,7 @@ struct NoTLSListener:
 struct ListenConfig:
     var __keep_alive: Duration
 
-    fn __init__(out self) raises:
-        self.__keep_alive = default_tcp_keep_alive
-
-    fn __init__(out self, keep_alive: Duration):
+    fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self.__keep_alive = keep_alive
 
     fn listen(mut self, network: String, address: String) raises -> NoTLSListener:
@@ -163,7 +161,7 @@ struct ListenConfig:
             print("Socket creation error")
 
         var yes: Int = 1
-        var setsockopt_result = setsockopt(
+        setsockopt(
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
@@ -175,7 +173,7 @@ struct ListenConfig:
         var bind_fail_logged = False
 
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        var conv_status = inet_pton(address_family, to_char_ptr(addr.ip), ip_buf)
+        var conv_status = inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
@@ -205,8 +203,11 @@ struct ListenConfig:
                 _ = shutdown(sockfd, SHUT_RDWR)
                 sleep(UInt(1))
 
-        if listen(sockfd, c_int(128)) == -1:
+        try:
+            listen(sockfd, c_int(128))
+        except:
             print("Listen failed.\n on sockfd " + sockfd.__str__())
+            raise
 
         var listener = NoTLSListener(addr, sockfd)
 
@@ -267,9 +268,11 @@ struct SysConnection(Connection):
 
     fn close(self) raises:
         _ = shutdown(self.fd, SHUT_RDWR)
-        var close_status = close(self.fd)
-        if close_status == -1:
-            print("Failed to close connection")
+        try:
+            close(self.fd)
+        except:
+            print("Failed to close connection.", file=2)
+            raise
 
     fn local_addr(mut self) raises -> TCPAddr:
         return self.laddr
@@ -591,8 +594,8 @@ fn convert_binary_port_to_int(port: UInt16) -> Int:
     return int(ntohs(port))
 
 
-fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, address_length: UInt32) -> String:
-    """Convert a binary IP address to a string by calling inet_ntop.
+fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, address_length: UInt32) raises -> String:
+    """Convert a binary IP address to a string by calling `inet_ntop`.
 
     Args:
         ip_address: The binary IP address.
@@ -604,36 +607,28 @@ fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, 
     """
     # It seems like the len of the buffer depends on the length of the string IP.
     # Allocating 10 works for localhost (127.0.0.1) which I suspect is 9 bytes + 1 null terminator byte. So max should be 16 (15 + 1).
-    var ip_buffer = UnsafePointer[c_void].alloc(16)
-    var ip_address_ptr = UnsafePointer.address_of(ip_address).bitcast[c_void]()
-    _ = inet_ntop(address_family, ip_address_ptr, ip_buffer, 16)
-
-    var string_buf = ip_buffer.bitcast[Int8]()
-    var index = 0
-    while True:
-        if string_buf[index] == 0:
-            break
-        index += 1
-
-    return StringRef(string_buf, index)
+    var ip_buffer = UnsafePointer[c_void].alloc(INET_ADDRSTRLEN)
+    return inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), ip_buffer, INET_ADDRSTRLEN)
 
 
 fn get_sock_name(fd: Int32) raises -> HostPort:
     """Return the address of the socket."""
     var local_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var local_address_ptr_size = socklen_t(sizeof[sockaddr]())
-    var status = getsockname(
-        fd,
-        local_address_ptr,
-        UnsafePointer[socklen_t].address_of(local_address_ptr_size),
-    )
-    if status == -1:
-        raise Error("get_sock_name: Failed to get address of local socket.")
+    try:
+        getsockname(
+            fd,
+            local_address_ptr,
+            UnsafePointer[socklen_t].address_of(local_address_ptr_size),
+        )
+    except:
+        print("get_sock_name: Failed to get address of local socket.")
+        raise
     var addr_in = local_address_ptr.bitcast[sockaddr_in]()[]
 
     return HostPort(
-        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
-        port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
+        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
+        port=str(convert_binary_port_to_int(addr_in.sin_port)),
     )
 
 
@@ -642,19 +637,21 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
     var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
     var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
 
-    var status = getpeername(
-        fd,
-        remote_address_ptr,
-        UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
-    )
-    if status == -1:
-        raise Error("get_peer_name: Failed to get address of remote socket.")
+    try:
+        getpeername(
+            fd,
+            remote_address_ptr,
+            UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
+        )
+    except:
+        print("get_peer_name: Failed to get address of remote socket.")
+        raise
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
     var addr_in = remote_address_ptr.bitcast[sockaddr_in]()[]
 
     return HostPort(
-        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, 16),
+        host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
         port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
     )
 

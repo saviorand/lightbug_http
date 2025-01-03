@@ -1,5 +1,5 @@
 from utils import Variant
-from lightbug_http.io.bytes import Bytes, bytes_equal, bytes
+from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import (
     strSlash,
     strHttp11,
