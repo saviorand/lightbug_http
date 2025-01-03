@@ -105,95 +105,91 @@ alias socklen_t = c_uint
 alias in_addr_t = c_uint
 alias in_port_t = c_ushort
 
+# TODO: These might vary on each platform...we should confirm this.
+# Taken from: https://github.com/openbsd/src/blob/master/sys/sys/socket.h#L250
 # Address Family Constants
-alias AF_UNSPEC = 0
-alias AF_UNIX = 1
-alias AF_LOCAL = AF_UNIX
-alias AF_INET = 2
-alias AF_AX25 = 3
-alias AF_IPX = 4
-alias AF_APPLETALK = 5
-alias AF_NETROM = 6
-alias AF_BRIDGE = 7
-alias AF_ATMPVC = 8
-alias AF_X25 = 9
-alias AF_INET6 = 10
-alias AF_ROSE = 11
-alias AF_DECnet = 12
-alias AF_NETBEUI = 13
-alias AF_SECURITY = 14
-alias AF_KEY = 15
-alias AF_NETLINK = 16
-alias AF_ROUTE = AF_NETLINK
-alias AF_PACKET = 17
-alias AF_ASH = 18
-alias AF_ECONET = 19
-alias AF_ATMSVC = 20
-alias AF_RDS = 21
-alias AF_SNA = 22
-alias AF_IRDA = 23
-alias AF_PPPOX = 24
-alias AF_WANPIPE = 25
-alias AF_LLC = 26
-alias AF_CAN = 29
-alias AF_TIPC = 30
-alias AF_BLUETOOTH = 31
-alias AF_IUCV = 32
-alias AF_RXRPC = 33
-alias AF_ISDN = 34
-alias AF_PHONET = 35
-alias AF_IEEE802154 = 36
-alias AF_CAIF = 37
-alias AF_ALG = 38
-alias AF_NFC = 39
-alias AF_VSOCK = 40
-alias AF_KCM = 41
-alias AF_QIPCRTR = 42
-alias AF_MAX = 43
+alias AF_UNSPEC = 0  # unspecified
+alias AF_UNIX = 1  # local to host
+alias AF_LOCAL = AF_UNIX  # draft POSIX compatibility
+alias AF_INET = 2  # internetwork: UDP, TCP, etc.
+alias AF_IMPLINK = 3  # arpanet imp addresses
+alias AF_PUP = 4  # pup protocols: e.g. BSP
+alias AF_CHAOS = 5  # mit CHAOS protocols
+alias AF_NS = 6  # XEROX NS protocols
+alias AF_ISO = 7  # ISO protocols
+alias AF_OSI = AF_ISO
+alias AF_ECMA = 8  # european computer manufacturers
+alias AF_DATAKIT = 9  # datakit protocols
+alias AF_CCITT = 10  # CCITT protocols, X.25 etc
+alias AF_SNA = 11  # IBM SNA
+alias AF_DECnet = 12  # DECnet
+alias AF_DLI = 13  # DEC Direct data link interface
+alias AF_LAT = 14  # LAT
+alias AF_HYLINK = 15  # NSC Hyperchannel
+alias AF_APPLETALK = 16  # Apple Talk
+alias AF_ROUTE = 17  # Internal Routing Protocol
+alias AF_LINK = 18  # Link layer interface
+alias pseudo_AF_XTP = 19  # eXpress Transfer Protocol (no AF)
+alias AF_COIP = 20  # connection-oriented IP, aka ST II
+alias AF_CNT = 21  # Computer Network Technology
+alias pseudo_AF_RTIP = 22  # Help Identify RTIP packets
+alias AF_IPX = 23  # Novell Internet Protocol
+alias AF_INET6 = 24  # IPv6
+alias pseudo_AF_PIP = 25  # Help Identify PIP packets
+alias AF_ISDN = 26  # Integrated Services Digital Network
+alias AF_E164 = AF_ISDN  # CCITT E.164 recommendation
+alias AF_NATM = 27  # native ATM access
+alias AF_ENCAP = 28
+alias AF_SIP = 29  # Simple Internet Protocol
+alias AF_KEY = 30
+alias pseudo_AF_HDRCMPLT = 31  # Used by BPF to not rewrite headers in interface output routine
+alias AF_BLUETOOTH = 32  # Bluetooth
+alias AF_MPLS = 33              # MPLS
+alias pseudo_AF_PFLOW = 34  # pflow
+alias pseudo_AF_PIPEX = 35  # PIPEX
+alias AF_FRAME = 36  # frame (Ethernet) sockets
+alias AF_MAX = 37
 
+# Protocol families, same as address families for now.
 alias PF_UNSPEC = AF_UNSPEC
-alias PF_UNIX = AF_UNIX
 alias PF_LOCAL = AF_LOCAL
+alias PF_UNIX = AF_UNIX
 alias PF_INET = AF_INET
-alias PF_AX25 = AF_AX25
-alias PF_IPX = AF_IPX
-alias PF_APPLETALK = AF_APPLETALK
-alias PF_NETROM = AF_NETROM
-alias PF_BRIDGE = AF_BRIDGE
-alias PF_ATMPVC = AF_ATMPVC
-alias PF_X25 = AF_X25
-alias PF_INET6 = AF_INET6
-alias PF_ROSE = AF_ROSE
-alias PF_DECnet = AF_DECnet
-alias PF_NETBEUI = AF_NETBEUI
-alias PF_SECURITY = AF_SECURITY
-alias PF_KEY = AF_KEY
-alias PF_NETLINK = AF_NETLINK
-alias PF_ROUTE = AF_ROUTE
-alias PF_PACKET = AF_PACKET
-alias PF_ASH = AF_ASH
-alias PF_ECONET = AF_ECONET
-alias PF_ATMSVC = AF_ATMSVC
-alias PF_RDS = AF_RDS
+alias PF_IMPLINK = AF_IMPLINK
+alias PF_PUP = AF_PUP
+alias PF_CHAOS = AF_CHAOS
+alias PF_NS = AF_NS
+alias PF_ISO = AF_ISO
+alias PF_OSI = AF_ISO
+alias PF_ECMA = AF_ECMA
+alias PF_DATAKIT = AF_DATAKIT
+alias PF_CCITT = AF_CCITT
 alias PF_SNA = AF_SNA
-alias PF_IRDA = AF_IRDA
-alias PF_PPPOX = AF_PPPOX
-alias PF_WANPIPE = AF_WANPIPE
-alias PF_LLC = AF_LLC
-alias PF_CAN = AF_CAN
-alias PF_TIPC = AF_TIPC
-alias PF_BLUETOOTH = AF_BLUETOOTH
-alias PF_IUCV = AF_IUCV
-alias PF_RXRPC = AF_RXRPC
+alias PF_DECnet = AF_DECnet
+alias PF_DLI = AF_DLI
+alias PF_LAT = AF_LAT
+alias PF_HYLINK = AF_HYLINK
+alias PF_APPLETALK = AF_APPLETALK
+alias PF_ROUTE = AF_ROUTE
+alias PF_LINK = AF_LINK
+alias PF_XTP = pseudo_AF_XTP # really just proto family, no AF
+alias PF_COIP = AF_COIP
+alias PF_CNT = AF_CNT
+alias PF_IPX = AF_IPX  # same format as = AF_NS
+alias PF_INET6 = AF_INET6
+alias PF_RTIP = pseudo_AF_RTIP # same format as AF_INET
+alias PF_PIP = pseudo_AF_PIP
 alias PF_ISDN = AF_ISDN
-alias PF_PHONET = AF_PHONET
-alias PF_IEEE802154 = AF_IEEE802154
-alias PF_CAIF = AF_CAIF
-alias PF_ALG = AF_ALG
-alias PF_NFC = AF_NFC
-alias PF_VSOCK = AF_VSOCK
-alias PF_KCM = AF_KCM
-alias PF_QIPCRTR = AF_QIPCRTR
+alias PF_NATM = AF_NATM
+alias PF_ENCAP = AF_ENCAP
+alias PF_SIP = AF_SIP
+alias PF_KEY = AF_KEY
+alias PF_BPF = pseudo_AF_HDRCMPLT
+alias PF_BLUETOOTH = AF_BLUETOOTH
+alias PF_MPLS = AF_MPLS
+alias PF_PFLOW = pseudo_AF_PFLOW
+alias PF_PIPEX = pseudo_AF_PIPEX
+alias PF_FRAME = AF_FRAME
 alias PF_MAX = AF_MAX
 
 # Socket Type constants
@@ -223,85 +219,38 @@ alias SHUT_RD = 0
 alias SHUT_WR = 1
 alias SHUT_RDWR = 2
 
-alias SOL_SOCKET = 1
+alias SOL_SOCKET = 0xffff
 
-alias SO_DEBUG = 1
-alias SO_REUSEADDR = 2
-alias SO_TYPE = 3
-alias SO_ERROR = 4
-alias SO_DONTROUTE = 5
-alias SO_BROADCAST = 6
-alias SO_SNDBUF = 7
-alias SO_RCVBUF = 8
-alias SO_KEEPALIVE = 9
-alias SO_OOBINLINE = 10
-alias SO_NO_CHECK = 11
-alias SO_PRIORITY = 12
-alias SO_LINGER = 13
-alias SO_BSDCOMPAT = 14
-alias SO_REUSEPORT = 15
-alias SO_PASSCRED = 16
-alias SO_PEERCRED = 17
-alias SO_RCVLOWAT = 18
-alias SO_SNDLOWAT = 19
-alias SO_RCVTIMEO = 20
-alias SO_SNDTIMEO = 21
-alias SO_RCVTIMEO_OLD = 20
-alias SO_SNDTIMEO_OLD = 21
-alias SO_SECURITY_AUTHENTICATION = 22
-alias SO_SECURITY_ENCRYPTION_TRANSPORT = 23
-alias SO_SECURITY_ENCRYPTION_NETWORK = 24
-alias SO_BINDTODEVICE = 25
-alias SO_ATTACH_FILTER = 26
-alias SO_DETACH_FILTER = 27
-alias SO_GET_FILTER = SO_ATTACH_FILTER
-alias SO_PEERNAME = 28
-alias SO_TIMESTAMP = 29
-alias SO_TIMESTAMP_OLD = 29
-alias SO_ACCEPTCONN = 30
-alias SO_PEERSEC = 31
-alias SO_SNDBUFFORCE = 32
-alias SO_RCVBUFFORCE = 33
-alias SO_PASSSEC = 34
-alias SO_TIMESTAMPNS = 35
-alias SO_TIMESTAMPNS_OLD = 35
-alias SO_MARK = 36
-alias SO_TIMESTAMPING = 37
-alias SO_TIMESTAMPING_OLD = 37
-alias SO_PROTOCOL = 38
-alias SO_DOMAIN = 39
-alias SO_RXQ_OVFL = 40
-alias SO_WIFI_STATUS = 41
-alias SCM_WIFI_STATUS = SO_WIFI_STATUS
-alias SO_PEEK_OFF = 42
-alias SO_NOFCS = 43
-alias SO_LOCK_FILTER = 44
-alias SO_SELECT_ERR_QUEUE = 45
-alias SO_BUSY_POLL = 46
-alias SO_MAX_PACING_RATE = 47
-alias SO_BPF_EXTENSIONS = 48
-alias SO_INCOMING_CPU = 49
-alias SO_ATTACH_BPF = 50
-alias SO_DETACH_BPF = SO_DETACH_FILTER
-alias SO_ATTACH_REUSEPORT_CBPF = 51
-alias SO_ATTACH_REUSEPORT_EBPF = 52
-alias SO_CNX_ADVICE = 53
-alias SCM_TIMESTAMPING_OPT_STATS = 54
-alias SO_MEMINFO = 55
-alias SO_INCOMING_NAPI_ID = 56
-alias SO_COOKIE = 57
-alias SCM_TIMESTAMPING_PKTINFO = 58
-alias SO_PEERGROUPS = 59
-alias SO_ZEROCOPY = 60
-alias SO_TXTIME = 61
-alias SCM_TXTIME = SO_TXTIME
-alias SO_BINDTOIFINDEX = 62
-alias SO_TIMESTAMP_NEW = 63
-alias SO_TIMESTAMPNS_NEW = 64
-alias SO_TIMESTAMPING_NEW = 65
-alias SO_RCVTIMEO_NEW = 66
-alias SO_SNDTIMEO_NEW = 67
-alias SO_DETACH_REUSEPORT_BPF = 68
+# Socket option flags
+# TODO: These are probably platform specific, on MacOS I have these values, but we should check on Linux.
+# Taken from: https://github.com/openbsd/src/blob/master/sys/sys/socket.h
+alias SO_DEBUG = 0x0001
+alias SO_ACCEPTCONN = 0x0002
+alias SO_REUSEADDR = 0x0004
+alias SO_KEEPALIVE = 0x0008
+alias SO_DONTROUTE = 0x0010
+alias SO_BROADCAST = 0x0020
+alias SO_USELOOPBACK = 0x0040
+alias SO_LINGER = 0x0080
+alias SO_OOBINLINE = 0x0100
+alias SO_REUSEPORT = 0x0200
+alias SO_TIMESTAMP = 0x0800
+alias SO_BINDANY = 0x1000
+alias SO_ZEROIZE = 0x2000
+alias SO_SNDBUF = 0x1001
+alias SO_RCVBUF = 0x1002
+alias SO_SNDLOWAT = 0x1003
+alias SO_RCVLOWAT = 0x1004
+alias SO_SNDTIMEO = 0x1005
+alias SO_RCVTIMEO = 0x1006
+alias SO_ERROR = 0x1007
+alias SO_TYPE = 0x1008
+alias SO_NETPROC = 0x1020
+alias SO_RTABLE = 0x1021
+alias SO_PEERCRED = 0x1022
+alias SO_SPLICE = 0x1023
+alias SO_DOMAIN = 0x1024
+alias SO_PROTOCOL = 0x1025
 
 
 # --- ( Network Related Structs )-----------------------------------------------
@@ -908,7 +857,7 @@ fn getpeername(
             raise Error("getpeername: An error occurred while getting the socket name. Error code: " + str(errno))
 
 
-fn _bind(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t) -> c_int:
+fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
     """Libc POSIX `bind` function.
 
     Args:
@@ -927,10 +876,10 @@ fn _bind(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
     """
-    return external_call["bind", c_int, c_int, UnsafePointer[sockaddr], socklen_t](socket, address, address_len)
+    return external_call["bind", c_int, c_int, Pointer[sockaddr_in, origin], socklen_t](socket, address, address_len)
 
 
-fn bind(socket: c_int, address: UnsafePointer[sockaddr], address_len: socklen_t) raises:
+fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) raises:
     """Libc POSIX `bind` function.
 
     Args:

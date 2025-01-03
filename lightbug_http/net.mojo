@@ -157,23 +157,18 @@ struct ListenConfig:
             ip_buf_size = 16
 
         var sockfd = socket(address_family, SOCK_STREAM, 0)
-        if sockfd == -1:
-            print("Socket creation error")
-
-        var yes: Int = 1
         setsockopt(
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
-            UnsafePointer[Int].address_of(yes).bitcast[c_void](),
+            UnsafePointer[c_void].address_of(1),
             sizeof[Int](),
         )
 
         var bind_success = False
         var bind_fail_logged = False
-
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        var conv_status = inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
+        inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
         var raw_ip = ip_buf.bitcast[c_uint]()[]
         var bin_port = htons(UInt16(addr.port))
 
@@ -186,21 +181,17 @@ struct ListenConfig:
             sin_zero=StaticTuple[c_char, 8]()
         )
 
-        var ai_ptr = Pointer.address_of(ai)
-
         while not bind_success:
-            # TODO: was removed when switching to 24.5, add this back
-            # var bind = bind(sockfd, ai_ptr, sizeof[sockaddr_in]())
-            var bind = external_call["bind", c_int](sockfd, ai_ptr, sizeof[sockaddr_in]())
-            if bind == 0:
+            try:
+                bind(sockfd, Pointer.address_of(ai), sizeof[sockaddr_in]())
                 bind_success = True
-            else:
+            except e:
                 if not bind_fail_logged:
-                    print("Bind attempt failed. The address might be in use or the socket might not be available.")
+                    print("Bind attempt failed: ", e)
                     print("Retrying. Might take 10-15 seconds.")
                     bind_fail_logged = True
                 print(".", end="", flush=True)
-                _ = shutdown(sockfd, SHUT_RDWR)
+                shutdown(sockfd, SHUT_RDWR)
                 sleep(UInt(1))
 
         try:
