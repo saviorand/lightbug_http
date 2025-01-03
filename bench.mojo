@@ -62,7 +62,7 @@ var headers_struct = Headers(
 
 
 @parameter
-fn lightbug_benchmark_response_encode(inout b: Bencher):
+fn lightbug_benchmark_response_encode(mut b: Bencher):
     @always_inline
     @parameter
     fn response_encode():
@@ -73,7 +73,7 @@ fn lightbug_benchmark_response_encode(inout b: Bencher):
 
 
 @parameter
-fn lightbug_benchmark_response_parse(inout b: Bencher):
+fn lightbug_benchmark_response_parse(mut b: Bencher):
     @always_inline
     @parameter
     fn response_parse():
@@ -87,7 +87,7 @@ fn lightbug_benchmark_response_parse(inout b: Bencher):
 
 
 @parameter
-fn lightbug_benchmark_request_parse(inout b: Bencher):
+fn lightbug_benchmark_request_parse(mut b: Bencher):
     @always_inline
     @parameter
     fn request_parse():
@@ -101,7 +101,7 @@ fn lightbug_benchmark_request_parse(inout b: Bencher):
 
 
 @parameter
-fn lightbug_benchmark_request_encode(inout b: Bencher):
+fn lightbug_benchmark_request_encode(mut b: Bencher):
     @always_inline
     @parameter
     fn request_encode():
@@ -116,7 +116,7 @@ fn lightbug_benchmark_request_encode(inout b: Bencher):
 
 
 @parameter
-fn lightbug_benchmark_header_encode(inout b: Bencher):
+fn lightbug_benchmark_header_encode(mut b: Bencher):
     @always_inline
     @parameter
     fn header_encode():
@@ -128,7 +128,7 @@ fn lightbug_benchmark_header_encode(inout b: Bencher):
 
 
 @parameter
-fn lightbug_benchmark_header_parse(inout b: Bencher):
+fn lightbug_benchmark_header_parse(mut b: Bencher):
     @always_inline
     @parameter
     fn header_parse():

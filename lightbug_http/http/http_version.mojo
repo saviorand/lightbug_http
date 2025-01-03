@@ -4,7 +4,7 @@
 struct HttpVersion(EqualityComparable, Stringable):
     var _v: Int
 
-    fn __init__(inout self, version: String) raises:
+    fn __init__(out self, version: String) raises:
         self._v = int(version[version.find("/") + 1])
 
     fn __eq__(self, other: Self) -> Bool:

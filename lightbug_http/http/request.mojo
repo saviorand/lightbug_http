@@ -65,7 +65,7 @@ struct HTTPRequest(Writable, Stringable):
         return request
 
     fn __init__(
-        inout self,
+        mut self,
         uri: URI,
         headers: Headers = Headers(),
         cookies: RequestCookieJar = RequestCookieJar(),
@@ -89,24 +89,24 @@ struct HTTPRequest(Writable, Stringable):
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
 
-    fn set_connection_close(inout self):
+    fn set_connection_close(mut self):
         self.headers[HeaderKey.CONNECTION] = "close"
 
-    fn set_content_length(inout self, l: Int):
+    fn set_content_length(mut self, l: Int):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     fn connection_close(self) -> Bool:
         return self.headers[HeaderKey.CONNECTION] == "close"
 
     @always_inline
-    fn read_body(inout self, inout r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
+    fn read_body(mut self, mut r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
         if content_length > max_body_size:
             raise Error("Request body too large")
 
         r.consume(self.body_raw, content_length)
         self.set_content_length(content_length)
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         writer.write(self.method, whitespace)
         path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
@@ -125,7 +125,7 @@ struct HTTPRequest(Writable, Stringable):
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    fn _encoded(inout self) -> Bytes:
+    fn _encoded(mut self) -> Bytes:
         """Encodes request as bytes.
 
         This method consumes the data in this request and it should

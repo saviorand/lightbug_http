@@ -8,5 +8,5 @@ from lightbug_http.strings import to_string
 
 
 trait DefaultConstructible:
-    fn __init__(inout self) raises:
+    fn __init__(out self) raises:
         ...

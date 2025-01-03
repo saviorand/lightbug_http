@@ -2,7 +2,7 @@ from lightbug_http import *
 from lightbug_http.client import Client
 
 
-fn test_request(inout client: Client) raises -> None:
+fn test_request(mut client: Client) raises -> None:
     var uri = URI.parse_raises("google.com")
     var headers = Headers(Header("Host", "google.com"))
     var request = HTTPRequest(uri, headers)

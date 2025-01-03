@@ -43,7 +43,7 @@ struct URI(Writable, Stringable):
         return u
 
     fn __init__(
-        inout self,
+        mut self,
         uri: String = "",
     ) -> None:
         self.__path_original = "/"
@@ -63,7 +63,7 @@ struct URI(Writable, Stringable):
             s += "?" + self.query_string
         return s
 
-    fn write_to[T: Writer](self, inout writer: T):
+    fn write_to[T: Writer](self, mut writer: T):
         writer.write(str(self))
 
     fn is_https(self) -> Bool:
@@ -72,7 +72,7 @@ struct URI(Writable, Stringable):
     fn is_http(self) -> Bool:
         return self.scheme == http or len(self.scheme) == 0
 
-    fn _parse(inout self) raises -> None:
+    fn _parse(mut self) raises -> None:
         var raw_uri = self.full_uri
         var proto_str = String(strHttp11)
         var is_https = False

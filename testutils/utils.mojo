@@ -38,7 +38,7 @@ struct ReqInfo:
     var host: String
     var is_tls: Bool
 
-    fn __init__(inout self, full_uri: URI, host: String, is_tls: Bool):
+    fn __init__(out self, full_uri: URI, host: String, is_tls: Bool):
         self.full_uri = full_uri
         self.host = host
         self.is_tls = is_tls
@@ -55,7 +55,7 @@ struct FakeClient(Client):
     var req_host: String
     var req_is_tls: Bool
 
-    fn __init__(inout self) raises:
+    fn __init__(out self) raises:
         self.host = "127.0.0.1"
         self.port = 8888
         self.name = "lightbug_http_fake_client"
@@ -63,7 +63,7 @@ struct FakeClient(Client):
         self.req_host = ""
         self.req_is_tls = False
 
-    fn __init__(inout self, host: StringLiteral, port: Int) raises:
+    fn __init__(out self, host: StringLiteral, port: Int) raises:
         self.host = host
         self.port = port
         self.name = "lightbug_http_fake_client"
@@ -74,7 +74,7 @@ struct FakeClient(Client):
     fn do(self, owned req: HTTPRequest) raises -> HTTPResponse:
         return OK(String(defaultExpectedGetResponse))
 
-    fn extract(inout self, req: HTTPRequest) raises -> ReqInfo:
+    fn extract(mut self, req: HTTPRequest) raises -> ReqInfo:
         var full_uri = req.uri()
         try:
             _ = full_uri.parse()
@@ -100,12 +100,12 @@ struct FakeServer(ServerTrait):
     var __listener: FakeListener
     var __handler: FakeResponder
 
-    fn __init__(inout self, listener: FakeListener, handler: FakeResponder):
+    fn __init__(out self, listener: FakeListener, handler: FakeResponder):
         self.__listener = listener
         self.__handler = handler
 
     fn __init__(
-        inout self,
+        mut self,
         addr: String,
         service: HTTPService,
         error_handler: ErrorHandler,
@@ -121,7 +121,7 @@ struct FakeServer(ServerTrait):
     ) raises -> None:
         ...
 
-    fn serve(inout self) -> None:
+    fn serve(mut self) -> None:
         while not self.__listener.closed:
             try:
                 _ = self.__listener.accept()
@@ -134,7 +134,7 @@ struct FakeServer(ServerTrait):
 
 @value
 struct FakeResponder(HTTPService):
-    fn func(inout self, req: HTTPRequest) raises -> HTTPResponse:
+    fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         var method = req.method
         if method != "GET":
             raise Error("Did not expect a non-GET request! Got: " + method)
@@ -143,13 +143,13 @@ struct FakeResponder(HTTPService):
 
 @value
 struct FakeConnection(Connection):
-    fn __init__(inout self, laddr: String, raddr: String) raises:
+    fn __init__(out self, laddr: String, raddr: String) raises:
         ...
 
-    fn __init__(inout self, laddr: TCPAddr, raddr: TCPAddr) raises:
+    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr) raises:
         ...
 
-    fn read(self, inout buf: Bytes) raises -> Int:
+    fn read(self, mut buf: Bytes) raises -> Int:
         return 0
 
     fn write(self, buf: Bytes) raises -> Int:
@@ -158,7 +158,7 @@ struct FakeConnection(Connection):
     fn close(self) raises:
         ...
 
-    fn local_addr(inout self) raises -> TCPAddr:
+    fn local_addr(mut self) raises -> TCPAddr:
         return TCPAddr()
 
     fn remote_addr(self) raises -> TCPAddr:
@@ -171,17 +171,17 @@ struct FakeListener:
     var request: Bytes
     var closed: Bool
 
-    fn __init__(inout self):
+    fn __init__(out self):
         self.request_count = 0
         self.request = Bytes()
         self.closed = False
 
-    fn __init__(inout self, addr: TCPAddr):
+    fn __init__(out self, addr: TCPAddr):
         self.request_count = 0
         self.request = Bytes()
         self.closed = False
 
-    fn __init__(inout self, request_count: Int, request: Bytes):
+    fn __init__(out self, request_count: Int, request: Bytes):
         self.request_count = request_count
         self.request = request
         self.closed = False
@@ -205,14 +205,14 @@ struct TestStruct:
     var d: Int
     var e: TestStructNested
 
-    fn __init__(inout self, a: String, b: String) -> None:
+    fn __init__(out self, a: String, b: String) -> None:
         self.a = a
         self.b = b
         self.c = bytes("c")
         self.d = 1
         self.e = TestStructNested("a", 1)
 
-    fn set_a_direct(inout self, a: String) -> Self:
+    fn set_a_direct(mut self, a: String) -> Self:
         self.a = a
         return self
 
@@ -225,11 +225,11 @@ struct TestStructNested:
     var a: String
     var b: Int
 
-    fn __init__(inout self, a: String, b: Int) -> None:
+    fn __init__(out self, a: String, b: Int) -> None:
         self.a = a
         self.b = b
 
-    fn set_a_direct(inout self, a: String) -> Self:
+    fn set_a_direct(mut self, a: String) -> Self:
         self.a = a
         return self
 
