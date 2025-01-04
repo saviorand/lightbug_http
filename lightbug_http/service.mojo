@@ -12,66 +12,50 @@ trait HTTPService:
 @value
 struct Printer(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
-        var uri = req.uri
-        print("Request URI: ", to_string(uri.request_uri))
+        print("Request URI:", req.uri.request_uri)
+        print("Request protocol:", req.protocol)
+        print("Request method:", req.method)
+        print("Request Content-Type:", req.headers[HeaderKey.CONTENT_TYPE])
+        print("Request Body:", to_string(req.body_raw))
 
-        var header = req.headers
-        print("Request protocol: ", req.protocol)
-        print("Request method: ", req.method)
-        print("Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE]))
-
-        var body = req.body_raw
-        print("Request Body: ", to_string(body))
-
-        return OK(body)
+        return OK(req.body_raw)
 
 
 @value
 struct Welcome(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
-        var uri = req.uri
-
-        if uri.path == "/":
-            var html: Bytes
+        if req.uri.path == "/":
             with open("static/lightbug_welcome.html", "r") as f:
-                html = f.read_bytes()
-            return OK(html, "text/html; charset=utf-8")
+                return OK(f.read_bytes(), "text/html; charset=utf-8")
 
-        if uri.path == "/logo.png":
-            var image: Bytes
+        if req.uri.path == "/logo.png":
             with open("static/logo.png", "r") as f:
-                image = f.read_bytes()
-            return OK(image, "image/png")
+                return OK(f.read_bytes(), "image/png")
 
-        return NotFound(uri.path)
+        return NotFound(req.uri.path)
 
 
 @value
 struct ExampleRouter(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
-        var body = req.body_raw
-        var uri = req.uri
-
-        if uri.path == "/":
+        if req.uri.path == "/":
             print("I'm on the index path!")
-        if uri.path == "/first":
+        if req.uri.path == "/first":
             print("I'm on /first!")
-        elif uri.path == "/second":
+        elif req.uri.path == "/second":
             print("I'm on /second!")
-        elif uri.path == "/echo":
-            print(to_string(body))
+        elif req.uri.path == "/echo":
+            print(to_string(req.body_raw))
 
-        return OK(body)
+        return OK(req.body_raw)
 
 
 @value
 struct TechEmpowerRouter(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
-        var uri = req.uri
-
-        if uri.path == "/plaintext":
+        if req.uri.path == "/plaintext":
             return OK("Hello, World!", "text/plain")
-        elif uri.path == "/json":
+        elif req.uri.path == "/json":
             return OK('{"message": "Hello, World!"}', "application/json")
 
         return OK("Hello world!")  # text/plain is the default

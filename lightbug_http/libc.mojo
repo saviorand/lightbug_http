@@ -272,6 +272,10 @@ struct sockaddr:
     var sa_family: sa_family_t
     var sa_data: StaticTuple[c_char, 14]
 
+    fn __init__(out self, family: sa_family_t = 0, data: StaticTuple[c_char, 14] = StaticTuple[c_char, 14]()):
+        self.sa_family = family
+        self.sa_data = data
+
 
 @value
 @register_passable("trivial")
@@ -469,11 +473,11 @@ fn inet_ntop(
     if not result:
         var errno = get_errno()
         if errno == EAFNOSUPPORT:
-            raise Error("inet_ntop: `*src` was not an `AF_INET` or `AF_INET6` family address.")
+            raise Error("inet_ntop Error: `*src` was not an `AF_INET` or `AF_INET6` family address.")
         elif errno == ENOSPC:
-            raise Error("inet_ntop: The buffer size, `size`, was not large enough to store the presentation form of the address.")
+            raise Error("inet_ntop Error: The buffer size, `size`, was not large enough to store the presentation form of the address.")
         else:
-            raise Error("inet_ntop: An error occurred while converting the address. Error code: " + str(errno))
+            raise Error("inet_ntop Error: An error occurred while converting the address. Error code: " + str(errno))
     
     # We want the string representation of the address, so it's ok to take ownership of the pointer here.
     return String(ptr=result, length=int(size))
@@ -533,10 +537,10 @@ fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) 
     """
     var result = _inet_pton(af, src, dst)
     if result == 0:
-        raise Error("inet_pton: The input is not a valid address.")
+        raise Error("inet_pton Error: The input is not a valid address.")
     elif result == -1:
         var errno = get_errno()
-        raise Error("inet_pton: An error occurred while converting the address. Error code: " + str(errno))
+        raise Error("inet_pton Error: An error occurred while converting the address. Error code: " + str(errno))
 
 
 fn _socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
@@ -1239,7 +1243,7 @@ fn recv(
         flags: Flags to control the behaviour of the function.
     
     Returns:
-        The number of bytes received or -1 in case of failure.
+        The number of bytes received.
 
     #### C Function
     ```c
@@ -1253,21 +1257,21 @@ fn recv(
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
-            raise Error("recv: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
+            raise Error("ReceiveError: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
         elif errno == EBADF:
-            raise Error("recv: The argument `socket` is an invalid descriptor.")
+            raise Error("ReceiveError: The argument `socket` is an invalid descriptor.")
         elif errno == ECONNREFUSED:
-            raise Error("recv: The remote host refused to allow the network connection (typically because it is not running the requested service).")
+            raise Error("ReceiveError: The remote host refused to allow the network connection (typically because it is not running the requested service).")
         elif errno == EFAULT:
-            raise Error("recv: `buffer` points outside the process's address space.")
+            raise Error("ReceiveError: `buffer` points outside the process's address space.")
         elif errno == EINTR:
-            raise Error("recv: The receive was interrupted by delivery of a signal before any data were available.")
+            raise Error("ReceiveError: The receive was interrupted by delivery of a signal before any data were available.")
         elif errno == ENOTCONN:
-            raise Error("recv: The socket is not connected.")
+            raise Error("ReceiveError: The socket is not connected.")
         elif errno == ENOTSOCK:
-            raise Error("recv: The file descriptor is not associated with a socket.")
+            raise Error("ReceiveError: The file descriptor is not associated with a socket.")
         else:
-            raise Error("recv: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
+            raise Error("ReceiveError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
     
     return result
 

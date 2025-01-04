@@ -73,19 +73,18 @@ struct URI(Writable, Stringable):
         return self.scheme == http or len(self.scheme) == 0
 
     fn _parse(mut self) raises -> None:
-        var raw_uri = self.full_uri
         var proto_str = String(strHttp11)
         var is_https = False
 
-        var proto_end = raw_uri.find("://")
+        var proto_end = self.full_uri.find("://")
         var remainder_uri: String
         if proto_end >= 0:
-            proto_str = raw_uri[:proto_end]
+            proto_str = self.full_uri[:proto_end]
             if proto_str == https:
                 is_https = True
-            remainder_uri = raw_uri[proto_end + 3 :]
+            remainder_uri = self.full_uri[proto_end + 3 :]
         else:
-            remainder_uri = raw_uri
+            remainder_uri = self.full_uri
 
         self.scheme = proto_str^
 

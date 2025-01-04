@@ -19,19 +19,13 @@ from collections import Dict
 
 
 struct Client:
-    var host: StringLiteral
+    var host: String
     var port: Int
     var name: String
 
     var _connections: Dict[String, SysConnection]
 
-    fn __init__(out self):
-        self.host = "127.0.0.1"
-        self.port = 8888
-        self.name = "lightbug_http_client"
-        self._connections = Dict[String, SysConnection]()
-
-    fn __init__(out self, host: StringLiteral, port: Int):
+    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
@@ -46,8 +40,7 @@ struct Client:
                 pass
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
-        """
-        The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
+        """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
         It performs the following steps:
         1. Creates a connection to the server specified in the request.
@@ -58,40 +51,31 @@ struct Client:
 
         Note: The code assumes that the `HTTPRequest` object passed as an argument has a valid URI with a host and port specified.
 
-        Parameters
-        ----------
-        req : HTTPRequest :
-            An `HTTPRequest` object representing the request to be sent.
+        Args:
+            req: An `HTTPRequest` object representing the request to be sent.
 
-        Returns
-        -------
-        HTTPResponse :
+        Returns:
             The received response.
 
-        Raises
-        ------
-        Error :
-            If there is a failure in sending or receiving the message.
+        Raises:
+            Error: If there is a failure in sending or receiving the message.
         """
-        var uri = req.uri
-        var host = uri.host
-
-        if host == "":
+        if req.uri.host == "":
             raise Error("URI is nil")
         var is_tls = False
 
-        if uri.is_https():
+        if req.uri.is_https():
             is_tls = True
 
         var host_str: String
         var port: Int
 
-        if ":" in host:
-            var host_port = host.split(":")
+        if ":" in req.uri.host:
+            var host_port = req.uri.host.split(":")
             host_str = host_port[0]
             port = atol(host_port[1])
         else:
-            host_str = host
+            host_str = req.uri.host
             if is_tls:
                 port = 443
             else:
@@ -106,14 +90,22 @@ struct Client:
             conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
             self._connections[host_str] = conn
 
-        var bytes_sent = conn.write(encode(req))
-        if bytes_sent == -1:
+        var buffer = encode(req)
+        if buffer[-1] != 0:
+            buffer.append(0)
+        
+        var bytes_sent: Int
+        try:
+            bytes_sent = conn.write(buffer)
+        except e:
             # Maybe peer reset ungracefully, so try a fresh connection
             self._close_conn(host_str)
             if cached_connection:
                 return self.do(req^)
-            raise Error("Failed to send message")
+            print("Failed to send message", file=2)
+            raise e
 
+        # TODO: What if the response is too large for the buffer? We should read until the end of the response.
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
 

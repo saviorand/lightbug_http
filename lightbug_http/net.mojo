@@ -1,6 +1,6 @@
 from utils import StaticTuple
 from time import sleep
-from memory import UnsafePointer, OwnedPointer
+from memory import UnsafePointer, OwnedPointer, stack_allocation
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call
 from lightbug_http.strings import NetworkType, to_string
@@ -50,12 +50,6 @@ alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
 
 
 trait Connection(Movable):
-    fn __init__(out self, laddr: String, raddr: String) raises:
-        ...
-
-    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr) raises:
-        ...
-
     fn read(self, mut buf: Bytes) raises -> Int:
         ...
 
@@ -65,10 +59,10 @@ trait Connection(Movable):
     fn close(self) raises:
         ...
 
-    fn local_addr(mut self) raises -> TCPAddr:
+    fn local_addr(mut self) -> TCPAddr:
         ...
 
-    fn remote_addr(self) raises -> TCPAddr:
+    fn remote_addr(self) -> TCPAddr:
         ...
 
 
@@ -85,8 +79,7 @@ trait Addr(CollectionElement, Stringable):
 
 trait AnAddrInfo:
     fn get_ip_address(self, host: String) raises -> in_addr:
-        """
-        TODO: Once default functions can be implemented in traits, this function should use the functions currently
+        """TODO: Once default functions can be implemented in traits, this function should use the functions currently
         implemented in the `addrinfo_macos` and `addrinfo_unix` structs.
         """
         ...
@@ -94,12 +87,13 @@ trait AnAddrInfo:
 
 @value
 struct NoTLSListener:
-    """
-    A TCP listener that listens for incoming connections and can accept them.
+    """A TCP listener that listens for incoming connections and can accept them.
     """
 
     var fd: c_int
+    """The file descriptor of the listener."""
     var __addr: TCPAddr
+    """The address of the listener."""
 
     fn __init__(out self) raises:
         self.__addr = TCPAddr("localhost", 8080)
@@ -114,12 +108,10 @@ struct NoTLSListener:
         self.fd = fd
 
     fn accept(self) raises -> SysConnection:
-        var their_addr = sockaddr(0, StaticTuple[c_char, 14]())
-        var sin_size = socklen_t(sizeof[socklen_t]())
-        
+        var their_addr = sockaddr()        
         var new_sockfd: c_int
         try:
-            new_sockfd = accept(self.fd, Pointer.address_of(their_addr), Pointer.address_of(sin_size))
+            new_sockfd = accept(self.fd, Pointer.address_of(their_addr), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
         except:
             print("Failed to accept connection, system `accept()` returned an error.", file=2)
             raise
@@ -169,15 +161,11 @@ struct ListenConfig:
         var bind_fail_logged = False
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
         inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
-        var raw_ip = ip_buf.bitcast[c_uint]()[]
-        var bin_port = htons(UInt16(addr.port))
-
-        var addr_struct = in_addr(s_addr=raw_ip)
 
         var ai = sockaddr_in(
             sin_family=address_family,
-            sin_port=bin_port,
-            sin_addr=addr_struct,
+            sin_port=htons(UInt16(addr.port)),
+            sin_addr=in_addr(ip_buf.bitcast[c_uint]().take_pointee()),
             sin_zero=StaticTuple[c_char, 8]()
         )
 
@@ -224,7 +212,7 @@ struct SysConnection(Connection):
         self.laddr = laddr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
-    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int) raises:
+    fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int):
         self.raddr = raddr
         self.laddr = laddr
         self.fd = fd
@@ -236,39 +224,33 @@ struct SysConnection(Connection):
             buf.capacity - buf.size,
             0,
         )
-        if bytes_recv == -1:
-            return 0
         buf.size += bytes_recv
-        if bytes_recv == 0:
-            return 0
         return bytes_recv
 
-    fn write(self, owned msg: String) raises -> Int:
-        var bytes_sent = send(self.fd, msg.unsafe_ptr(), len(msg), 0)
-        if bytes_sent == -1:
-            print("Failed to send response")
-        return bytes_sent
+    fn write(self, msg: String) raises -> Int:
+        return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
 
     fn write(self, buf: Bytes) raises -> Int:
-        var content = to_string(buf)
-        var bytes_sent = send(self.fd, content.unsafe_ptr(), len(content), 0)
-        if bytes_sent == -1:
-            print("Failed to send response")
-        _ = content
-        return bytes_sent
+        if buf[-1] != 0:
+            raise Error("SysConnection.write: Buffer must be null-terminated.")
+        return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
 
     fn close(self) raises:
-        _ = shutdown(self.fd, SHUT_RDWR)
+        try:
+            shutdown(self.fd, SHUT_RDWR)
+        except:
+            print("Failed to shutdown connection.", file=2)
+        
         try:
             close(self.fd)
         except:
             print("Failed to close connection.", file=2)
             raise
 
-    fn local_addr(mut self) raises -> TCPAddr:
+    fn local_addr(mut self) -> TCPAddr:
         return self.laddr
 
-    fn remote_addr(self) raises -> TCPAddr:
+    fn remote_addr(self) -> TCPAddr:
         return self.raddr
 
 
@@ -313,10 +295,12 @@ struct addrinfo_macos(AnAddrInfo):
     fn get_ip_address(self, host: String) raises -> in_addr:       
         """Returns an IP address based on the host.
         This is a MacOS-specific implementation.
+        
         Args:
             host: String - The host to get the IP from.
+
         Returns:
-            in_addr - The IP address.
+            The IP address.
         """
         var result = UnsafePointer[Self]()
         var hints = Self(
@@ -475,7 +459,7 @@ struct TCPAddr(Addr):
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
     var host: String = ""
     var port: String = ""
-    var portnum: Int = 0
+    var port_number = 0
     if (
         network == NetworkType.tcp.value
         or network == NetworkType.tcp4.value
@@ -488,7 +472,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
             var host_port = split_host_port(address)
             host = host_port.host
             port = host_port.port
-            portnum = atol(port.__str__())
+            port_number = atol(str(port))
     elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":
             host = address
@@ -496,7 +480,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         raise Error("Unix addresses not supported yet")
     else:
         raise Error("unsupported network type: " + network)
-    return TCPAddr(host, portnum)
+    return TCPAddr(host, port_number)
 
 
 fn join_host_port(host: String, port: String) -> String:
@@ -505,8 +489,8 @@ fn join_host_port(host: String, port: String) -> String:
     return host + ":" + port
 
 
-alias missingPortError = Error("missing port in address")
-alias tooManyColonsError = Error("too many colons in address")
+alias MissingPortError = Error("missing port in address")
+alias TooManyColonsError = Error("too many colons in address")
 
 
 struct HostPort:
@@ -526,26 +510,26 @@ fn split_host_port(hostport: String) raises -> HostPort:
     var k: Int = 0
 
     if colon_index == -1:
-        raise missingPortError
+        raise MissingPortError
     if hostport[0] == "[":
         var end_bracket_index = hostport.find("]")
         if end_bracket_index == -1:
             raise Error("missing ']' in address")
         if end_bracket_index + 1 == len(hostport):
-            raise missingPortError
+            raise MissingPortError
         elif end_bracket_index + 1 == colon_index:
             host = hostport[1:end_bracket_index]
             j = 1
             k = end_bracket_index + 1
         else:
             if hostport[end_bracket_index + 1] == ":":
-                raise tooManyColonsError
+                raise TooManyColonsError
             else:
-                raise missingPortError
+                raise MissingPortError
     else:
         host = hostport[:colon_index]
         if host.find(":") != -1:
-            raise tooManyColonsError
+            raise TooManyColonsError
     if hostport[j:].find("[") != -1:
         raise Error("unexpected '[' in address")
     if hostport[k:].find("]") != -1:
@@ -553,7 +537,7 @@ fn split_host_port(hostport: String) raises -> HostPort:
     port = hostport[colon_index + 1 :]
 
     if port == "":
-        raise missingPortError
+        raise MissingPortError
     if host == "":
         raise Error("missing host")
     return HostPort(host, port)
@@ -574,27 +558,24 @@ fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, 
     Returns:
         The IP address as a string.
     """
-    # It seems like the len of the buffer depends on the length of the string IP.
-    # Allocating 10 works for localhost (127.0.0.1) which I suspect is 9 bytes + 1 null terminator byte. So max should be 16 (15 + 1).
     var ip_buffer = UnsafePointer[c_void].alloc(INET_ADDRSTRLEN)
     return inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), ip_buffer, INET_ADDRSTRLEN)
 
 
 fn get_sock_name(fd: Int32) raises -> HostPort:
     """Return the address of the socket."""
-    var local_address_ptr = UnsafePointer[sockaddr].alloc(1)
-    var local_address_ptr_size = socklen_t(sizeof[sockaddr]())
+    var local_address = stack_allocation[1, sockaddr]()
     try:
         getsockname(
             fd,
-            local_address_ptr,
-            UnsafePointer[socklen_t].address_of(local_address_ptr_size),
+            local_address,
+            UnsafePointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
-    except:
-        print("get_sock_name: Failed to get address of local socket.")
-        raise
-    var addr_in = local_address_ptr.bitcast[sockaddr_in]()[]
+    except e:
+        print("get_sock_name: Failed to get address of local socket.", file=2)
+        raise e
 
+    var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
         port=str(convert_binary_port_to_int(addr_in.sin_port)),
@@ -603,25 +584,22 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
 
 fn get_peer_name(fd: Int32) raises -> HostPort:
     """Return the address of the peer connected to the socket."""
-    var remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
-    var remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
-
+    var remote_address = stack_allocation[1, sockaddr]()
     try:
         getpeername(
             fd,
-            remote_address_ptr,
-            UnsafePointer[socklen_t].address_of(remote_address_ptr_size),
+            remote_address,
+            UnsafePointer[socklen_t].address_of(socklen_t(sizeof[sockaddr]())),
         )
     except:
         print("get_peer_name: Failed to get address of remote socket.")
         raise
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
-    var addr_in = remote_address_ptr.bitcast[sockaddr_in]()[]
-
+    var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
-        port=convert_binary_port_to_int(addr_in.sin_port).__str__(),
+        port=str(convert_binary_port_to_int(addr_in.sin_port)),
     )
 
 
@@ -709,4 +687,5 @@ fn getaddrinfo[T: AnAddrInfo, //](
 
 
 fn freeaddrinfo[T: AnAddrInfo, //](ptr: UnsafePointer[T]):
+    """Free the memory allocated by `getaddrinfo`."""
     external_call["freeaddrinfo", NoneType, UnsafePointer[T]](ptr)
