@@ -617,11 +617,11 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) raises -> c_int:
     return fd
 
 
-fn _setsockopt(
+fn _setsockopt[origin: Origin](
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: UnsafePointer[c_void],
+    option_value: Pointer[c_void, origin],
     option_len: socklen_t,
 ) -> c_int:
     """Libc POSIX `setsockopt` function.
@@ -630,7 +630,7 @@ fn _setsockopt(
         socket: A File Descriptor.
         level: The protocol level.
         option_name: The option to set.
-        option_value: A UnsafePointer to the value to set.
+        option_value: A Pointer to the value to set.
         option_len: The size of the value.
 
     Returns:
@@ -650,16 +650,16 @@ fn _setsockopt(
         c_int,
         c_int,
         c_int,
-        UnsafePointer[c_void],
+        Pointer[c_void, origin],
         socklen_t,  # Args
     ](socket, level, option_name, option_value, option_len)
 
 
-fn setsockopt(
+fn setsockopt[origin: Origin](
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: UnsafePointer[c_void],
+    option_value: Pointer[c_void, origin],
     option_len: socklen_t,
 ) raises:
     """Libc POSIX `setsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
@@ -704,10 +704,10 @@ fn setsockopt(
             raise Error("setsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
 
 
-fn _getsockname(
+fn _getsockname[origin: Origin](
     socket: c_int,
     address: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
+    address_len: Pointer[socklen_t, origin],
 ) -> c_int:
     """Libc POSIX `getsockname` function.
 
@@ -732,14 +732,14 @@ fn _getsockname(
         c_int,  # FnName, RetType
         c_int,
         UnsafePointer[sockaddr],
-        UnsafePointer[socklen_t],  # Args
+        Pointer[socklen_t, origin],  # Args
     ](socket, address, address_len)
 
 
-fn getsockname(
+fn getsockname[origin: Origin](
     socket: c_int,
     address: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
+    address_len: Pointer[socklen_t, origin],
 ) raises:
     """Libc POSIX `getsockname` function.
 
@@ -781,10 +781,10 @@ fn getsockname(
             raise Error("getsockname: An error occurred while getting the socket name. Error code: " + str(errno))
 
 
-fn _getpeername(
+fn _getpeername[origin: Origin](
     sockfd: c_int,
     addr: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
+    address_len: Pointer[socklen_t, origin],
 ) -> c_int:
     """Libc POSIX `getpeername` function.
 
@@ -809,14 +809,14 @@ fn _getpeername(
         c_int,  # FnName, RetType
         c_int,
         UnsafePointer[sockaddr],
-        UnsafePointer[socklen_t],  # Args
+        Pointer[socklen_t, origin],  # Args
     ](sockfd, addr, address_len)
 
 
-fn getpeername(
+fn getpeername[origin: Origin](
     sockfd: c_int,
     addr: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
+    address_len: Pointer[socklen_t, origin],
 ) raises:
     """Libc POSIX `getpeername` function.
 
@@ -1475,7 +1475,9 @@ fn inet_pton(address_family: Int, address: String) raises -> Int:
 
     var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
     inet_pton(rebind[c_int](address_family), address.unsafe_ptr(), ip_buf)
-    return int(ip_buf.bitcast[c_uint]())
+    var result = int(ip_buf.bitcast[c_uint]())
+    ip_buf.free()
+    return result
 
 
 # --- ( File Related Syscalls & Structs )---------------------------------------

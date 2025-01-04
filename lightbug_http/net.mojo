@@ -1,6 +1,6 @@
 from utils import StaticTuple
 from time import sleep
-from memory import UnsafePointer, OwnedPointer, stack_allocation
+from memory import UnsafePointer, stack_allocation
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call
 from lightbug_http.strings import NetworkType, to_string
@@ -46,7 +46,9 @@ from .libc import (
 
 
 alias default_buffer_size = 4096
+"""The default buffer size for reading and writing data."""
 alias default_tcp_keep_alive = Duration(15 * 1000 * 1000 * 1000)  # 15 seconds
+"""The default TCP keep-alive duration."""
 
 
 trait Connection(Movable):
@@ -95,11 +97,7 @@ struct NoTLSListener:
     var __addr: TCPAddr
     """The address of the listener."""
 
-    fn __init__(out self) raises:
-        self.__addr = TCPAddr("localhost", 8080)
-        self.fd = socket(AF_INET, SOCK_STREAM, 0)
-
-    fn __init__(out self, addr: TCPAddr) raises:
+    fn __init__(out self, addr: TCPAddr = TCPAddr("localhost", 8080)) raises:
         self.__addr = addr
         self.fd = socket(AF_INET, SOCK_STREAM, 0)
 
@@ -112,9 +110,9 @@ struct NoTLSListener:
         var new_sockfd: c_int
         try:
             new_sockfd = accept(self.fd, Pointer.address_of(their_addr), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
-        except:
+        except e:
             print("Failed to accept connection, system `accept()` returned an error.", file=2)
-            raise
+            raise e
 
         var peer = get_peer_name(new_sockfd)
         return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
@@ -144,30 +142,43 @@ struct ListenConfig:
     fn listen(mut self, network: String, address: String) raises -> NoTLSListener:
         var addr = resolve_internet_addr(network, address)
         var address_family = AF_INET
-        var ip_buf_size = 4
-        if address_family == AF_INET6:
-            ip_buf_size = 16
 
-        var sockfd = socket(address_family, SOCK_STREAM, 0)
+        var sockfd: c_int
+        try:
+            sockfd = socket(address_family, SOCK_STREAM, 0)
+        except e:
+            print("Failed to create listener due to socket creation failure.", file=2)
+            raise e
+
         setsockopt(
             sockfd,
             SOL_SOCKET,
             SO_REUSEADDR,
-            UnsafePointer[c_void].address_of(1),
+            Pointer[c_void].address_of(1),
             sizeof[Int](),
         )
 
         var bind_success = False
         var bind_fail_logged = False
+
+        var ip_buf_size = 4
+        if address_family == AF_INET6:
+            ip_buf_size = 16
         var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-        inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
+
+        try:
+            inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
+        except e:
+            print("Failed to convert IP address to binary.", file=2)
+            raise e
 
         var ai = sockaddr_in(
             sin_family=address_family,
-            sin_port=htons(UInt16(addr.port)),
+            sin_port=htons(addr.port),
             sin_addr=in_addr(ip_buf.bitcast[c_uint]().take_pointee()),
             sin_zero=StaticTuple[c_char, 8]()
         )
+        ip_buf.free()
 
         while not bind_success:
             try:
@@ -182,14 +193,14 @@ struct ListenConfig:
                 shutdown(sockfd, SHUT_RDWR)
                 sleep(UInt(1))
         try:
-            listen(sockfd, c_int(128))
-        except:
-            print("Listen failed.\n on sockfd " + sockfd.__str__())
-            raise
+            listen(sockfd, 128)
+        except e:
+            print("Listen failed.\n on sockfd " + str(sockfd))
+            raise e
 
         var listener = NoTLSListener(addr, sockfd)
 
-        var msg = String.write("\n🔥🐝 Lightbug is listening on ", "http://", addr.ip, ":", addr.port.__str__())
+        var msg = String.write("\n🔥🐝 Lightbug is listening on ", "http://", addr.ip, ":", str(addr.port))
         print(msg)
         print("Ready to accept connections...")
 
@@ -218,22 +229,35 @@ struct SysConnection(Connection):
         self.fd = fd
 
     fn read(self, mut buf: Bytes) raises -> Int:
-        var bytes_recv = recv(
-            self.fd,
-            buf.unsafe_ptr().offset(buf.size),
-            buf.capacity - buf.size,
-            0,
-        )
-        buf.size += bytes_recv
-        return bytes_recv
+        try:
+            var bytes_recv = recv(
+                self.fd,
+                buf.unsafe_ptr().offset(buf.size),
+                buf.capacity - buf.size,
+                0,
+            )
+            buf.size += bytes_recv
+            return bytes_recv
+        except e:
+            print("SysConnection.read: Failed to read data from connection.", file=2)
+            raise e
 
     fn write(self, msg: String) raises -> Int:
-        return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
+        try:
+            return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
+        except e:
+            print("SysConnection.write: Failed to write data to connection.", file=2)
+            raise e
 
     fn write(self, buf: Bytes) raises -> Int:
         if buf[-1] != 0:
             raise Error("SysConnection.write: Buffer must be null-terminated.")
-        return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
+        
+        try:
+            return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
+        except e:
+            print("SysConnection.write: Failed to write data to connection.", file=2)
+            raise e
 
     fn close(self) raises:
         try:
@@ -257,11 +281,8 @@ struct SysConnection(Connection):
 struct SysNet:
     var __lc: ListenConfig
 
-    fn __init__(out self):
+    fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self.__lc = ListenConfig(default_tcp_keep_alive)
-
-    fn __init__(out self, keep_alive: Duration):
-        self.__lc = ListenConfig(keep_alive)
 
     fn listen(mut self, network: String, addr: String) raises -> NoTLSListener:
         return self.__lc.listen(network, addr)
@@ -310,20 +331,15 @@ struct addrinfo_macos(AnAddrInfo):
             ai_protocol=0
         )
         try:
-            getaddrinfo(
-                host.unsafe_ptr(),
-                UnsafePointer[c_char](),
-                UnsafePointer.address_of(hints),
-                UnsafePointer.address_of(result)
-            )
+            getaddrinfo(host, String(), hints, result)
         except e:
             print("Failed to get IP address.", file=2)
             raise e
 
-        var addrinfo = result[]
+        var addrinfo = result.take_pointee()
         if not addrinfo.ai_addr:
             freeaddrinfo(UnsafePointer.address_of(addrinfo))
-            raise Error("ai_addr is null")
+            raise Error("Failed to get IP address because the response's `ai_addr` was null.")
 
         var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]().take_pointee()
         var ip_addr = addr_in.sin_addr
@@ -369,30 +385,26 @@ struct addrinfo_unix(AnAddrInfo):
         """
         var result = UnsafePointer[Self]()
         var hints = Self(
+            ai_flags=0,
             ai_family=AF_INET,
             ai_socktype=SOCK_STREAM,
-            ai_flags=0,
             ai_protocol=0
         )
         try:
-            getaddrinfo(
-                host.unsafe_ptr(),
-                UnsafePointer[c_char](),
-                UnsafePointer.address_of(hints),
-                UnsafePointer.address_of(result)
-            )
+            getaddrinfo(host, String(), hints, result)
         except e:
             print("Failed to get IP address.", file=2)
-            raise
+            raise e
 
-        var addrinfo = result[]
+        var addrinfo = result.take_pointee()
         if not addrinfo.ai_addr:
             freeaddrinfo(UnsafePointer.address_of(addrinfo))
-            raise Error("ai_addr is null")
+            raise Error("Failed to get IP address because the response's `ai_addr` was null.")
 
-        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]()[]
+        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]().take_pointee()
         var ip_addr = addr_in.sin_addr
-        freeaddrinfo(UnsafePointer.address_of(addrinfo))
+
+        # freeaddrinfo(UnsafePointer.address_of(addrinfo))
         return ip_addr
 
 
@@ -400,9 +412,9 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     """Connect to a server using a socket.
 
     Args:
-        sock: Int32 - The socket file descriptor.
-        host: String - The host to connect to.
-        port: UInt16 - The port to connect to.
+        sock: The socket file descriptor.
+        host: The host to connect to.
+        port: The port to connect on.
     
     Returns:
         Int32 - The socket file descriptor.
@@ -559,7 +571,9 @@ fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, 
         The IP address as a string.
     """
     var ip_buffer = UnsafePointer[c_void].alloc(INET_ADDRSTRLEN)
-    return inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), ip_buffer, INET_ADDRSTRLEN)
+    var ip = inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), ip_buffer, INET_ADDRSTRLEN)
+    ip_buffer.free()
+    return ip
 
 
 fn get_sock_name(fd: Int32) raises -> HostPort:
@@ -569,7 +583,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
         getsockname(
             fd,
             local_address,
-            UnsafePointer.address_of(socklen_t(sizeof[sockaddr]())),
+            Pointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
     except e:
         print("get_sock_name: Failed to get address of local socket.", file=2)
@@ -589,11 +603,11 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
         getpeername(
             fd,
             remote_address,
-            UnsafePointer[socklen_t].address_of(socklen_t(sizeof[sockaddr]())),
+            Pointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
-    except:
+    except e:
         print("get_peer_name: Failed to get address of remote socket.")
-        raise
+        raise e
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
     var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
@@ -603,18 +617,18 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
     )
 
 
-fn _getaddrinfo[T: AnAddrInfo, //](
+fn _getaddrinfo[T: AnAddrInfo, hints_origin: MutableOrigin, result_origin: MutableOrigin, //](
     nodename: UnsafePointer[c_char],
     servname: UnsafePointer[c_char],
-    hints: UnsafePointer[T],
-    res: UnsafePointer[UnsafePointer[T]],
+    hints: Pointer[T, hints_origin],
+    res: Pointer[UnsafePointer[T], result_origin],
 )-> c_int:
     """Libc POSIX `getaddrinfo` function.
 
     Args:
         nodename: The node name.
         servname: The service name.
-        hints: A UnsafePointer to the hints.
+        hints: A Pointer to the hints.
         res: A UnsafePointer to the result.
     
     Returns:
@@ -633,23 +647,23 @@ fn _getaddrinfo[T: AnAddrInfo, //](
         c_int,  # FnName, RetType
         UnsafePointer[c_char],
         UnsafePointer[c_char],
-        UnsafePointer[T],  # Args
-        UnsafePointer[UnsafePointer[T]],  # Args
+        Pointer[T, hints_origin],  # Args
+        Pointer[UnsafePointer[T], result_origin],  # Args
     ](nodename, servname, hints, res)
 
 
 fn getaddrinfo[T: AnAddrInfo, //](
-    nodename: UnsafePointer[c_char],
-    servname: UnsafePointer[c_char],
-    hints: UnsafePointer[T],
-    res: UnsafePointer[UnsafePointer[T]],
+    node: String,
+    service: String,
+    mut hints: T,
+    mut res: UnsafePointer[T],
 ) raises:
     """Libc POSIX `getaddrinfo` function.
 
     Args:
-        nodename: The node name.
-        servname: The service name.
-        hints: A UnsafePointer to the hints.
+        node: The node name.
+        service: The service name.
+        hints: A Pointer to the hints.
         res: A UnsafePointer to the result.
     
     Raises:
@@ -672,7 +686,7 @@ fn getaddrinfo[T: AnAddrInfo, //](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
     """
-    var result = _getaddrinfo(nodename, servname, hints, res)
+    var result = _getaddrinfo(node.unsafe_ptr(), service.unsafe_ptr(), Pointer.address_of(hints), Pointer.address_of(res))
     if result != 0:
         # gai_strerror returns a char buffer that we don't know the length of.
         # TODO: Perhaps switch to writing bytes once the Writer trait allows writing individual bytes.
