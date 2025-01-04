@@ -1013,10 +1013,10 @@ fn listen(socket: c_int, backlog: c_int) raises:
             raise Error("listen: An error occurred while listening on the socket. Error code: " + str(errno))
 
 
-fn _accept(
+fn _accept[address_origin: MutableOrigin, len_origin: Origin](
     socket: c_int,
-    address: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
+    address: Pointer[sockaddr, address_origin],
+    address_len: Pointer[socklen_t, len_origin],
 ) -> c_int:
     """Libc POSIX `accept` function.
 
@@ -1040,16 +1040,16 @@ fn _accept(
         "accept",
         c_int,  # FnName, RetType
         c_int,
-        UnsafePointer[sockaddr],
-        UnsafePointer[socklen_t],  # Args
+        Pointer[sockaddr, address_origin],
+        Pointer[socklen_t, len_origin]
     ](socket, address, address_len)
 
 
-fn accept(
+fn accept[address_origin: MutableOrigin, len_origin: Origin](
     socket: c_int,
-    address: UnsafePointer[sockaddr],
-    address_len: UnsafePointer[socklen_t],
-) raises:
+    address: Pointer[sockaddr, address_origin],
+    address_len: Pointer[socklen_t, len_origin],
+) raises -> c_int:
     """Libc POSIX `accept` function.
 
     Args:
@@ -1117,8 +1117,9 @@ fn accept(
                 raise Error("accept: Firewall rules forbid connection.")
         raise Error("accept: An error occurred while listening on the socket. Error code: " + str(errno))
 
+    return result
 
-fn _connect(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -> c_int:
+fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function.
 
     Args: socket: A File Descriptor.
@@ -1137,7 +1138,7 @@ fn _connect(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -
     return external_call["connect", c_int](socket, address, address_len)
 
 
-fn connect(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) raises:
+fn connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) raises:
     """Libc POSIX `connect` function.
 
     Args: socket: A File Descriptor.
@@ -1434,41 +1435,6 @@ fn shutdown(socket: c_int, how: c_int) raises:
             raise Error("shutdown: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
 
 
-fn _getaddrinfo(
-    nodename: UnsafePointer[c_char],
-    servname: UnsafePointer[c_char],
-    hints: UnsafePointer[addrinfo],
-    res: UnsafePointer[UnsafePointer[addrinfo]],
-) -> c_int:
-    """Libc POSIX `getaddrinfo` function.
-
-    Args:
-        nodename: The node name.
-        servname: The service name.
-        hints: A UnsafePointer to the hints.
-        res: A UnsafePointer to the result.
-    
-    Returns:
-        0 on success, an error code on failure.
-
-    #### C Function
-    ```c
-    int getaddrinfo(const char *restrict nodename, const char *restrict servname, const struct addrinfo *restrict hints, struct addrinfo **restrict res)
-    ```
-
-    #### Notes:
-    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
-    """
-    return external_call[
-        "getaddrinfo",
-        c_int,  # FnName, RetType
-        UnsafePointer[c_char],
-        UnsafePointer[c_char],
-        UnsafePointer[addrinfo],  # Args
-        UnsafePointer[UnsafePointer[addrinfo]],  # Args
-    ](nodename, servname, hints, res)
-
-
 fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
     """Libc POSIX `gai_strerror` function.
 
@@ -1487,54 +1453,6 @@ fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
     * Reference: https://man7.org/linux/man-pages/man3/gai_strerror.3p.html
     """
     return external_call["gai_strerror", UnsafePointer[c_char], c_int](ecode)
-
-
-fn getaddrinfo(
-    nodename: UnsafePointer[c_char],
-    servname: UnsafePointer[c_char],
-    hints: UnsafePointer[addrinfo],
-    res: UnsafePointer[UnsafePointer[addrinfo]],
-) raises:
-    """Libc POSIX `getaddrinfo` function.
-
-    Args:
-        nodename: The node name.
-        servname: The service name.
-        hints: A UnsafePointer to the hints.
-        res: A UnsafePointer to the result.
-    
-    Raises:
-        Error: If an error occurs while attempting to receive data from the socket.
-        EAI_AGAIN: The name could not be resolved at this time. Future attempts may succeed.
-        EAI_BADFLAGS: The `ai_flags` value was invalid.
-        EAI_FAIL: A non-recoverable error occurred when attempting to resolve the name.
-        EAI_FAMILY: The `ai_family` member of the `hints` argument is not supported.
-        EAI_MEMORY: Out of memory.
-        EAI_NONAME: The name does not resolve for the supplied parameters.
-        EAI_SERVICE: The `servname` is not supported for `ai_socktype`.
-        EAI_SOCKTYPE: The `ai_socktype` is not supported.
-        EAI_SYSTEM: A system error occurred. `errno` is set in this case.
-
-    #### C Function
-    ```c
-    int getaddrinfo(const char *restrict nodename, const char *restrict servname, const struct addrinfo *restrict hints, struct addrinfo **restrict res)
-    ```
-
-    #### Notes:
-    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
-    """
-    var result = _getaddrinfo(nodename, servname, hints, res)
-    if result != 0:
-        # gai_strerror returns a char buffer that we don't know the length of.
-        # TODO: Perhaps switch to writing bytes once the Writer trait allows writing individual bytes.
-        var err = gai_strerror(result)
-        var msg = List[Byte, True]()
-        var i = 0
-        while err[i] != 0:
-            msg.append(err[i])
-            i += 1
-        msg.append(0)
-        raise Error("getaddrinfo: " + String(msg^))
 
 
 fn inet_pton(address_family: Int, address: String) raises -> Int:

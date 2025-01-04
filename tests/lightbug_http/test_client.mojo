@@ -78,16 +78,16 @@ fn test_mojo_client_redirect_external_req_301() raises:
         print(e)
 
 fn test_mojo_client_lightbug_external_req_200() raises:
-    var client = Client()
-    var req = HTTPRequest(
-        uri=URI.parse_raises("http://httpbin.org/status/200"),
-        headers=Headers(
-            Header("Connection", "close")),
-        method="GET",
-    )
-
     try:
+        var client = Client()
+        var req = HTTPRequest(
+            uri=URI.parse_raises("http://httpbin.org/status/200"),
+            headers=Headers(
+                Header("Connection", "close")),
+            method="GET",
+        )
         var res = client.do(req)
         testing.assert_equal(res.status_code, 200)
     except e:
         print(e)
+        raise
