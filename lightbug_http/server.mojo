@@ -1,7 +1,7 @@
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import NetworkType
-from lightbug_http.utils import ByteReader
+from lightbug_http.utils import ByteReader, logger
 from lightbug_http.net import NoTLSListener, default_buffer_size, NoTLSListener, SysConnection, SysNet
 from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.http.common_response import InternalError
@@ -133,8 +133,14 @@ struct Server:
                     is_closed = True
                 break
 
-            var request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
-
+            logger.info("Received bytes: ", bytes_recv)
+            var request: HTTPRequest
+            try:
+                request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
+            except e:
+                logger.error("Server.serve_connection: Failed to parse request")
+                raise e
+            
             var res: HTTPResponse
             try:
                 res = handler.func(request)
@@ -149,7 +155,7 @@ struct Server:
                         conn.close()
                         is_closed = True
                     except e:
-                        print("Failed to send InternalError response", file=2)
+                        logger.error("Failed to send InternalError response")
                         raise e
                 return
 

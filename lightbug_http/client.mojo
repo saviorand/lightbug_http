@@ -14,7 +14,7 @@ from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
 from lightbug_http.net import create_connection, SysConnection
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.utils import ByteReader
+from lightbug_http.utils import ByteReader, logger
 from collections import Dict
 
 
@@ -61,7 +61,7 @@ struct Client:
             Error: If there is a failure in sending or receiving the message.
         """
         if req.uri.host == "":
-            raise Error("URI is nil")
+            raise Error("Client.do: Request failed because the host field is empty.")
         var is_tls = False
 
         if req.uri.is_https():
@@ -102,7 +102,7 @@ struct Client:
             self._close_conn(host_str)
             if cached_connection:
                 return self.do(req^)
-            print("Failed to send message", file=2)
+            logger.error("Client.do: Failed to send message.")
             raise e
 
         # TODO: What if the response is too large for the buffer? We should read until the end of the response.
@@ -113,9 +113,12 @@ struct Client:
             self._close_conn(host_str)
             if cached_connection:
                 return self.do(req^)
-            raise Error("No response received")
+            raise Error("Client.do: No response received from the server.")
+
         try:
+            logger.info("parsing response")
             var res = HTTPResponse.from_bytes(new_buf^, conn)
+            logger.info(res)
             if res.is_redirect():
                 self._close_conn(host_str)
                 return self._handle_redirect(req^, res^)

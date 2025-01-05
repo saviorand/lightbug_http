@@ -2,7 +2,8 @@ from utils import StaticTuple
 from time import sleep
 from memory import UnsafePointer, stack_allocation
 from sys.info import sizeof, os_is_macos
-from sys.ffi import external_call
+from sys.ffi import external_call, OpaquePointer
+from sys._libc import free
 from lightbug_http.strings import NetworkType, to_string
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
@@ -43,6 +44,7 @@ from .libc import (
     gai_strerror,
     INET_ADDRSTRLEN
 )
+from .utils import logger
 
 
 alias default_buffer_size = 4096
@@ -111,7 +113,7 @@ struct NoTLSListener:
         try:
             new_sockfd = accept(self.fd, Pointer.address_of(their_addr), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
         except e:
-            print("Failed to accept connection, system `accept()` returned an error.", file=2)
+            logger.error("Failed to accept connection, system `accept()` returned an error.")
             raise e
 
         var peer = get_peer_name(new_sockfd)
@@ -120,14 +122,15 @@ struct NoTLSListener:
     fn close(self) raises:
         try:
             shutdown(self.fd, SHUT_RDWR)
-        except:
-            print("Failed to shutdown listener.")
+        except e:
+            logger.error("Failed to shutdown listener.")
+            print(e)
 
         try:
             close(self.fd)
-        except:
-            print("Failed to close listener.")
-            raise
+        except e:
+            logger.error("Failed to close listener.")
+            raise e
 
     fn addr(self) -> TCPAddr:
         return self.__addr
@@ -147,7 +150,7 @@ struct ListenConfig:
         try:
             sockfd = socket(address_family, SOCK_STREAM, 0)
         except e:
-            print("Failed to create listener due to socket creation failure.", file=2)
+            logger.error("Failed to create listener due to socket creation failure.")
             raise e
 
         setsockopt(
@@ -169,7 +172,7 @@ struct ListenConfig:
         try:
             inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
         except e:
-            print("Failed to convert IP address to binary.", file=2)
+            print("Failed to convert IP address to binary.")
             raise e
 
         var ai = sockaddr_in(
@@ -195,7 +198,7 @@ struct ListenConfig:
         try:
             listen(sockfd, 128)
         except e:
-            print("Listen failed.\n on sockfd " + str(sockfd))
+            logger.error("Listen failed.\n on sockfd " + str(sockfd))
             raise e
 
         var listener = NoTLSListener(addr, sockfd)
@@ -239,14 +242,14 @@ struct SysConnection(Connection):
             buf.size += bytes_recv
             return bytes_recv
         except e:
-            print("SysConnection.read: Failed to read data from connection.", file=2)
+            logger.error("SysConnection.read: Failed to read data from connection.")
             raise e
 
     fn write(self, msg: String) raises -> Int:
         try:
             return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
         except e:
-            print("SysConnection.write: Failed to write data to connection.", file=2)
+            logger.error("SysConnection.write: Failed to write data to connection.")
             raise e
 
     fn write(self, buf: Bytes) raises -> Int:
@@ -256,19 +259,20 @@ struct SysConnection(Connection):
         try:
             return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
         except e:
-            print("SysConnection.write: Failed to write data to connection.", file=2)
+            logger.error("SysConnection.write: Failed to write data to connection.")
             raise e
 
     fn close(self) raises:
         try:
             shutdown(self.fd, SHUT_RDWR)
-        except:
-            print("Failed to shutdown connection.", file=2)
+        except e:
+            logger.error("Failed to shutdown connection.")
+            logger.error(e)
         
         try:
             close(self.fd)
         except:
-            print("Failed to close connection.", file=2)
+            logger.error("Failed to close connection.")
             raise
 
     fn local_addr(mut self) -> TCPAddr:
@@ -301,7 +305,7 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_addrlen: socklen_t
     var ai_canonname: UnsafePointer[c_char]
     var ai_addr: UnsafePointer[sockaddr]
-    var ai_next: UnsafePointer[c_void]
+    var ai_next: OpaquePointer
 
     fn __init__(out self, ai_flags: c_int = 0, ai_family: c_int = 0, ai_socktype: c_int = 0, ai_protocol: c_int = 0):
         self.ai_flags = 0
@@ -311,7 +315,7 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_addrlen = 0
         self.ai_canonname = UnsafePointer[c_char]()
         self.ai_addr = UnsafePointer[sockaddr]()
-        self.ai_next = UnsafePointer[c_void]()
+        self.ai_next = OpaquePointer()
 
     fn get_ip_address(self, host: String) raises -> in_addr:       
         """Returns an IP address based on the host.
@@ -333,25 +337,22 @@ struct addrinfo_macos(AnAddrInfo):
         try:
             getaddrinfo(host, String(), hints, result)
         except e:
-            print("Failed to get IP address.", file=2)
+            logger.error("Failed to get IP address.")
             raise e
 
-        var addrinfo = result.take_pointee()
-        if not addrinfo.ai_addr:
-            freeaddrinfo(UnsafePointer.address_of(addrinfo))
+        if not result[].ai_addr:
+            freeaddrinfo(result)
             raise Error("Failed to get IP address because the response's `ai_addr` was null.")
 
-        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]().take_pointee()
-        var ip_addr = addr_in.sin_addr
-
-        # freeaddrinfo(UnsafePointer.address_of(addrinfo))
-        return ip_addr
+        var ip = result[].ai_addr.bitcast[sockaddr_in]()[].sin_addr
+        freeaddrinfo(result)
+        return ip
  
 @value
 @register_passable("trivial")
 struct addrinfo_unix(AnAddrInfo):
-    """
-    Standard addrinfo struct for Unix systems. Overwrites the existing libc `getaddrinfo` function to adhere to the AnAddrInfo trait.
+    """Standard addrinfo struct for Unix systems.
+    Overwrites the existing libc `getaddrinfo` function to adhere to the AnAddrInfo trait.
     """
 
     var ai_flags: c_int
@@ -361,7 +362,7 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_addrlen: socklen_t
     var ai_addr: UnsafePointer[sockaddr]
     var ai_canonname: UnsafePointer[c_char]
-    var ai_next: UnsafePointer[c_void]
+    var ai_next: OpaquePointer
 
     fn __init__(out self, ai_flags: c_int = 0, ai_family: c_int = 0, ai_socktype: c_int = 0, ai_protocol: c_int = 0):
         self.ai_flags = ai_flags
@@ -371,7 +372,7 @@ struct addrinfo_unix(AnAddrInfo):
         self.ai_addrlen = 0
         self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_canonname = UnsafePointer[c_char]()
-        self.ai_next = UnsafePointer[c_void]()
+        self.ai_next = OpaquePointer()
 
     fn get_ip_address(self, host: String) raises -> in_addr:
         """Returns an IP address based on the host.
@@ -393,19 +394,16 @@ struct addrinfo_unix(AnAddrInfo):
         try:
             getaddrinfo(host, String(), hints, result)
         except e:
-            print("Failed to get IP address.", file=2)
+            logger.error("Failed to get IP address.")
             raise e
 
-        var addrinfo = result.take_pointee()
-        if not addrinfo.ai_addr:
-            freeaddrinfo(UnsafePointer.address_of(addrinfo))
+        if not result[].ai_addr:
+            freeaddrinfo(result)
             raise Error("Failed to get IP address because the response's `ai_addr` was null.")
 
-        var addr_in = addrinfo.ai_addr.bitcast[sockaddr_in]().take_pointee()
-        var ip_addr = addr_in.sin_addr
-
-        # freeaddrinfo(UnsafePointer.address_of(addrinfo))
-        return ip_addr
+        var ip = result[].ai_addr.bitcast[sockaddr_in]()[].sin_addr
+        freeaddrinfo(result)
+        return ip
 
 
 fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConnection:
@@ -427,14 +425,14 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
 
     var addr = sockaddr_in(AF_INET, htons(port), in_addr(ip.s_addr), StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
     try:
-        connect(sock, Pointer.address_of(addr), sizeof[sockaddr_in]())
+        connect(sock, addr, sizeof[sockaddr_in]())
     except e:
         try:
             shutdown(sock, SHUT_RDWR)
         except e:
-            print("Failed to shutdown socket.", file=2)
-            print(e, file=2)
-        print("Failed to connect to server.", file=2)
+            logger.error("Failed to shutdown socket.")
+            logger.error(e)
+        logger.error("Failed to connect to server.")
         raise
 
     return SysConnection(sock, TCPAddr(), TCPAddr(host, int(port)))
@@ -586,7 +584,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
             Pointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
     except e:
-        print("get_sock_name: Failed to get address of local socket.", file=2)
+        logger.error("get_sock_name: Failed to get address of local socket.")
         raise e
 
     var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()

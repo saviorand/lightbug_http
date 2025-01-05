@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 (magic run mojo build integration_test_server.mojo) || exit 1
 (magic run mojo build integration_test_client.mojo) || exit 1
 

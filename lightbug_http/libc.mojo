@@ -1142,13 +1142,30 @@ fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, 
     return external_call["connect", c_int](socket, address, address_len)
 
 
-fn connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) raises:
+fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) raises:
     """Libc POSIX `connect` function.
 
-    Args: socket: A File Descriptor.
+    Args:
+        socket: A File Descriptor.
         address: A UnsafePointer to the address to connect to.
         address_len: The size of the address.
-    Returns: 0 on success, -1 on error.
+    
+    Raises:
+        Error: If an error occurs while connecting to the socket.
+        EACCES: For UNIX domain sockets, which are identified by pathname: Write permission is denied on the socket file, or search permission is denied for one of the directories in the path prefix. (See also path_resolution(7)).
+        EADDRINUSE: Local address is already in use.
+        EAGAIN: No more free local ports or insufficient entries in the routing cache.
+        EALREADY: The socket is nonblocking and a previous connection attempt has not yet been completed.
+        EBADF: The file descriptor is not a valid index in the descriptor table.
+        ECONNREFUSED: No-one listening on the remote address.
+        EFAULT: The socket structure address is outside the user's address space.
+        EINPROGRESS: The socket is nonblocking and the connection cannot be completed immediately. It is possible to select(2) or poll(2) for completion by selecting the socket for writing. After select(2) indicates writability, use getsockopt(2) to read the SO_ERROR option at level SOL_SOCKET to determine whether connect() completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one of the usual error codes listed here, explaining the reason for the failure).
+        EINTR: The system call was interrupted by a signal that was caught.
+        EISCONN: The socket is already connected.
+        ENETUNREACH: Network is unreachable.
+        ENOTSOCK: The file descriptor is not associated with a socket.
+        EAFNOSUPPORT: The passed address didn't have the correct address family in its `sa_family` field.
+        ETIMEDOUT: Timeout while attempting connection. The server may be too busy to accept new connections.
 
     #### C Function
     ```c
@@ -1158,7 +1175,7 @@ fn connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, o
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     """
-    var result = _connect(socket, address, address_len)
+    var result = _connect(socket, Pointer.address_of(address), address_len)
     if result == -1:
         var errno = get_errno()
         if errno == EACCES:
@@ -1342,41 +1359,41 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
-            raise Error("send: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
+            raise Error("SendError: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
         elif errno == EBADF:
-            raise Error("send: The argument `socket` is an invalid descriptor.")
+            raise Error("SendError: The argument `socket` is an invalid descriptor.")
         elif errno == EAGAIN:
-            raise Error("send: No more free local ports or insufficient entries in the routing cache.")
+            raise Error("SendError: No more free local ports or insufficient entries in the routing cache.")
         elif errno == ECONNRESET:
-            raise Error("send: Connection reset by peer.")
+            raise Error("SendError: Connection reset by peer.")
         elif errno == EDESTADDRREQ:
-            raise Error("send: The socket is not connection-mode, and no peer address is set.")
+            raise Error("SendError: The socket is not connection-mode, and no peer address is set.")
         elif errno == ECONNREFUSED:
-            raise Error("send: The remote host refused to allow the network connection (typically because it is not running the requested service).")
+            raise Error("SendError: The remote host refused to allow the network connection (typically because it is not running the requested service).")
         elif errno == EFAULT:
-            raise Error("send: `buffer` points outside the process's address space.")
+            raise Error("SendError: `buffer` points outside the process's address space.")
         elif errno == EINTR:
-            raise Error("send: The receive was interrupted by delivery of a signal before any data were available.")
+            raise Error("SendError: The receive was interrupted by delivery of a signal before any data were available.")
         elif errno == EINVAL:
-            raise Error("send: Invalid argument passed.")
+            raise Error("SendError: Invalid argument passed.")
         elif errno == EISCONN:
-            raise Error("send: The connection-mode socket was connected already but a recipient was specified.")
+            raise Error("SendError: The connection-mode socket was connected already but a recipient was specified.")
         elif errno == EMSGSIZE:
-            raise Error("send: The socket type requires that message be sent atomically, and the size of the message to be sent made this impossible..")
+            raise Error("SendError: The socket type requires that message be sent atomically, and the size of the message to be sent made this impossible..")
         elif errno == ENOBUFS:
-            raise Error("send: The output queue for a network interface was full. This generally indicates that the interface has stopped sending, but may be caused by transient congestion.")
+            raise Error("SendError: The output queue for a network interface was full. This generally indicates that the interface has stopped sending, but may be caused by transient congestion.")
         elif errno == ENOMEM:
-            raise Error("send: No memory available.")
+            raise Error("SendError: No memory available.")
         elif errno == ENOTCONN:
-            raise Error("send: The socket is not connected.")
+            raise Error("SendError: The socket is not connected.")
         elif errno == ENOTSOCK:
-            raise Error("send: The file descriptor is not associated with a socket.")
+            raise Error("SendError: The file descriptor is not associated with a socket.")
         elif errno == EOPNOTSUPP:
-            raise Error("send: Some bit in the flags argument is inappropriate for the socket type.")
+            raise Error("SendError: Some bit in the flags argument is inappropriate for the socket type.")
         elif errno == EPIPE:
-            raise Error("send: The local end has been shut down on a connection oriented socket. In this case the process will also receive a SIGPIPE unless MSG_NOSIGNAL is set.")
+            raise Error("SendError: The local end has been shut down on a connection oriented socket. In this case the process will also receive a SIGPIPE unless MSG_NOSIGNAL is set.")
         else:
-            raise Error("send: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
+            raise Error("SendError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
     
     return result
 
@@ -1428,15 +1445,15 @@ fn shutdown(socket: c_int, how: c_int) raises:
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
-            raise Error("shutdown: The argument `socket` is an invalid descriptor.")
+            raise Error("ShutdownError: The argument `socket` is an invalid descriptor.")
         elif errno == EINVAL:
-            raise Error("shutdown: Invalid argument passed.")
+            raise Error("ShutdownError: Invalid argument passed.")
         elif errno == ENOTCONN:
-            raise Error("shutdown: The socket is not connected.")
+            raise Error("ShutdownError: The socket is not connected.")
         elif errno == ENOTSOCK:
-            raise Error("shutdown: The file descriptor is not associated with a socket.")
+            raise Error("ShutdownError: The file descriptor is not associated with a socket.")
         else:
-            raise Error("shutdown: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
+            raise Error("ShutdownError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
 
 
 fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
