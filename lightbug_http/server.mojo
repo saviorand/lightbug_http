@@ -165,6 +165,7 @@ struct Server:
             var buffer = encode(res^)
             if buffer[-1] != 0:
                 buffer.append(0)
+            
             var written = conn.write(buffer)
             if close_connection or written == -1:
                 if not conn._closed:

@@ -59,7 +59,10 @@ struct Headers(Writable, Stringable):
 
     @always_inline
     fn __getitem__(self, key: String) raises -> String:
-        return self._inner[key.lower()]
+        try:
+            return self._inner[key.lower()]
+        except:
+            raise Error("KeyError: Key not found in headers: " + key)
     
     @always_inline
     fn get(self, key: String) -> Optional[String]:
@@ -69,8 +72,11 @@ struct Headers(Writable, Stringable):
     fn __setitem__(mut self, key: String, value: String):
         self._inner[key.lower()] = value
 
-    fn content_length(self) raises -> Int:
-        return int(self[HeaderKey.CONTENT_LENGTH])
+    fn content_length(self) -> Int:
+        try:
+            return int(self[HeaderKey.CONTENT_LENGTH])
+        except:
+            return 0
 
     fn parse_raw(mut self, mut r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()

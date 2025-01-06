@@ -142,7 +142,7 @@ struct HTTPResponse(Writable, Stringable):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     @always_inline
-    fn content_length(mut self) -> Int:
+    fn content_length(self) -> Int:
         try:
             return int(self.headers[HeaderKey.CONTENT_LENGTH])
         except:
