@@ -35,19 +35,15 @@ struct HTTPRequest(Writable, Stringable):
         var reader = ByteReader(b)
         var headers = Headers()
         var cookies = RequestCookieJar()
-        var cookie_list = List[String]()
         var method: String
         var protocol: String
         var uri_str: String
-        logger.info("parsing headers")
         try:
-            logger.info("parsing headers from reader")
             var rest = headers.parse_raw(reader)
             method, uri_str, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + str(e))
         
-        logger.info("parsing cookies")
         try:
             cookies.parse_cookies(headers)
         except e:
@@ -105,7 +101,7 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        self.body_raw = r.consume(self.body_raw, content_length)
+        self.body_raw = r.bytes(content_length)
         self.set_content_length(content_length)
 
     fn write_to[T: Writer](self, mut writer: T):
@@ -127,7 +123,8 @@ struct HTTPRequest(Writable, Stringable):
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    fn _encoded(mut self) -> Bytes:
+    # TODO: If we want to consume the args for speed, then this should be owned and not mut. self is being consumed and is invalid after this call.
+    fn _encoded(owned self) -> Bytes:
         """Encodes request as bytes.
 
         This method consumes the data in this request and it should
@@ -144,11 +141,13 @@ struct HTTPRequest(Writable, Stringable):
         writer.write(self.protocol)
         writer.write(lineBreak)
 
-        self.headers.encode_to(writer)
-        self.cookies.encode_to(writer)
+        writer.write(self.headers)
+        writer.write(self.cookies)
+        # self.headers.encode_to(writer)
+        # self.cookies.encode_to(writer)
         writer.write(lineBreak)
 
-        writer.write(self.body_raw)
+        writer.consuming_write(self.body_raw)
 
         return writer.consume()
 

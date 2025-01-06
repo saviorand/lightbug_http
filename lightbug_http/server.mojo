@@ -134,7 +134,6 @@ struct Server:
                     is_closed = True
                 break
 
-            logger.info("Received bytes: ", bytes_recv)
             var request: HTTPRequest
             try:
                 request = HTTPRequest.from_bytes(self.address(), max_request_body_size, Span(b))

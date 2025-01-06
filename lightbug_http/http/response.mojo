@@ -64,8 +64,7 @@ struct HTTPResponse(Writable, Stringable):
         )
 
         if response.headers[HeaderKey.TRANSFER_ENCODING] == "chunked":
-            var b = Bytes()
-            b = reader.consume(b)
+            var b = reader.bytes()
 
             var buff = Bytes(capacity=default_buffer_size)
             while conn.value().read(buff) > 0:
@@ -152,7 +151,7 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader) raises -> None:
-        self.body_raw = r.consume(self.body_raw, self.content_length())
+        self.body_raw = r.bytes(self.content_length())
         self.set_content_length(len(self.body_raw))
 
     fn read_chunks(mut self, chunks: Bytes) raises:
@@ -161,8 +160,7 @@ struct HTTPResponse(Writable, Stringable):
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
                 break
-            var data = Bytes()
-            data = reader.consume(data, size)
+            var data = reader.bytes(size)
             reader.skip_newlines()
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
@@ -188,7 +186,7 @@ struct HTTPResponse(Writable, Stringable):
         var writer = ByteWriter()
         writer.write(self.protocol)
         writer.write(whitespace)
-        writer.write(bytes(str(self.status_code)))
+        writer.consuming_write(bytes(str(self.status_code)))
         writer.write(whitespace)
         writer.write(self.status_text)
         writer.write(lineBreak)
@@ -202,11 +200,13 @@ struct HTTPResponse(Writable, Stringable):
             except:
                 pass
 
-        self.headers.encode_to(writer)
-        self.cookies.encode_to(writer)
+        writer.write(self.headers)
+        writer.write(self.cookies)
+        # self.headers.encode_to(writer)
+        # self.cookies.encode_to(writer)
 
         writer.write(lineBreak)
-        writer.write(self.body_raw)
+        writer.consuming_write(self.body_raw)
 
         return writer.consume()
 

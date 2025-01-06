@@ -115,6 +115,6 @@ fn to_string(owned bytes: Bytes) -> String:
     Args:
         bytes: The List of bytes to convert to a String.
     """
-    if bytes[len(bytes)] != 0:
+    if bytes[-1] != 0:
         bytes.append(0)
     return String(bytes^)

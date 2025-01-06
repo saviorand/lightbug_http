@@ -116,9 +116,7 @@ struct Client:
             raise Error("Client.do: No response received from the server.")
 
         try:
-            logger.info("parsing response")
-            var res = HTTPResponse.from_bytes(new_buf^, conn)
-            logger.info(res)
+            var res = HTTPResponse.from_bytes(new_buf, conn)
             if res.is_redirect():
                 self._close_conn(host_str)
                 return self._handle_redirect(req^, res^)

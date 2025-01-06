@@ -570,7 +570,6 @@ fn convert_binary_ip_to_string(owned ip_address: UInt32, address_family: Int32, 
     """
     var ip_buffer = UnsafePointer[c_void].alloc(INET_ADDRSTRLEN)
     var ip = inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), ip_buffer, INET_ADDRSTRLEN)
-    ip_buffer.free()
     return ip
 
 

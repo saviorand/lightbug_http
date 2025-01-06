@@ -32,12 +32,12 @@ fn write_header[T: Writer](mut writer: T, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
 
-@always_inline
-fn write_header(mut writer: ByteWriter, key: String, mut value: String):
-    var k = key + ": "
-    writer.write(k)
-    writer.write(value)
-    writer.write(lineBreak)
+# @always_inline
+# fn write_header(mut writer: ByteWriter, key: String, value: String):
+#     var k = key + ": "
+#     writer.write(k)
+#     writer.write(value)
+#     writer.write(lineBreak)
 
 
 @value
@@ -83,12 +83,10 @@ struct Headers(Writable, Stringable):
             return 0
 
     fn parse_raw(mut self, mut r: ByteReader) raises -> (String, String, String, List[String]):
-        logger.info("peeking at first byte")
         var first_byte = r.peek()
         if not first_byte:
             raise Error("Headers.parse_raw: Failed to read first byte from response header")
 
-        logger.info("first_byte", first_byte.__str__())
         var first = r.read_word()
         r.increment()
         var second = r.read_word()
@@ -96,41 +94,28 @@ struct Headers(Writable, Stringable):
         var third = r.read_line()
         var cookies = List[String]()
 
-        logger.info("parsing raw")
         while not is_newline(r.peek()):
-            logger.info("loop")
             var key = r.read_until(BytesConstant.colon)
-            # logger.info("key", key.__str__())
             r.increment()
-            logger.info("checking space")
             if is_space(r.peek()):
                 r.increment()
             # TODO (bgreni): Handle possible trailing whitespace
-            logger.info("reading line")
             var value = r.read_line()
-            logger.info("setting k", len(key))
-            var k = to_string(Span(Bytes(key)))
-            logger.info(k, len(k), len(k._buffer))
-            k = k.lower()
-            logger.info(k)
-            logger.info("appending")
+            var k = to_string(key).lower()
             if k == HeaderKey.SET_COOKIE:
-                print(to_string(value))
                 cookies.append(to_string(value))
                 continue
 
-            logger.info("setting header")
             self._inner[k] = to_string(value)
-        logger.info("done parsing raw")
         return (to_string(first), to_string(second), to_string(third), cookies)
 
     fn write_to[T: Writer](self, mut writer: T):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
 
-    fn encode_to(mut self, mut writer: ByteWriter):
-        for header in self._inner.items():
-            write_header(writer, header[].key, header[].value)
+    # fn encode_to(self, mut writer: ByteWriter):
+    #     for header in self._inner.items():
+    #         write_header(writer, header[].key, header[].value)
 
     fn __str__(self) -> String:
-        return to_string(self)
+        return String.write(self)
