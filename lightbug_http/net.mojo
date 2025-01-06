@@ -271,9 +271,9 @@ struct SysConnection(Connection):
         
         try:
             close(self.fd)
-        except:
+        except e:
             logger.error("Failed to close connection.")
-            raise
+            raise e
 
     fn local_addr(mut self) -> TCPAddr:
         return self.laddr
@@ -433,7 +433,7 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
             logger.error("Failed to shutdown socket.")
             logger.error(e)
         logger.error("Failed to connect to server.")
-        raise
+        raise e
 
     return SysConnection(sock, TCPAddr(), TCPAddr(host, int(port)))
 

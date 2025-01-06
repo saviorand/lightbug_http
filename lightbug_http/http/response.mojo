@@ -38,8 +38,8 @@ struct HTTPResponse(Writable, Stringable):
     var protocol: String
 
     @staticmethod
-    fn from_bytes(owned b: Bytes, conn: Optional[SysConnection] = None) raises -> HTTPResponse:
-        var reader = ByteReader(b^)
+    fn from_bytes(b: Bytes, conn: Optional[SysConnection] = None) raises -> HTTPResponse:
+        var reader = ByteReader(Span(b))
 
         var headers = Headers()
         var cookies = ResponseCookieJar()
@@ -65,7 +65,7 @@ struct HTTPResponse(Writable, Stringable):
 
         if response.headers[HeaderKey.TRANSFER_ENCODING] == "chunked":
             var b = Bytes()
-            reader.consume(b)
+            b = reader.consume(b)
 
             var buff = Bytes(capacity=default_buffer_size)
             while conn.value().read(buff) > 0:
@@ -152,17 +152,17 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader) raises -> None:
-        r.consume(self.body_raw, self.content_length())
+        self.body_raw = r.consume(self.body_raw, self.content_length())
         self.set_content_length(len(self.body_raw))
 
-    fn read_chunks(mut self, owned chunks: Bytes) raises:
-        var reader = ByteReader(chunks^)
+    fn read_chunks(mut self, chunks: Bytes) raises:
+        var reader = ByteReader(Span(chunks))
         while True:
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
                 break
             var data = Bytes()
-            reader.consume(data, size)
+            data = reader.consume(data, size)
             reader.skip_newlines()
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data

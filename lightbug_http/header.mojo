@@ -90,20 +90,17 @@ struct Headers(Writable, Stringable):
 
         logger.info("first_byte", first_byte.__str__())
         var first = r.read_word()
-        logger.info("first", first.__str__())
         r.increment()
         var second = r.read_word()
-        logger.info("second", second.__str__())
         r.increment()
         var third = r.read_line()
-        logger.info("third", third.__str__())
         var cookies = List[String]()
 
         logger.info("parsing raw")
         while not is_newline(r.peek()):
             logger.info("loop")
             var key = r.read_until(BytesConstant.colon)
-            logger.info("key", key.__str__())
+            # logger.info("key", key.__str__())
             r.increment()
             logger.info("checking space")
             if is_space(r.peek()):
@@ -112,19 +109,20 @@ struct Headers(Writable, Stringable):
             logger.info("reading line")
             var value = r.read_line()
             logger.info("setting k", len(key))
-            var k = to_string(key^)
+            var k = to_string(Span(Bytes(key)))
             logger.info(k, len(k), len(k._buffer))
-            # k = k.lower()
+            k = k.lower()
             logger.info(k)
             logger.info("appending")
-            # if k == HeaderKey.SET_COOKIE:
-            #     cookies.append(to_string(value^))
-            #     continue
+            if k == HeaderKey.SET_COOKIE:
+                print(to_string(value))
+                cookies.append(to_string(value))
+                continue
 
             logger.info("setting header")
-            self._inner[k] = to_string(value^)
+            self._inner[k] = to_string(value)
         logger.info("done parsing raw")
-        return (to_string(first^), to_string(second^), to_string(third^), cookies)
+        return (to_string(first), to_string(second), to_string(third), cookies)
 
     fn write_to[T: Writer](self, mut writer: T):
         for header in self._inner.items():

@@ -1,3 +1,4 @@
+from memory import Span
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import NetworkType
@@ -136,7 +137,7 @@ struct Server:
             logger.info("Received bytes: ", bytes_recv)
             var request: HTTPRequest
             try:
-                request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b^)
+                request = HTTPRequest.from_bytes(self.address(), max_request_body_size, Span(b))
             except e:
                 logger.error("Server.serve_connection: Failed to parse request")
                 raise e

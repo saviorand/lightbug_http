@@ -1,3 +1,4 @@
+from memory import Span
 from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
 from lightbug_http.cookie import RequestCookieJar
@@ -30,8 +31,8 @@ struct HTTPRequest(Writable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
-        var reader = ByteReader(b^)
+    fn from_bytes[origin: Origin, //](addr: String, max_body_size: Int, b: Span[Byte, origin]) raises -> HTTPRequest:
+        var reader = ByteReader(b)
         var headers = Headers()
         var cookies = RequestCookieJar()
         var cookie_list = List[String]()
@@ -104,7 +105,7 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        r.consume(self.body_raw, content_length)
+        self.body_raw = r.consume(self.body_raw, content_length)
         self.set_content_length(content_length)
 
     fn write_to[T: Writer](self, mut writer: T):

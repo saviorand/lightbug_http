@@ -1,7 +1,7 @@
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
 from lightbug_http.net import default_buffer_size
-from memory import memcpy
+from memory import memcpy, Span
 
 
 @always_inline
@@ -46,12 +46,12 @@ struct ByteWriter:
         return ret^
 
 
-struct ByteReader:
-    var _inner: Bytes
+struct ByteReader[origin: Origin]:
+    var _inner: Span[Byte, origin]
     var read_pos: Int
 
-    fn __init__(out self, owned b: Bytes):
-        self._inner = b^
+    fn __init__(out self, ref b: Span[Byte, origin]):
+        self._inner = b
         self.read_pos = 0
 
     fn peek(self) -> Byte:
@@ -59,20 +59,20 @@ struct ByteReader:
             return 0
         return self._inner[self.read_pos]
 
-    fn read_until(mut self, char: Byte) -> Bytes:
+    fn read_until(mut self, char: Byte) -> Span[Byte, origin]:
         var start = self.read_pos
         while self.peek() != char:
             self.increment()
         logger.info("start", start, "read_pos", self.read_pos, len(self._inner))
         logger.info(chr(int(self._inner[0])), chr(int(self._inner[1])), chr(int(self._inner[2])), chr(int(self._inner[3])))
-        logger.info(self._inner[start : self.read_pos].__str__())
+        print(String(self._inner))
         return self._inner[start : self.read_pos]
 
     @always_inline
-    fn read_word(mut self) -> Bytes:
+    fn read_word(mut self) -> Span[Byte, origin]:
         return self.read_until(BytesConstant.whitespace)
 
-    fn read_line(mut self) -> Bytes:
+    fn read_line(mut self) -> Span[Byte, origin]:
         var start = self.read_pos
         while not is_newline(self.peek()):
             self.increment()
@@ -98,7 +98,7 @@ struct ByteReader:
         self.read_pos += v
 
     @always_inline
-    fn consume(mut self, mut buffer: Bytes, bytes_len: Int = -1):
+    fn consume(mut self, mut buffer: Bytes, bytes_len: Int = -1) -> Bytes:
         var pos = self.read_pos
         var read_len: Int
         if bytes_len == -1:
@@ -108,8 +108,9 @@ struct ByteReader:
             self.read_pos += bytes_len
             read_len = bytes_len
 
-        buffer.resize(read_len, 0)
-        memcpy(buffer.data, self._inner.data + pos, read_len)
+        return self._inner
+        # buffer.resize(read_len, 0)
+        # memcpy(buffer.data, self._inner.data + pos, read_len)
 
 
 struct LogLevel():
