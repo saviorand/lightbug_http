@@ -72,8 +72,8 @@ struct IntegrationTest:
     fn run_tests(mut self):
         logger.info("Running Client Integration Tests...")
         self.test_redirect()
-        # self.test_close_connection()
-        # self.test_server_error()
+        self.test_close_connection()
+        self.test_server_error()
 
         for test in self.results.items():
             print(test[].key + ":", test[].value)
