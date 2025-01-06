@@ -80,9 +80,12 @@ struct Server:
     fn listen_and_serve[T: HTTPService](mut self, address: String, mut handler: T) raises:
         """Listen for incoming connections and serve HTTP requests.
 
+        Parameters:
+            T: The type of HTTPService that handles incoming requests.
+
         Args:
-            address : String - The address (host:port) to listen on.
-            handler : HTTPService - An object that handles incoming HTTP requests.
+            address: The address (host:port) to listen on.
+            handler: An object that handles incoming HTTP requests.
         """
         var net = SysNet()
         var listener = net.listen(NetworkType.tcp4.value, address)
@@ -105,7 +108,7 @@ struct Server:
             var conn = self.ln.accept()
             self.serve_connection(conn, handler)
 
-    fn serve_connection[T: HTTPService](mut self, conn: SysConnection, mut handler: T) raises -> None:
+    fn serve_connection[T: HTTPService](mut self, mut conn: SysConnection, mut handler: T) raises -> None:
         """
         Serve a single connection.
 
@@ -121,31 +124,28 @@ struct Server:
             max_request_body_size = default_max_request_body_size
 
         var req_number = 0
-        var is_closed = False
-
         while True:
             req_number += 1
 
             b = Bytes(capacity=default_buffer_size)
             bytes_recv = conn.read(b)
             if bytes_recv == 0:
-                if not is_closed:
+                if not conn._closed:
                     conn.close()
-                    is_closed = True
                 break
 
             var request: HTTPRequest
             try:
                 request = HTTPRequest.from_bytes(self.address(), max_request_body_size, Span(b))
             except e:
-                logger.error("Server.serve_connection: Failed to parse request")
-                raise e
+                logger.error(e)
+                raise Error("Server.serve_connection: Failed to parse request")
             
             var res: HTTPResponse
             try:
                 res = handler.func(request)
             except:
-                if not is_closed:
+                if not conn._closed:
                     var buffer = encode(InternalError())
                     if buffer[-1] != 0:
                         buffer.append(0)
@@ -153,10 +153,9 @@ struct Server:
                     try:
                         _ = conn.write(buffer)
                         conn.close()
-                        is_closed = True
                     except e:
-                        logger.error("Failed to send InternalError response")
-                        raise e
+                        logger.error(e)
+                        raise Error("Failed to send InternalError response")
                 return
 
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
@@ -168,8 +167,7 @@ struct Server:
                 buffer.append(0)
             var written = conn.write(buffer)
             if close_connection or written == -1:
-                if not is_closed:
+                if not conn._closed:
                     conn.close()
-                    is_closed = True
                 break
 

@@ -1,4 +1,4 @@
-from collections import Dict
+from collections import Dict, Optional
 from memory import Span
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
@@ -32,14 +32,6 @@ fn write_header[T: Writer](mut writer: T, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
 
-# @always_inline
-# fn write_header(mut writer: ByteWriter, key: String, value: String):
-#     var k = key + ": "
-#     writer.write(k)
-#     writer.write(value)
-#     writer.write(lineBreak)
-
-
 @value
 struct Headers(Writable, Stringable):
     """Represents the header key/values in an http request/response.
@@ -66,21 +58,19 @@ struct Headers(Writable, Stringable):
         return key.lower() in self._inner
 
     @always_inline
-    fn __getitem__(self, key: String) -> String:
-        try:
-            return self._inner[key.lower()]
-        except:
-            return String()
+    fn __getitem__(self, key: String) raises -> String:
+        return self._inner[key.lower()]
+    
+    @always_inline
+    fn get(self, key: String) -> Optional[String]:
+        return self._inner.get(key.lower())
 
     @always_inline
     fn __setitem__(mut self, key: String, value: String):
         self._inner[key.lower()] = value
 
-    fn content_length(self) -> Int:
-        try:
-            return int(self[HeaderKey.CONTENT_LENGTH])
-        except:
-            return 0
+    fn content_length(self) raises -> Int:
+        return int(self[HeaderKey.CONTENT_LENGTH])
 
     fn parse_raw(mut self, mut r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()
@@ -109,13 +99,9 @@ struct Headers(Writable, Stringable):
             self._inner[k] = to_string(value)
         return (to_string(first), to_string(second), to_string(third), cookies)
 
-    fn write_to[T: Writer](self, mut writer: T):
+    fn write_to[T: Writer, //](self, mut writer: T):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
-
-    # fn encode_to(self, mut writer: ByteWriter):
-    #     for header in self._inner.items():
-    #         write_header(writer, header[].key, header[].value)
 
     fn __str__(self) -> String:
         return String.write(self)

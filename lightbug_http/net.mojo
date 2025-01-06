@@ -1,5 +1,5 @@
 from utils import StaticTuple
-from time import sleep
+from time import sleep, perf_counter_ns
 from memory import UnsafePointer, stack_allocation
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call, OpaquePointer
@@ -60,7 +60,7 @@ trait Connection(Movable):
     fn write(self, buf: Bytes) raises -> Int:
         ...
 
-    fn close(self) raises:
+    fn close(mut self) raises:
         ...
 
     fn local_addr(mut self) -> TCPAddr:
@@ -113,8 +113,8 @@ struct NoTLSListener:
         try:
             new_sockfd = accept(self.fd, Pointer.address_of(their_addr), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
         except e:
-            logger.error("Failed to accept connection, system `accept()` returned an error.")
-            raise e
+            logger.error(e)
+            raise Error("NoTLSListener.accept: Failed to accept connection, system `accept()` returned an error.")
 
         var peer = get_peer_name(new_sockfd)
         return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
@@ -123,14 +123,14 @@ struct NoTLSListener:
         try:
             shutdown(self.fd, SHUT_RDWR)
         except e:
-            logger.error("Failed to shutdown listener.")
-            print(e)
+            logger.error("NoTLSListener.close: Failed to shutdown listener: " + str(e))
+            logger.error(e)
 
         try:
             close(self.fd)
         except e:
-            logger.error("Failed to close listener.")
-            raise e
+            logger.error(e)
+            raise Error("NoTLSListener.close: Failed to close listener.")
 
     fn addr(self) -> TCPAddr:
         return self.__addr
@@ -143,23 +143,31 @@ struct ListenConfig:
         self.__keep_alive = keep_alive
 
     fn listen(mut self, network: String, address: String) raises -> NoTLSListener:
-        var addr = resolve_internet_addr(network, address)
+        var addr: TCPAddr
+        try:
+            addr = resolve_internet_addr(network, address)
+        except e:
+            raise Error("ListenConfig.listen: Failed to resolve host address - " + str(e))
         var address_family = AF_INET
 
         var sockfd: c_int
         try:
             sockfd = socket(address_family, SOCK_STREAM, 0)
         except e:
-            logger.error("Failed to create listener due to socket creation failure.")
-            raise e
+            logger.error(e)
+            raise Error("ListenConfig.listen: Failed to create listener due to socket creation failure.")
 
-        setsockopt(
-            sockfd,
-            SOL_SOCKET,
-            SO_REUSEADDR,
-            Pointer[c_void].address_of(1),
-            sizeof[Int](),
-        )
+        try:
+            setsockopt(
+                sockfd,
+                SOL_SOCKET,
+                SO_REUSEADDR,
+                Pointer[c_void].address_of(1),
+                sizeof[Int](),
+            )
+        except e:
+            logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
+            # TODO: Maybe raise here if we want to make this a hard failure.
 
         var bind_success = False
         var bind_fail_logged = False
@@ -172,8 +180,8 @@ struct ListenConfig:
         try:
             inet_pton(address_family, addr.ip.unsafe_ptr(), ip_buf)
         except e:
-            print("Failed to convert IP address to binary.")
-            raise e
+            logger.error(e)
+            raise Error("ListenConfig.listen: Failed to convert IP address to binary form.")
 
         var ai = sockaddr_in(
             sin_family=address_family,
@@ -181,8 +189,6 @@ struct ListenConfig:
             sin_addr=in_addr(ip_buf.bitcast[c_uint]().take_pointee()),
             sin_zero=StaticTuple[c_char, 8]()
         )
-        ip_buf.free()
-
         while not bind_success:
             try:
                 bind(sockfd, Pointer.address_of(ai), sizeof[sockaddr_in]())
@@ -193,16 +199,20 @@ struct ListenConfig:
                     print("Retrying. Might take 10-15 seconds.")
                     bind_fail_logged = True
                 print(".", end="", flush=True)
-                shutdown(sockfd, SHUT_RDWR)
+
+                try:
+                    shutdown(sockfd, SHUT_RDWR)
+                except e:
+                    logger.error("ListenConfig.listen: Failed to shutdown socket:", e)
+                    # TODO: Should shutdown failure be a hard failure? We can still ungracefully close the socket.
                 sleep(UInt(1))
         try:
             listen(sockfd, 128)
         except e:
-            logger.error("Listen failed.\n on sockfd " + str(sockfd))
-            raise e
+            logger.error(e)
+            raise Error("ListenConfig.listen: Listen failed on sockfd: " + str(sockfd))
 
         var listener = NoTLSListener(addr, sockfd)
-
         var msg = String.write("\n🔥🐝 Lightbug is listening on ", "http://", addr.ip, ":", str(addr.port))
         print(msg)
         print("Ready to accept connections...")
@@ -215,21 +225,42 @@ struct SysConnection(Connection):
     var fd: c_int
     var raddr: TCPAddr
     var laddr: TCPAddr
+    var _closed: Bool
 
     fn __init__(out self, laddr: String, raddr: String) raises:
-        self.raddr = resolve_internet_addr(NetworkType.tcp4.value, raddr)
-        self.laddr = resolve_internet_addr(NetworkType.tcp4.value, laddr)
-        self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        try:
+            self.raddr = resolve_internet_addr(NetworkType.tcp4.value, raddr)
+        except e:
+            raise Error("Failed to resolve remote address: " + str(e))
+        
+        try:
+            self.laddr = resolve_internet_addr(NetworkType.tcp4.value, laddr)
+        except e:
+            raise Error("Failed to resolve local address: " + str(e))
+        
+        try:
+            self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        except e:
+            logger.error(e)
+            raise Error("Failed to create connection to remote host.")
+        
+        self._closed = False
 
     fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr) raises:
         self.raddr = raddr
         self.laddr = laddr
-        self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        try:
+            self.fd = socket(AF_INET, SOCK_STREAM, 0)
+        except e:
+            logger.error(e)
+            raise Error("Failed to create connection to remote host.")
+        self._closed = False
 
     fn __init__(out self, laddr: TCPAddr, raddr: TCPAddr, fd: c_int):
         self.raddr = raddr
         self.laddr = laddr
         self.fd = fd
+        self._closed = False
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:
@@ -242,15 +273,15 @@ struct SysConnection(Connection):
             buf.size += bytes_recv
             return bytes_recv
         except e:
-            logger.error("SysConnection.read: Failed to read data from connection.")
-            raise e
+            logger.error(e)
+            raise Error("SysConnection.read: Failed to read data from connection.")
 
     fn write(self, msg: String) raises -> Int:
         try:
             return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
         except e:
-            logger.error("SysConnection.write: Failed to write data to connection.")
-            raise e
+            logger.error(e)
+            raise Error("SysConnection.write: Failed to write data to connection.")
 
     fn write(self, buf: Bytes) raises -> Int:
         if buf[-1] != 0:
@@ -259,21 +290,26 @@ struct SysConnection(Connection):
         try:
             return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
         except e:
-            logger.error("SysConnection.write: Failed to write data to connection.")
-            raise e
+            logger.error(e)
+            raise Error("SysConnection.write: Failed to write data to connection.")
 
-    fn close(self) raises:
+    fn close(mut self) raises:
+        if self._closed:
+            return
+
         try:
             shutdown(self.fd, SHUT_RDWR)
         except e:
-            logger.error("Failed to shutdown connection.")
-            logger.error(e)
-        
+            # TODO: In the case where the connection was already closed, should we just info or debug log?
+            logger.debug(e)
+            logger.debug("SysConnection.close: Failed to shutdown connection.")
+            
         try:
             close(self.fd)
         except e:
-            logger.error("Failed to close connection.")
-            raise e
+            logger.error(e)
+            raise Error("SysConnection.close: Failed to close connection.")
+        self._closed = True
 
     fn local_addr(mut self) -> TCPAddr:
         return self.laddr
@@ -427,15 +463,14 @@ fn create_connection(sock: c_int, host: String, port: UInt16) raises -> SysConne
     try:
         connect(sock, addr, sizeof[sockaddr_in]())
     except e:
+        logger.error(e)
         try:
             shutdown(sock, SHUT_RDWR)
         except e:
-            logger.error("Failed to shutdown socket.")
-            logger.error(e)
-        logger.error("Failed to connect to server.")
-        raise e
+            logger.error("Failed to shutdown socket: " + str(e))
+        raise Error("Failed to establish a connection to the server.")
 
-    return SysConnection(sock, TCPAddr(), TCPAddr(host, int(port)))
+    return SysConnection(sock, TCPAddr(), TCPAddr(host, int(port)), False)
 
 
 alias TCPAddrList = List[TCPAddr]
@@ -487,9 +522,9 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         if address != "":
             host = address
     elif network == NetworkType.unix.value:
-        raise Error("Unix addresses not supported yet")
+        raise Error("Couldn't resolve internet address as Unix addresses not supported yet")
     else:
-        raise Error("unsupported network type: " + network)
+        raise Error("Received an unsupported network type for internet address resolution: " + network)
     return TCPAddr(host, port_number)
 
 
@@ -583,8 +618,8 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
             Pointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
     except e:
-        logger.error("get_sock_name: Failed to get address of local socket.")
-        raise e
+        logger.error(e)
+        raise Error("get_sock_name: Failed to get address of local socket.")
 
     var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()
     return HostPort(
@@ -603,8 +638,8 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
             Pointer.address_of(socklen_t(sizeof[sockaddr]())),
         )
     except e:
-        print("get_peer_name: Failed to get address of remote socket.")
-        raise e
+        logger.error(e)
+        raise Error("get_peer_name: Failed to get address of remote socket.")
 
     # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
     var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()

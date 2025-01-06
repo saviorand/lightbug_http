@@ -1,5 +1,6 @@
 from lightbug_http import *
 
+
 @value
 struct IntegerationTestService(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
@@ -20,6 +21,7 @@ struct IntegerationTestService(HTTPService):
             raise Error("oops")
 
         return NotFound("wrong")
+
 
 fn main() raises:
     var server = Server(tcp_keep_alive=True)

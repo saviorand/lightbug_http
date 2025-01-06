@@ -69,9 +69,12 @@ struct Client:
 
         var host_str: String
         var port: Int
-
         if ":" in req.uri.host:
-            var host_port = req.uri.host.split(":")
+            var host_port: List[String]
+            try:
+                host_port = req.uri.host.split(":")
+            except:
+                raise Error("Client.do: Failed to split host and port.")
             host_str = host_port[0]
             port = atol(host_port[1])
         else:
@@ -83,12 +86,18 @@ struct Client:
 
         var conn: SysConnection
         var cached_connection = False
-        if host_str in self._connections:
+        try:
             conn = self._connections[host_str]
             cached_connection = True
-        else:
-            conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
-            self._connections[host_str] = conn
+        except:
+            # If connection is not cached, create a new one.
+            try:
+                conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
+                self._connections[host_str] = conn
+                # cached_connection = True # TODO: It's cached now right?
+            except e:
+                logger.error(e)
+                raise Error("Client.do: Failed to create a connection to host.")
 
         var buffer = encode(req)
         if buffer[-1] != 0:
@@ -133,9 +142,17 @@ struct Client:
         mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
         var new_uri: URI
-        var new_location = original_response.headers[HeaderKey.LOCATION]
-        if new_location.startswith("http"):
-            new_uri = URI.parse_raises(new_location)
+        var new_location: String
+        try:
+            new_location = original_response.headers[HeaderKey.LOCATION]
+        except e:
+            raise Error("Client._handle_redirect: `Location` header was not received in the response.")
+        
+        if new_location and new_location.startswith("http"):
+            try:
+                new_uri = URI.parse_raises(new_location)
+            except e:
+                raise Error("Client._handle_redirect: Failed to parse the new URI - " + str(e))
             original_req.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_req.uri

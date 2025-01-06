@@ -31,7 +31,7 @@ struct HTTPRequest(Writable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes[origin: Origin, //](addr: String, max_body_size: Int, b: Span[Byte, origin]) raises -> HTTPRequest:
+    fn from_bytes(addr: String, max_body_size: Int, b: Span[Byte]) raises -> HTTPRequest:
         var reader = ByteReader(b)
         var headers = Headers()
         var cookies = RequestCookieJar()
@@ -47,7 +47,7 @@ struct HTTPRequest(Writable, Stringable):
         try:
             cookies.parse_cookies(headers)
         except e:
-            raise Error("HTTPRequest.from_bytes: Failed to parse cookies" + str(e))
+            raise Error("HTTPRequest.from_bytes: Failed to parse cookies: " + str(e))
         var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
@@ -94,7 +94,10 @@ struct HTTPRequest(Writable, Stringable):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     fn connection_close(self) -> Bool:
-        return self.headers[HeaderKey.CONNECTION] == "close"
+        var result = self.headers.get(HeaderKey.CONNECTION)
+        if not result:
+            return False
+        return result.value() == "close"
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
