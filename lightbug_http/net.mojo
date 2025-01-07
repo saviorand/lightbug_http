@@ -117,7 +117,7 @@ struct NoTLSListener:
             raise Error("NoTLSListener.accept: Failed to accept connection, system `accept()` returned an error.")
 
         var peer = get_peer_name(new_sockfd)
-        return SysConnection(self.__addr, TCPAddr(peer.host, atol(peer.port)), new_sockfd)
+        return SysConnection(self.__addr, TCPAddr(peer.host, peer.port), new_sockfd)
 
     fn close(self) raises:
         try:
@@ -496,8 +496,7 @@ struct TCPAddr(Addr):
 
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
     var host: String = ""
-    var port: String = ""
-    var port_number = 0
+    var port = 0
     if (
         network == NetworkType.tcp.value
         or network == NetworkType.tcp4.value
@@ -510,7 +509,6 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
             var host_port = split_host_port(address)
             host = host_port.host
             port = host_port.port
-            port_number = atol(str(port))
     elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
         if address != "":
             host = address
@@ -518,7 +516,7 @@ fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
         raise Error("Couldn't resolve internet address as Unix addresses not supported yet")
     else:
         raise Error("Received an unsupported network type for internet address resolution: " + network)
-    return TCPAddr(host, port_number)
+    return TCPAddr(host, port)
 
 
 fn join_host_port(host: String, port: String) -> String:
@@ -531,13 +529,10 @@ alias MissingPortError = Error("missing port in address")
 alias TooManyColonsError = Error("too many colons in address")
 
 
+@value
 struct HostPort:
     var host: String
-    var port: String
-
-    fn __init__(out self, host: String, port: String):
-        self.host = host
-        self.port = port
+    var port: Int
 
 
 fn split_host_port(hostport: String) raises -> HostPort:
@@ -578,7 +573,7 @@ fn split_host_port(hostport: String) raises -> HostPort:
         raise MissingPortError
     if host == "":
         raise Error("missing host")
-    return HostPort(host, port)
+    return HostPort(host, int(port))
 
 
 fn convert_binary_port_to_int(port: UInt16) -> Int:
@@ -617,7 +612,7 @@ fn get_sock_name(fd: Int32) raises -> HostPort:
     var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
-        port=str(convert_binary_port_to_int(addr_in.sin_port)),
+        port=convert_binary_port_to_int(addr_in.sin_port),
     )
 
 
@@ -638,7 +633,7 @@ fn get_peer_name(fd: Int32) raises -> HostPort:
     var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
     return HostPort(
         host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
-        port=str(convert_binary_port_to_int(addr_in.sin_port)),
+        port=convert_binary_port_to_int(addr_in.sin_port),
     )
 
 

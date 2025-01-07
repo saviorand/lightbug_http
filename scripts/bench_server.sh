@@ -1,6 +1,6 @@
 
 
-magic run mojo build bench_server.mojo || exit 1
+magic run mojo build benchmark/bench_server.mojo -I . || exit 1
 
 echo "running server..."
 ./bench_server&

@@ -704,6 +704,93 @@ fn setsockopt[origin: Origin](
             raise Error("setsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
 
 
+fn _getsockopt[len_origin: Origin](
+    socket: c_int,
+    level: c_int,
+    option_name: c_int,
+    option_value: UnsafePointer[c_void],
+    option_len: Pointer[socklen_t, len_origin],
+) -> c_int:
+    """Libc POSIX `setsockopt` function.
+
+    Args:
+        socket: A File Descriptor.
+        level: The protocol level.
+        option_name: The option to set.
+        option_value: A Pointer to the value to set.
+        option_len: The size of the value.
+
+    Returns:
+        0 on success, -1 on error.
+
+    #### C Function
+    ```c
+    int getsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
+    """
+    return external_call[
+        "getsockopt",
+        c_int,  # FnName, RetType
+        c_int,
+        c_int,
+        c_int,
+        UnsafePointer[c_void],
+        Pointer[socklen_t, len_origin],  # Args
+    ](socket, level, option_name, option_value, option_len)
+
+
+fn getsockopt(
+    socket: c_int,
+    level: c_int,
+    option_name: c_int,
+    option_value: UnsafePointer[c_void],
+    option_len: socklen_t,
+) raises:
+    """Libc POSIX `setsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
+
+    Args:
+        socket: A File Descriptor.
+        level: The protocol level.
+        option_name: The option to set.
+        option_value: A UnsafePointer to the value to set.
+        option_len: The size of the value.
+
+    Raises:
+        Error: If an error occurs while setting the socket option.
+        EBADF: The argument `socket` is not a valid descriptor.
+        EFAULT: The argument `option_value` points outside the process's allocated address space.
+        EINVAL: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid.
+        ENOPROTOOPT: The option is unknown at the level indicated.
+        ENOTSOCK: The argument `socket` is not a socket.
+
+    #### C Function
+    ```c
+    int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
+    """
+    var result = _getsockopt(socket, level, option_name, option_value, Pointer.address_of(option_len))
+    if result == -1:
+        var errno = get_errno()
+        if errno == EBADF:
+            raise Error("getsockopt: The argument `socket` is not a valid descriptor.")
+        elif errno == EFAULT:
+            raise Error("getsockopt: The argument `option_value` points outside the process's allocated address space.")
+        elif errno == EINVAL:
+            raise Error("getsockopt: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid.")
+        elif errno == ENOPROTOOPT:
+            raise Error("getsockopt: The option is unknown at the level indicated.")
+        elif errno == ENOTSOCK:
+            raise Error("getsockopt: The argument `socket` is not a socket.")
+        else:
+            raise Error("getsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
+
+
 fn _getsockname[origin: Origin](
     socket: c_int,
     address: UnsafePointer[sockaddr],
