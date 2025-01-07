@@ -94,7 +94,6 @@ struct Client:
             try:
                 conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
                 self._connections[host_str] = conn
-                # cached_connection = True # TODO: It's cached now right?
             except e:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
