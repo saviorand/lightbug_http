@@ -14,24 +14,18 @@ from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
 from lightbug_http.net import create_connection, SysConnection
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.utils import ByteReader
+from lightbug_http.utils import ByteReader, logger
 from collections import Dict
 
 
 struct Client:
-    var host: StringLiteral
+    var host: String
     var port: Int
     var name: String
 
     var _connections: Dict[String, SysConnection]
 
-    fn __init__(out self):
-        self.host = "127.0.0.1"
-        self.port = 8888
-        self.name = "lightbug_http_client"
-        self._connections = Dict[String, SysConnection]()
-
-    fn __init__(out self, host: StringLiteral, port: Int):
+    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
@@ -46,8 +40,7 @@ struct Client:
                 pass
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
-        """
-        The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
+        """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
         It performs the following steps:
         1. Creates a connection to the server specified in the request.
@@ -58,40 +51,34 @@ struct Client:
 
         Note: The code assumes that the `HTTPRequest` object passed as an argument has a valid URI with a host and port specified.
 
-        Parameters
-        ----------
-        req : HTTPRequest :
-            An `HTTPRequest` object representing the request to be sent.
+        Args:
+            req: An `HTTPRequest` object representing the request to be sent.
 
-        Returns
-        -------
-        HTTPResponse :
+        Returns:
             The received response.
 
-        Raises
-        ------
-        Error :
-            If there is a failure in sending or receiving the message.
+        Raises:
+            Error: If there is a failure in sending or receiving the message.
         """
-        var uri = req.uri
-        var host = uri.host
-
-        if host == "":
-            raise Error("URI is nil")
+        if req.uri.host == "":
+            raise Error("Client.do: Request failed because the host field is empty.")
         var is_tls = False
 
-        if uri.is_https():
+        if req.uri.is_https():
             is_tls = True
 
         var host_str: String
         var port: Int
-
-        if ":" in host:
-            var host_port = host.split(":")
+        if ":" in req.uri.host:
+            var host_port: List[String]
+            try:
+                host_port = req.uri.host.split(":")
+            except:
+                raise Error("Client.do: Failed to split host and port.")
             host_str = host_port[0]
             port = atol(host_port[1])
         else:
-            host_str = host
+            host_str = req.uri.host
             if is_tls:
                 port = 443
             else:
@@ -99,21 +86,32 @@ struct Client:
 
         var conn: SysConnection
         var cached_connection = False
-        if host_str in self._connections:
+        try:
             conn = self._connections[host_str]
             cached_connection = True
-        else:
-            conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
-            self._connections[host_str] = conn
+        except:
+            # If connection is not cached, create a new one.
+            try:
+                conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
+                self._connections[host_str] = conn
+            except e:
+                logger.error(e)
+                raise Error("Client.do: Failed to create a connection to host.")
 
-        var bytes_sent = conn.write(encode(req))
-        if bytes_sent == -1:
+        var bytes_sent: Int
+        try:
+            bytes_sent = conn.write(encode(req))
+        except e:
             # Maybe peer reset ungracefully, so try a fresh connection
-            self._close_conn(host_str)
-            if cached_connection:
-                return self.do(req^)
-            raise Error("Failed to send message")
+            if str(e) == "SendError: Connection reset by peer.":
+                logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
+                self._close_conn(host_str)
+                if cached_connection:
+                    return self.do(req^)
+            logger.error("Client.do: Failed to send message.")
+            raise e
 
+        # TODO: What if the response is too large for the buffer? We should read until the end of the response.
         var new_buf = Bytes(capacity=default_buffer_size)
         var bytes_recv = conn.read(new_buf)
 
@@ -121,9 +119,10 @@ struct Client:
             self._close_conn(host_str)
             if cached_connection:
                 return self.do(req^)
-            raise Error("No response received")
+            raise Error("Client.do: No response received from the server.")
+
         try:
-            var res = HTTPResponse.from_bytes(new_buf^, conn)
+            var res = HTTPResponse.from_bytes(new_buf, conn)
             if res.is_redirect():
                 self._close_conn(host_str)
                 return self._handle_redirect(req^, res^)
@@ -140,9 +139,17 @@ struct Client:
         mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
         var new_uri: URI
-        var new_location = original_response.headers[HeaderKey.LOCATION]
-        if new_location.startswith("http"):
-            new_uri = URI.parse_raises(new_location)
+        var new_location: String
+        try:
+            new_location = original_response.headers[HeaderKey.LOCATION]
+        except e:
+            raise Error("Client._handle_redirect: `Location` header was not received in the response.")
+        
+        if new_location and new_location.startswith("http"):
+            try:
+                new_uri = URI.parse_raises(new_location)
+            except e:
+                raise Error("Client._handle_redirect: Failed to parse the new URI - " + str(e))
             original_req.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_req.uri

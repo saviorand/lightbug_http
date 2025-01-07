@@ -1,9 +1,9 @@
+from memory import Span
 from lightbug_http.io.bytes import Bytes, bytes, Byte
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
 from lightbug_http.cookie import RequestCookieJar
 from lightbug_http.uri import URI
-from lightbug_http.utils import ByteReader, ByteWriter
-from lightbug_http.io.bytes import Bytes, bytes, Byte
+from lightbug_http.utils import ByteReader, ByteWriter, logger
 from lightbug_http.io.sync import Duration
 from lightbug_http.strings import (
     strHttp11,
@@ -31,11 +31,10 @@ struct HTTPRequest(Writable, Stringable):
     var timeout: Duration
 
     @staticmethod
-    fn from_bytes(addr: String, max_body_size: Int, owned b: Bytes) raises -> HTTPRequest:
-        var reader = ByteReader(b^)
+    fn from_bytes(addr: String, max_body_size: Int, b: Span[Byte]) raises -> HTTPRequest:
+        var reader = ByteReader(b)
         var headers = Headers()
         var cookies = RequestCookieJar()
-        var cookie_list = List[String]()
         var method: String
         var protocol: String
         var uri_str: String
@@ -43,24 +42,23 @@ struct HTTPRequest(Writable, Stringable):
             var rest = headers.parse_raw(reader)
             method, uri_str, protocol = rest[0], rest[1], rest[2]
         except e:
-            raise Error("Failed to parse request headers: " + e.__str__())
+            raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + str(e))
+        
         try:
             cookies.parse_cookies(headers)
         except e:
-            raise Error("Failed to parse cookies" + str(e))
+            raise Error("HTTPRequest.from_bytes: Failed to parse cookies: " + str(e))
         var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
-
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
-            raise Error("Request body too large")
+            raise Error("HTTPRequest.from_bytes: Request body too large.")
 
         var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol, cookies=cookies)
-
         try:
             request.read_body(reader, content_length, max_body_size)
         except e:
-            raise Error("Failed to read request body: " + e.__str__())
+            raise Error("HTTPRequest.from_bytes: Failed to read request body: " + str(e))
 
         return request
 
@@ -96,14 +94,17 @@ struct HTTPRequest(Writable, Stringable):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     fn connection_close(self) -> Bool:
-        return self.headers[HeaderKey.CONNECTION] == "close"
+        var result = self.headers.get(HeaderKey.CONNECTION)
+        if not result:
+            return False
+        return result.value() == "close"
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader, content_length: Int, max_body_size: Int) raises -> None:
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        r.consume(self.body_raw, content_length)
+        self.body_raw = r.bytes(content_length)
         self.set_content_length(content_length)
 
     fn write_to[T: Writer](self, mut writer: T):
@@ -125,7 +126,8 @@ struct HTTPRequest(Writable, Stringable):
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
-    fn _encoded(mut self) -> Bytes:
+    # TODO: If we want to consume the args for speed, then this should be owned and not mut. self is being consumed and is invalid after this call.
+    fn _encoded(owned self) -> Bytes:
         """Encodes request as bytes.
 
         This method consumes the data in this request and it should
@@ -142,11 +144,13 @@ struct HTTPRequest(Writable, Stringable):
         writer.write(self.protocol)
         writer.write(lineBreak)
 
-        self.headers.encode_to(writer)
-        self.cookies.encode_to(writer)
+        writer.write(self.headers)
+        writer.write(self.cookies)
+        # self.headers.encode_to(writer)
+        # self.cookies.encode_to(writer)
         writer.write(lineBreak)
 
-        writer.write(self.body_raw)
+        writer.consuming_write(self.body_raw)
 
         return writer.consume()
 

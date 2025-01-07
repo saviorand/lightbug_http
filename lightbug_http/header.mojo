@@ -1,7 +1,8 @@
-from collections import Dict
+from collections import Dict, Optional
+from memory import Span
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
-from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space
+from lightbug_http.utils import ByteReader, ByteWriter, is_newline, is_space, logger
 from lightbug_http.strings import rChar, nChar, lineBreak, to_string
 
 
@@ -31,14 +32,6 @@ fn write_header[T: Writer](mut writer: T, key: String, value: String):
     writer.write(key + ": ", value, lineBreak)
 
 
-@always_inline
-fn write_header(mut writer: ByteWriter, key: String, mut value: String):
-    var k = key + ": "
-    writer.write(k)
-    writer.write(value)
-    writer.write(lineBreak)
-
-
 @value
 struct Headers(Writable, Stringable):
     """Represents the header key/values in an http request/response.
@@ -65,11 +58,15 @@ struct Headers(Writable, Stringable):
         return key.lower() in self._inner
 
     @always_inline
-    fn __getitem__(self, key: String) -> String:
+    fn __getitem__(self, key: String) raises -> String:
         try:
             return self._inner[key.lower()]
         except:
-            return String()
+            raise Error("KeyError: Key not found in headers: " + key)
+    
+    @always_inline
+    fn get(self, key: String) -> Optional[String]:
+        return self._inner.get(key.lower())
 
     @always_inline
     fn __setitem__(mut self, key: String, value: String):
@@ -84,7 +81,7 @@ struct Headers(Writable, Stringable):
     fn parse_raw(mut self, mut r: ByteReader) raises -> (String, String, String, List[String]):
         var first_byte = r.peek()
         if not first_byte:
-            raise Error("Failed to read first byte from response header")
+            raise Error("Headers.parse_raw: Failed to read first byte from response header")
 
         var first = r.read_word()
         r.increment()
@@ -100,21 +97,17 @@ struct Headers(Writable, Stringable):
                 r.increment()
             # TODO (bgreni): Handle possible trailing whitespace
             var value = r.read_line()
-            var k = to_string(key^).lower()
+            var k = to_string(key).lower()
             if k == HeaderKey.SET_COOKIE:
-                cookies.append(to_string(value^))
+                cookies.append(to_string(value))
                 continue
 
-            self._inner[k] = to_string(value^)
-        return (to_string(first^), to_string(second^), to_string(third^), cookies)
+            self._inner[k] = to_string(value)
+        return (to_string(first), to_string(second), to_string(third), cookies)
 
-    fn write_to[T: Writer](self, mut writer: T):
-        for header in self._inner.items():
-            write_header(writer, header[].key, header[].value)
-
-    fn encode_to(mut self, mut writer: ByteWriter):
+    fn write_to[T: Writer, //](self, mut writer: T):
         for header in self._inner.items():
             write_header(writer, header[].key, header[].value)
 
     fn __str__(self) -> String:
-        return to_string(self)
+        return String.write(self)

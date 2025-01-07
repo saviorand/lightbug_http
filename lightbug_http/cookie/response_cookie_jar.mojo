@@ -94,10 +94,10 @@ struct ResponseCookieJar(Writable, Stringable):
             except:
                 raise Error("Failed to parse cookie header string " + header[])
 
-    fn encode_to(mut self, mut writer: ByteWriter):
-        for cookie in self._inner.values():
-            var v = cookie[].build_header_value()
-            write_header(writer, HeaderKey.SET_COOKIE, v)
+    # fn encode_to(mut self, mut writer: ByteWriter):
+    #     for cookie in self._inner.values():
+    #         var v = cookie[].build_header_value()
+    #         write_header(writer, HeaderKey.SET_COOKIE, v)
 
     fn write_to[T: Writer](self, mut writer: T):
         for cookie in self._inner.values():

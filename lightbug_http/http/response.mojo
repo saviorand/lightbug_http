@@ -38,9 +38,8 @@ struct HTTPResponse(Writable, Stringable):
     var protocol: String
 
     @staticmethod
-    fn from_bytes(owned b: Bytes, conn: Optional[SysConnection] = None) raises -> HTTPResponse:
-        var reader = ByteReader(b^)
-
+    fn from_bytes(b: Span[Byte], conn: Optional[SysConnection] = None) raises -> HTTPResponse:
+        var reader = ByteReader(b)
         var headers = Headers()
         var cookies = ResponseCookieJar()
         var protocol: String
@@ -54,6 +53,7 @@ struct HTTPResponse(Writable, Stringable):
             reader.skip_newlines()
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
+    
         var response = HTTPResponse(
             Bytes(),
             headers=headers,
@@ -63,34 +63,38 @@ struct HTTPResponse(Writable, Stringable):
             status_text=status_text,
         )
 
-        if response.headers[HeaderKey.TRANSFER_ENCODING] == "chunked":
-            var b = Bytes()
-            reader.consume(b)
+        var transfer_encoding = response.headers.get(HeaderKey.TRANSFER_ENCODING)
+        if transfer_encoding and transfer_encoding.value() == "chunked":
+            var b = reader.bytes()
 
             var buff = Bytes(capacity=default_buffer_size)
-            while conn.value().read(buff) > 0:
-                b += buff
+            try:
+                while conn.value().read(buff) > 0:
+                    b += buff
 
-                if buff[-5] == byte('0') and buff[-4] == byte('\r')
-                    and buff[-3] == byte('\n')
-                    and buff[-2] == byte('\r')
-                    and buff[-1] == byte('\n'):
-                    break
+                    if buff[-5] == byte('0') and buff[-4] == byte('\r')
+                        and buff[-3] == byte('\n')
+                        and buff[-2] == byte('\r')
+                        and buff[-1] == byte('\n'):
+                        break
 
-
-                buff.resize(0)
-            response.read_chunks(b^)
-            return response
+                    buff.resize(0)
+                response.read_chunks(b^)
+                return response
+            except e:
+                logger.error(e)
+                raise Error("Failed to read chunked response.")
 
         try:
             response.read_body(reader)
             return response
         except e:
-            raise Error("Failed to read request body: " + e.__str__())
+            logger.error(e)
+            raise Error("Failed to read request body: ")
 
     fn __init__(
         mut self,
-        body_bytes: Bytes,
+        body_bytes: Span[Byte],
         headers: Headers = Headers(),
         cookies: ResponseCookieJar = ResponseCookieJar(),
         status_code: Int = 200,
@@ -128,14 +132,17 @@ struct HTTPResponse(Writable, Stringable):
         self.headers[HeaderKey.CONNECTION] = "keep-alive"
 
     fn connection_close(self) -> Bool:
-        return self.headers[HeaderKey.CONNECTION] == "close"
+        var result = self.headers.get(HeaderKey.CONNECTION)
+        if not result:
+            return False
+        return result.value() == "close"
 
     @always_inline
     fn set_content_length(mut self, l: Int):
         self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
 
     @always_inline
-    fn content_length(mut self) -> Int:
+    fn content_length(self) -> Int:
         try:
             return int(self.headers[HeaderKey.CONTENT_LENGTH])
         except:
@@ -152,17 +159,16 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader) raises -> None:
-        r.consume(self.body_raw, self.content_length())
+        self.body_raw = r.bytes(self.content_length())
         self.set_content_length(len(self.body_raw))
 
-    fn read_chunks(mut self, owned chunks: Bytes) raises:
-        var reader = ByteReader(chunks^)
+    fn read_chunks(mut self, chunks: Bytes) raises:
+        var reader = ByteReader(Span(chunks))
         while True:
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
                 break
-            var data = Bytes()
-            reader.consume(data, size)
+            var data = reader.bytes(size)
             reader.skip_newlines()
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
@@ -173,9 +179,8 @@ struct HTTPResponse(Writable, Stringable):
         if HeaderKey.SERVER not in self.headers:
             writer.write("server: lightbug_http", lineBreak)
 
-        self.headers.write_to(writer)
-        self.cookies.write_to(writer)
-
+        writer.write(self.headers)
+        writer.write(self.cookies)
         writer.write(lineBreak)
         writer.write(to_string(self.body_raw))
 
@@ -188,7 +193,7 @@ struct HTTPResponse(Writable, Stringable):
         var writer = ByteWriter()
         writer.write(self.protocol)
         writer.write(whitespace)
-        writer.write(bytes(str(self.status_code)))
+        writer.consuming_write(bytes(str(self.status_code)))
         writer.write(whitespace)
         writer.write(self.status_text)
         writer.write(lineBreak)
@@ -202,11 +207,10 @@ struct HTTPResponse(Writable, Stringable):
             except:
                 pass
 
-        self.headers.encode_to(writer)
-        self.cookies.encode_to(writer)
-
+        writer.write(self.headers)
+        writer.write(self.cookies)
         writer.write(lineBreak)
-        writer.write(self.body_raw)
+        writer.consuming_write(self.body_raw)
 
         return writer.consume()
 

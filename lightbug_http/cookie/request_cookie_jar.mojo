@@ -19,10 +19,11 @@ struct RequestCookieJar(Writable, Stringable):
             self._inner[cookie[].name] = cookie[].value
 
     fn parse_cookies(mut self, headers: Headers) raises:
-        var cookie_header = headers[HeaderKey.COOKIE]
+        var cookie_header = headers.get(HeaderKey.COOKIE)
         if not cookie_header:
             return None
-        var cookie_strings = cookie_header.split("; ")
+
+        var cookie_strings = cookie_header.value().split("; ")
 
         for chunk in cookie_strings:
             var key = String("")

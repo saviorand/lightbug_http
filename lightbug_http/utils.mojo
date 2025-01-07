@@ -1,7 +1,7 @@
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
 from lightbug_http.net import default_buffer_size
-from memory import memcpy
+from memory import memcpy, Span
 
 
 @always_inline
@@ -14,30 +14,51 @@ fn is_space(b: Byte) -> Bool:
     return b == BytesConstant.whitespace
 
 
-struct ByteWriter:
+struct ByteWriter(Writer):
     var _inner: Bytes
 
-    fn __init__(out self):
-        self._inner = Bytes(capacity=default_buffer_size)
+    fn __init__(out self, capacity: Int = default_buffer_size):
+        self._inner = Bytes(capacity=capacity)
+    
+    @always_inline
+    fn write_bytes(mut self, bytes: Span[Byte]) -> None:
+        """Writes the contents of `src` into the internal buffer.
+        If `total_bytes_written` < `len(src)`, it also returns an error explaining
+        why the write is short.
+
+        Args:
+            bytes: The bytes to write.
+        """
+        self._inner.extend(bytes)
+    
+    fn write[*Ts: Writable](mut self, *args: *Ts) -> None:
+        """Write data to the `Writer`.
+
+        Parameters:
+            Ts: The types of data to write.
+
+        Args:
+            args: The data to write.
+        """
+        @parameter
+        fn write_arg[T: Writable](arg: T):
+            arg.write_to(self)
+
+        args.each[write_arg]()
 
     @always_inline
-    fn write(mut self, owned b: Bytes):
+    fn consuming_write(mut self, owned b: Bytes):
         self._inner.extend(b^)
 
     @always_inline
-    fn write(mut self, mut s: String):
+    fn consuming_write(mut self, owned s: String):
         # kind of cursed but seems to work?
         _ = s._buffer.pop()
         self._inner.extend(s._buffer^)
         s._buffer = s._buffer_type()
 
     @always_inline
-    fn write(mut self, s: StringLiteral):
-        var str = String(s)
-        self.write(str)
-
-    @always_inline
-    fn write(mut self, b: Byte):
+    fn write_byte(mut self, b: Byte):
         self._inner.append(b)
 
     fn consume(mut self) -> Bytes:
@@ -46,12 +67,12 @@ struct ByteWriter:
         return ret^
 
 
-struct ByteReader:
-    var _inner: Bytes
+struct ByteReader[origin: Origin]:
+    var _inner: Span[Byte, origin]
     var read_pos: Int
 
-    fn __init__(out self, owned b: Bytes):
-        self._inner = b^
+    fn __init__(out self, ref b: Span[Byte, origin]):
+        self._inner = b
         self.read_pos = 0
 
     fn peek(self) -> Byte:
@@ -59,17 +80,17 @@ struct ByteReader:
             return 0
         return self._inner[self.read_pos]
 
-    fn read_until(mut self, char: Byte) -> Bytes:
+    fn read_until(mut self, char: Byte) -> Span[Byte, origin]:
         var start = self.read_pos
         while self.peek() != char:
             self.increment()
         return self._inner[start : self.read_pos]
 
     @always_inline
-    fn read_word(mut self) -> Bytes:
+    fn read_word(mut self) -> Span[Byte, origin]:
         return self.read_until(BytesConstant.whitespace)
 
-    fn read_line(mut self) -> Bytes:
+    fn read_line(mut self) -> Span[Byte, origin]:
         var start = self.read_pos
         while not is_newline(self.peek()):
             self.increment()
@@ -95,7 +116,7 @@ struct ByteReader:
         self.read_pos += v
 
     @always_inline
-    fn consume(mut self, mut buffer: Bytes, bytes_len: Int = -1):
+    fn bytes(mut self, bytes_len: Int = -1) -> Bytes:
         var pos = self.read_pos
         var read_len: Int
         if bytes_len == -1:
@@ -105,5 +126,70 @@ struct ByteReader:
             self.read_pos += bytes_len
             read_len = bytes_len
 
-        buffer.resize(read_len, 0)
-        memcpy(buffer.data, self._inner.data + pos, read_len)
+        return self._inner[pos : pos + read_len + 1]
+
+
+struct LogLevel():
+    alias FATAL = 0
+    alias ERROR = 1
+    alias WARN = 2
+    alias INFO = 3
+    alias DEBUG = 4
+
+
+@value
+struct Logger():
+    var level: Int
+
+    fn __init__(out self, level: Int = LogLevel.INFO):
+        self.level = level
+
+    fn _log_message(self, message: String, level: Int):
+        if self.level >= level:
+            if level < LogLevel.WARN:
+                print(message, file=2)
+            else:
+                print(message)
+
+    fn info[*Ts: Writable](self, *messages: *Ts):
+        var msg = String.write("\033[36mINFO\033[0m  - ")
+        @parameter
+        fn write_message[T: Writable](message: T):
+            msg.write(message, " ")
+        messages.each[write_message]()
+        self._log_message(msg, LogLevel.INFO)
+
+    fn warn[*Ts: Writable](self, *messages: *Ts):
+        var msg = String.write("\033[33mWARN\033[0m  - ")
+        @parameter
+        fn write_message[T: Writable](message: T):
+            msg.write(message, " ")
+        messages.each[write_message]()
+        self._log_message(msg, LogLevel.WARN)
+
+    fn error[*Ts: Writable](self, *messages: *Ts):
+        var msg = String.write("\033[31mERROR\033[0m - ")
+        @parameter
+        fn write_message[T: Writable](message: T):
+            msg.write(message, " ")
+        messages.each[write_message]()
+        self._log_message(msg, LogLevel.ERROR)
+
+    fn debug[*Ts: Writable](self, *messages: *Ts):
+        var msg = String.write("\033[34mDEBUG\033[0m - ")
+        @parameter
+        fn write_message[T: Writable](message: T):
+            msg.write(message, " ")
+        messages.each[write_message]()
+        self._log_message(msg, LogLevel.DEBUG)
+
+    fn fatal[*Ts: Writable](self, *messages: *Ts):
+        var msg = String.write("\033[35mFATAL\033[0m - ")
+        @parameter
+        fn write_message[T: Writable](message: T):
+            msg.write(message, " ")
+        messages.each[write_message]()
+        self._log_message(msg, LogLevel.FATAL)
+
+
+alias logger = Logger()

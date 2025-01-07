@@ -1,7 +1,8 @@
 from lightbug_http import *
 
+
 @value
-struct IntegerationTestService(HTTPService):
+struct IntegrationTestService(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         var p = req.uri.path
         if p == "/redirect":
@@ -21,8 +22,9 @@ struct IntegerationTestService(HTTPService):
 
         return NotFound("wrong")
 
+
 fn main() raises:
     var server = Server(tcp_keep_alive=True)
-    var service = IntegerationTestService()
+    var service = IntegrationTestService()
     server.listen_and_serve("127.0.0.1:8080", service)
             

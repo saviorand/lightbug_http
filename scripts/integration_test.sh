@@ -1,8 +1,7 @@
 #!/bin/bash
 
-
-(magic run mojo build integration_test_server.mojo) || exit 1
-(magic run mojo build integration_test_client.mojo) || exit 1
+(magic run mojo build --debug-level full integration_test_server.mojo) || exit 1
+(magic run mojo build --debug-level full integration_test_client.mojo) || exit 1
 
 echo "starting server..."
 ./integration_test_server &
