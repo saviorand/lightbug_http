@@ -1,6 +1,6 @@
 from utils import StaticTuple
 from time import sleep, perf_counter_ns
-from memory import UnsafePointer, stack_allocation
+from memory import UnsafePointer, stack_allocation, Span
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call, OpaquePointer
 from sys._libc import free
@@ -57,7 +57,7 @@ trait Connection(Movable):
     fn read(self, mut buf: Bytes) raises -> Int:
         ...
 
-    fn write(self, buf: Bytes) raises -> Int:
+    fn write(self, buf: Span[Byte]) raises -> Int:
         ...
 
     fn close(mut self) raises:
@@ -276,14 +276,7 @@ struct SysConnection(Connection):
             logger.error(e)
             raise Error("SysConnection.read: Failed to read data from connection.")
 
-    fn write(self, msg: String) raises -> Int:
-        try:
-            return send(self.fd, msg.unsafe_ptr(), len(msg), 0)
-        except e:
-            logger.error(e)
-            raise Error("SysConnection.write: Failed to write data to connection.")
-
-    fn write(self, buf: Bytes) raises -> Int:
+    fn write(self, buf: Span[Byte]) raises -> Int:
         if buf[-1] != 0:
             raise Error("SysConnection.write: Buffer must be null-terminated.")
         

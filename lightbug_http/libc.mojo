@@ -1326,7 +1326,7 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
         flags: Flags to control the behaviour of the function.
 
     Returns:
-        The number of bytes sent or -1 in case of failure.
+        The number of bytes sent.
     
     Raises:
         Error: If an error occurs while attempting to receive data from the socket.

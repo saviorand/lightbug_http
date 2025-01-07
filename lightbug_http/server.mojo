@@ -70,7 +70,7 @@ struct Server:
         the configured `max_concurrent_connections` or the `DefaultConcurrency`.
 
         Returns:
-            Int: concurrency level for the server.
+            Concurrency level for the server.
         """
         var concurrency = self.max_concurrent_connections
         if concurrency <= 0:
@@ -93,8 +93,10 @@ struct Server:
         self.serve(listener, handler)
 
     fn serve[T: HTTPService](mut self, ln: NoTLSListener, mut handler: T) raises:
-        """
-        Serve HTTP requests.
+        """Serve HTTP requests.
+
+        Parameters:
+            T: The type of HTTPService that handles incoming requests.
 
         Args:
             ln: TCP server that listens for incoming connections.
@@ -109,12 +111,14 @@ struct Server:
             self.serve_connection(conn, handler)
 
     fn serve_connection[T: HTTPService](mut self, mut conn: SysConnection, mut handler: T) raises -> None:
-        """
-        Serve a single connection.
+        """Serve a single connection.
+
+        Parameters:
+            T: The type of HTTPService that handles incoming requests.
 
         Args:
-            conn : SysConnection - A connection object that represents a client connection.
-            handler : HTTPService - An object that handles incoming HTTP requests.
+            conn: A connection object that represents a client connection.
+            handler: An object that handles incoming HTTP requests.
 
         Raises:
             If there is an error while serving the connection.
@@ -127,16 +131,18 @@ struct Server:
         while True:
             req_number += 1
 
-            b = Bytes(capacity=default_buffer_size)
-            bytes_recv = conn.read(b)
+            # TODO: We should read until 0 bytes are received. 
+            # If we completely fill the buffer haven't read the full request, we end up processing a partial request.
+            var b = Bytes(capacity=default_buffer_size)
+            var bytes_recv = conn.read(b)
+            # TODO: Should the connection be closed here? The client should close it for 1.1 http.
             if bytes_recv == 0:
-                if not conn._closed:
-                    conn.close()
+                # conn.close()
                 break
 
             var request: HTTPRequest
             try:
-                request = HTTPRequest.from_bytes(self.address(), max_request_body_size, Span(b))
+                request = HTTPRequest.from_bytes(self.address(), max_request_body_size, b)
             except e:
                 logger.error(e)
                 raise Error("Server.serve_connection: Failed to parse request")
@@ -166,9 +172,13 @@ struct Server:
             if buffer[-1] != 0:
                 buffer.append(0)
             
-            var written = conn.write(buffer)
-            if close_connection or written == -1:
-                if not conn._closed:
-                    conn.close()
+            try:
+                _ = conn.write(buffer)
+            except e:
+                conn.close()
+                break
+            
+            if close_connection:
+                conn.close()
                 break
 
