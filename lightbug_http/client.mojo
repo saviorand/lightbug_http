@@ -104,9 +104,11 @@ struct Client:
             bytes_sent = conn.write(encode(req))
         except e:
             # Maybe peer reset ungracefully, so try a fresh connection
-            self._close_conn(host_str)
-            if cached_connection:
-                return self.do(req^)
+            if str(e) == "SendError: Connection reset by peer.":
+                logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
+                self._close_conn(host_str)
+                if cached_connection:
+                    return self.do(req^)
             logger.error("Client.do: Failed to send message.")
             raise e
 

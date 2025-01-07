@@ -283,8 +283,8 @@ struct SysConnection(Connection):
         try:
             return send(self.fd, buf.unsafe_ptr(), len(buf), 0)
         except e:
-            logger.error(e)
-            raise Error("SysConnection.write: Failed to write data to connection.")
+            logger.error("SysConnection.write: Failed to write data to connection.")
+            raise e
 
     fn close(mut self) raises:
         if self._closed:
