@@ -137,7 +137,7 @@ struct Server:
             var bytes_recv = conn.read(b)
             # TODO: Should the connection be closed here? The client should close it for 1.1 http.
             if bytes_recv == 0:
-                # conn.close()
+                conn.close()
                 break
 
             var request: HTTPRequest
