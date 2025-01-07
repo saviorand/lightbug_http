@@ -277,8 +277,8 @@ struct SysConnection(Connection):
             raise Error("SysConnection.read: Failed to read data from connection.")
 
     fn write(self, buf: Span[Byte]) raises -> Int:
-        if buf[-1] != 0:
-            raise Error("SysConnection.write: Buffer must be null-terminated.")
+        if buf[-1] == 0:
+            raise Error("SysConnection.write: Buffer must not be null-terminated.")
         
         try:
             return send(self.fd, buf.unsafe_ptr(), len(buf), 0)

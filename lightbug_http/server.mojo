@@ -152,12 +152,8 @@ struct Server:
                 res = handler.func(request)
             except:
                 if not conn._closed:
-                    var buffer = encode(InternalError())
-                    if buffer[-1] != 0:
-                        buffer.append(0)
-
                     try:
-                        _ = conn.write(buffer)
+                        _ = conn.write(encode(InternalError()))
                         conn.close()
                     except e:
                         logger.error(e)
@@ -168,12 +164,8 @@ struct Server:
             if close_connection:
                 res.set_connection_close()
 
-            var buffer = encode(res^)
-            if buffer[-1] != 0:
-                buffer.append(0)
-            
             try:
-                _ = conn.write(buffer)
+                _ = conn.write(encode(res^))
             except e:
                 conn.close()
                 break

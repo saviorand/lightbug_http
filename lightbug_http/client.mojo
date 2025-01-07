@@ -99,13 +99,9 @@ struct Client:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
 
-        var buffer = encode(req)
-        if buffer[-1] != 0:
-            buffer.append(0)
-        
         var bytes_sent: Int
         try:
-            bytes_sent = conn.write(buffer)
+            bytes_sent = conn.write(encode(req))
         except e:
             # Maybe peer reset ungracefully, so try a fresh connection
             self._close_conn(host_str)
