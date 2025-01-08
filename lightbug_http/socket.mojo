@@ -48,14 +48,16 @@ from .libc import (
     SO_RCVTIMEO
 )
 # from .ip import (
-#     convert_binary_ip_to_string,
+#     binary_ip_to_string,
 #     build_sockaddr,
 #     build_sockaddr_in,
-#     convert_binary_port_to_int,
+#     binary_port_to_int,
 #     convert_sockaddr_to_host_port,
 # )
 from lightbug_http.io.bytes import Bytes
-from .net import Addr, TCPAddr, HostPort, get_peer_name, default_buffer_size, convert_binary_port_to_int, convert_binary_ip_to_string, resolve_internet_addr, addrinfo_macos, addrinfo_unix
+from lightbug_http.strings import NetworkType
+
+from .net import Addr, TCPAddr, HostPort, default_buffer_size, binary_port_to_int, binary_ip_to_string, resolve_internet_addr, addrinfo_macos, addrinfo_unix
 from sys import sizeof, external_call
 from sys.info import os_is_macos
 from memory import Pointer, UnsafePointer
@@ -91,7 +93,7 @@ struct Socket[AddrType: Addr]():
     """The remote address of the socket (peer's address if connected)."""
     var _closed: Bool
     """Whether the socket is closed."""
-    var _is_connected: Bool
+    var _connected: Bool
     """Whether the socket is connected."""
 
     fn __init__(
@@ -122,7 +124,7 @@ struct Socket[AddrType: Addr]():
         self._local_address = local_address
         self._remote_address = remote_address
         self._closed = False
-        self._is_connected = False
+        self._connected = False
 
     fn __init__(
         out self,
@@ -151,7 +153,7 @@ struct Socket[AddrType: Addr]():
         self._local_address = local_address
         self._remote_address = remote_address
         self._closed = False
-        self._is_connected = True
+        self._connected = True
 
     fn __moveinit__(out self, owned existing: Self):
         """Initialize a new socket object by moving the data from an existing socket object.
@@ -166,11 +168,11 @@ struct Socket[AddrType: Addr]():
         self._local_address = existing._local_address^
         self._remote_address = existing._remote_address^
         self._closed = existing._closed
-        self._is_connected = existing._is_connected
+        self._connected = existing._connected
     
     fn _teardown(mut self) raises:
         """Close the socket and free the file descriptor."""
-        if self._is_connected:
+        if self._connected:
             try:
                 shutdown(self.fd, SHUT_RDWR)
             except e:
@@ -236,7 +238,7 @@ struct Socket[AddrType: Addr]():
             logger.error(e)
             raise Error("Socket.accept: Failed to accept connection, system `accept()` returned an error.")
 
-        var remote = get_peer_name(new_sockfd)
+        var remote = self.get_peer_name()
         return Socket(
             fd=new_sockfd,
             address_family=self.address_family,
@@ -261,7 +263,7 @@ struct Socket[AddrType: Addr]():
             logger.error(e)
             raise Error("Socket.listen: Failed to listen for connections.")
 
-    fn bind[network: String = "tcp4"](mut self, address: String, port: Int) raises:
+    fn bind[network: String = NetworkType.tcp4.value, address_family: Int = AF_INET](mut self, address: String, port: UInt16) raises:
         """Bind the socket to address. The socket must not already be bound. (The format of address depends on the address family).
 
         When a socket is created with Socket(), it exists in a name
@@ -279,19 +281,15 @@ struct Socket[AddrType: Addr]():
         Raises:
             Error: If binding the socket fails.
         """
-        var addr: TCPAddr
-        try:
-            addr = resolve_internet_addr(network, address)
-        except e:
-            raise Error("ListenConfig.listen: Failed to resolve host address - " + str(e))
-
-        var ip_buf_size = 4
-        if self.address_family == AF_INET6:
-            ip_buf_size = 16
-        var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
+        var ip_buffer: UnsafePointer[c_void]
+        @parameter
+        if address_family == AF_INET6:
+            ip_buffer = stack_allocation[16, c_void]()
+        else:
+            ip_buffer = stack_allocation[4, c_void]()
 
         try:
-            inet_pton(self.address_family, addr.ip.unsafe_ptr(), ip_buf)
+            inet_pton(address_family, address.unsafe_ptr(), ip_buffer)
         except e:
             logger.error(e)
             raise Error("ListenConfig.listen: Failed to convert IP address to binary form.")
@@ -299,7 +297,7 @@ struct Socket[AddrType: Addr]():
         var local_address = sockaddr_in(
             sin_family=self.address_family,
             sin_port=htons(port),
-            sin_addr=in_addr(ip_buf.bitcast[c_uint]().take_pointee()),
+            sin_addr=in_addr(ip_buffer.bitcast[c_uint]().take_pointee()),
             sin_zero=StaticTuple[c_char, 8]()
         )
         try:
@@ -337,8 +335,8 @@ struct Socket[AddrType: Addr]():
 
         var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()
         return HostPort(
-            host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
-            port=convert_binary_port_to_int(addr_in.sin_port),
+            host=binary_ip_to_string[AF_INET](addr_in.sin_addr.s_addr),
+            port=binary_port_to_int(addr_in.sin_port),
         )
 
     fn get_peer_name(self) raises -> HostPort:
@@ -368,10 +366,9 @@ struct Socket[AddrType: Addr]():
         # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
         var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
         return HostPort(
-            host=convert_binary_ip_to_string(addr_in.sin_addr.s_addr, AF_INET, INET_ADDRSTRLEN),
-            port=convert_binary_port_to_int(addr_in.sin_port),
+            host=binary_ip_to_string[AF_INET](addr_in.sin_addr.s_addr),
+            port=binary_port_to_int(addr_in.sin_port),
         )
-
 
     fn get_socket_option(self, option_name: Int) raises -> Int:
         """Return the value of the given socket option.
@@ -385,13 +382,11 @@ struct Socket[AddrType: Addr]():
         Raises:
             Error: If getting the socket option fails.
         """
-        var option_value_pointer = stack_allocation[1, c_void]()
         try:
-            getsockopt(
+            return getsockopt(
                 self.fd,
                 SOL_SOCKET,
-                SO_REUSEADDR,
-                option_value_pointer,
+                option_name,
                 sizeof[Int](),
             )
         except e:
@@ -399,14 +394,12 @@ struct Socket[AddrType: Addr]():
             logger.warn("Socket.get_socket_option: Failed to get socket option.")
             raise e
 
-        return option_value_pointer.bitcast[Int]().take_pointee()
-
     fn set_socket_option(self, option_name: Int, owned option_value: Byte = 1) raises:
         """Return the value of the given socket option.
 
         Args:
             option_name: The socket option to set.
-            option_value: The value to set the socket option to.
+            option_value: The value to set the socket option to. Defaults to 1 (True).
 
         Raises:
             Error: If setting the socket option fails.
@@ -415,7 +408,7 @@ struct Socket[AddrType: Addr]():
             setsockopt(
                 self.fd,
                 SOL_SOCKET,
-                SO_REUSEADDR,
+                option_name,
                 Pointer[c_void].address_of(option_value),
                 sizeof[Int](),
             )
@@ -424,7 +417,7 @@ struct Socket[AddrType: Addr]():
             logger.warn("Socket.set_socket_option: Failed to set socket option.")
             raise e
 
-    fn connect(mut self, address: String, port: Int) raises -> None:
+    fn connect(mut self, address: String, port: UInt16) raises -> None:
         """Connect to a remote socket at address.
 
         Args:
@@ -548,7 +541,7 @@ struct Socket[AddrType: Addr]():
 
     #     return bytes_sent
     
-    fn _receive(mut self, mut buffer: Bytes) raises -> Bytes:
+    fn _receive(self, mut buffer: Bytes) raises -> Int:
         """Receive data from the socket into the buffer.
 
         Args:
@@ -577,9 +570,9 @@ struct Socket[AddrType: Addr]():
         if bytes_received == 0:
             raise Error("EOF")
 
-        return buffer
+        return bytes_received
     
-    fn receive(mut self, size: Int = default_buffer_size) raises -> List[Byte, True]:
+    fn receive(self, size: Int = default_buffer_size) raises -> List[Byte, True]:
         """Receive data from the socket into the buffer with capacity of `size` bytes.
 
         Args:
@@ -589,9 +582,10 @@ struct Socket[AddrType: Addr]():
             The buffer with the received data, and an error if one occurred.
         """
         var buffer = Bytes(capacity=size)
-        return self._receive(buffer)
+        _ = self._receive(buffer)
+        return buffer
     
-    fn receive_into(mut self, mut buffer: Bytes) raises -> List[Byte, True]:
+    fn receive_into(self, mut buffer: Bytes) raises -> Int:
         """Receive data from the socket into the buffer.
 
         Args:
@@ -606,7 +600,7 @@ struct Socket[AddrType: Addr]():
         """
         return self._receive(buffer)
 
-    # fn receive_from(mut self, mut buffer: Bytes) raises -> (List[Byte, True], HostPort):
+    # fn receive_from(self, mut buffer: Bytes) raises -> (List[Byte, True], HostPort):
     #     """Receive data from the socket into the buffer dest.
 
     #     Args:
@@ -671,10 +665,11 @@ struct Socket[AddrType: Addr]():
 
     #     return bytes_read, convert_sockaddr_to_host_port(remote_address)
 
-    fn shutdown(self) raises -> None:
+    fn shutdown(mut self) raises -> None:
         """Shut down the socket. The remote end will receive no more data (after queued data is flushed)."""
         try:
             shutdown(self.fd, SHUT_RDWR)
+            self._connected = False
         except e:
             logger.error("Socket.shutdown: Failed to shutdown socket.")
             raise e

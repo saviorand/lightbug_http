@@ -12,7 +12,7 @@ from lightbug_http.strings import to_string
 from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
-from lightbug_http.net import create_connection, SysConnection
+from lightbug_http.net import create_connection, TCPConnection
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.utils import ByteReader, logger
 from collections import Dict
@@ -23,21 +23,21 @@ struct Client:
     var port: Int
     var name: String
 
-    var _connections: Dict[String, SysConnection]
+    # var _connections: Dict[String, TCPConnection]
 
     fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
-        self._connections = Dict[String, SysConnection]()
+        # self._connections = Dict[String, TCPConnection]()
 
-    fn __del__(owned self):
-        for conn in self._connections.values():
-            try:
-                conn[].close()
-            except:
-                # TODO: Add an optional debug log entry here
-                pass
+    # fn __del__(owned self):
+    #     for conn in self._connections.values():
+    #         try:
+    #             conn[].close()
+    #         except:
+    #             # TODO: Add an optional debug log entry here
+    #             pass
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
@@ -84,19 +84,22 @@ struct Client:
             else:
                 port = 80
 
-        var conn: SysConnection
+        var conn: TCPConnection
         var cached_connection = False
-        try:
-            conn = self._connections[host_str]
-            cached_connection = True
-        except:
-            # If connection is not cached, create a new one.
-            try:
-                conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
-                self._connections[host_str] = conn
-            except e:
-                logger.error(e)
-                raise Error("Client.do: Failed to create a connection to host.")
+        conn = create_connection(host_str, port)
+
+        # try:
+        #     pass
+        #     # conn = self._connections[host_str]
+        #     # cached_connection = True
+        # except:
+        #     # If connection is not cached, create a new one.
+        #     try:
+        #         conn = create_connection(host_str, port)
+        #         # self._connections[host_str] = conn
+        #     except e:
+        #         logger.error(e)
+        #         raise Error("Client.do: Failed to create a connection to host.")
 
         var bytes_sent: Int
         try:
@@ -158,6 +161,7 @@ struct Client:
         return self.do(original_req^)
 
     fn _close_conn(mut self, host: String) raises:
-        if host in self._connections:
-            self._connections[host].close()
-            _ = self._connections.pop(host)
+        pass
+        # if host in self._connections:
+        #     self._connections[host].close()
+        #     _ = self._connections.pop(host)

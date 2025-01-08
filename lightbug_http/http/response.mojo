@@ -14,7 +14,7 @@ from lightbug_http.strings import (
 )
 from collections import Optional
 from utils import StringSlice
-from lightbug_http.net import SysConnection, default_buffer_size
+from lightbug_http.net import TCPConnection, default_buffer_size
 
 
 struct StatusCode:
@@ -38,7 +38,7 @@ struct HTTPResponse(Writable, Stringable):
     var protocol: String
 
     @staticmethod
-    fn from_bytes(b: Span[Byte], conn: Optional[SysConnection] = None) raises -> HTTPResponse:
+    fn from_bytes(b: Span[Byte], conn: TCPConnection) raises -> HTTPResponse:
         var reader = ByteReader(b)
         var headers = Headers()
         var cookies = ResponseCookieJar()
@@ -69,7 +69,7 @@ struct HTTPResponse(Writable, Stringable):
 
             var buff = Bytes(capacity=default_buffer_size)
             try:
-                while conn.value().read(buff) > 0:
+                while conn.read(buff) > 0:
                     b += buff
 
                     if buff[-5] == byte('0') and buff[-4] == byte('\r')

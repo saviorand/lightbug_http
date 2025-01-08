@@ -437,22 +437,20 @@ fn _inet_ntop(
     ](af, src, dst, size)
 
 
-fn inet_ntop(
-    af: c_int,
-    src: UnsafePointer[c_void],
-    dst: UnsafePointer[c_char],
-    size: socklen_t,
+fn inet_ntop[address_family: Int32, address_length: Int](
+    ip_address: UInt32,
 ) raises -> String:
     """Libc POSIX `inet_ntop` function.
 
+    Parameters:
+        address_family: Address Family see AF_ aliases.
+        address_length: Address length.
+
     Args:
-        af: Address Family see AF_ aliases.
-        src: A UnsafePointer to a binary address.
-        dst: A UnsafePointer to a buffer to store the result.
-        size: The size of the buffer.
+        ip_address: Binary IP address.
 
     Returns:
-        A UnsafePointer to the buffer containing the result.
+        The IP Address in the human readable format.
     
     Raises:
         Error: If an error occurs while converting the address.
@@ -467,7 +465,17 @@ fn inet_ntop(
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     """
-    var result = _inet_ntop(af, src, dst, size)
+    constrained[
+        int(address_family) in [AF_INET, AF_INET6],
+        "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+    ]()
+    constrained[
+        address_length in [INET_ADDRSTRLEN, INET6_ADDRSTRLEN],
+        "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+    ]()
+    var dst = String(capacity=address_length)
+    var result = _inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), dst.unsafe_ptr(), address_length)
+    dst._buffer.size += address_length # Need to modify internal buffer's size for the string to be valid.
 
     # `inet_ntop` returns NULL on error.
     if not result:
@@ -480,7 +488,7 @@ fn inet_ntop(
             raise Error("inet_ntop Error: An error occurred while converting the address. Error code: " + str(errno))
     
     # We want the string representation of the address, so it's ok to take ownership of the pointer here.
-    return String(ptr=result, length=int(size))
+    return dst
 
 
 fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) -> c_int:
@@ -746,17 +754,18 @@ fn getsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: UnsafePointer[c_void],
     option_len: socklen_t,
-) raises:
-    """Libc POSIX `setsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
+) raises -> Int:
+    """Libc POSIX `getsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
 
     Args:
         socket: A File Descriptor.
         level: The protocol level.
         option_name: The option to set.
-        option_value: A UnsafePointer to the value to set.
         option_len: The size of the value.
+    
+    Returns:
+        The value of the option.
 
     Raises:
         Error: If an error occurs while setting the socket option.
@@ -768,12 +777,13 @@ fn getsockopt(
 
     #### C Function
     ```c
-    int setsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len)
+    int getsockopt(int sockfd, int level, int optname, void optval[restrict *.optlen], socklen_t *restrict optlen);
     ```
 
     #### Notes:
-    * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
+    * Reference: https://man7.org/linux/man-pages/man3/getsockopt.3p.html
     """
+    var option_value = stack_allocation[1, c_void]()
     var result = _getsockopt(socket, level, option_name, option_value, Pointer.address_of(option_len))
     if result == -1:
         var errno = get_errno()
@@ -790,6 +800,7 @@ fn getsockopt(
         else:
             raise Error("getsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
 
+    return option_value.bitcast[Int]().take_pointee()
 
 fn _getsockname[origin: Origin](
     socket: c_int,
@@ -1561,27 +1572,6 @@ fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
     * Reference: https://man7.org/linux/man-pages/man3/gai_strerror.3p.html
     """
     return external_call["gai_strerror", UnsafePointer[c_char], c_int](ecode)
-
-
-fn inet_pton(address_family: Int, address: String) raises -> Int:
-    """Converts an IP address from text to binary form.
-
-    Args:
-        address_family: The address family (AF_INET or AF_INET6).
-        address: The IP address in text form.
-    
-    Returns:
-        The IP address in binary form.
-    """
-    var ip_buf_size = 4
-    if address_family == AF_INET6:
-        ip_buf_size = 16
-
-    var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-    inet_pton(rebind[c_int](address_family), address.unsafe_ptr(), ip_buf)
-    var result = int(ip_buf.bitcast[c_uint]())
-    ip_buf.free()
-    return result
 
 
 # --- ( File Related Syscalls & Structs )---------------------------------------
