@@ -99,7 +99,6 @@ struct Server(Movable):
         var net = ListenConfig()
         var listener = net.listen(NetworkType.tcp4.value, address)
         self.set_address(address)
-        print(listener.socket.local_address())
         self.serve(listener^, handler)
 
     fn serve[T: HTTPService](mut self, owned ln: NoTLSListener, mut handler: T) raises:

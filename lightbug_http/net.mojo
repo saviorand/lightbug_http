@@ -78,6 +78,10 @@ trait Addr(Stringable, Writable, RepresentableCollectionElement):
 
     fn __init__(out self, ip: String, port: UInt16):
         ...
+    
+    @implicit
+    fn __init__(out self, host_port: HostPort):
+        ...
 
     fn network(self) -> String:
         ...
@@ -389,6 +393,12 @@ struct TCPAddr(Addr):
     fn __init__(out self, ip: String = "127.0.0.1", port: UInt16 = 8000):
         self.ip = ip
         self.port = port
+        self.zone = ""
+    
+    @implicit
+    fn __init__(out self, host_port: HostPort):
+        self.ip = host_port.host
+        self.port = host_port.port
         self.zone = ""
 
     fn network(self) -> String:

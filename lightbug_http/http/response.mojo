@@ -38,6 +38,38 @@ struct HTTPResponse(Writable, Stringable):
     var protocol: String
 
     @staticmethod
+    fn from_bytes(b: Span[Byte]) raises -> HTTPResponse:
+        var reader = ByteReader(b)
+        var headers = Headers()
+        var cookies = ResponseCookieJar()
+        var protocol: String
+        var status_code: String
+        var status_text: String
+
+        try:
+            var properties = headers.parse_raw(reader)
+            protocol, status_code, status_text = properties[0], properties[1], properties[2]
+            cookies.from_headers(properties[3])
+            reader.skip_newlines()
+        except e:
+            raise Error("Failed to parse response headers: " + str(e))
+    
+        var response = HTTPResponse(
+            Bytes(),
+            headers=headers,
+            cookies=cookies,
+            protocol=protocol,
+            status_code=int(status_code),
+            status_text=status_text,
+        )
+        try:
+            response.read_body(reader)
+            return response
+        except e:
+            logger.error(e)
+            raise Error("Failed to read request body: ")
+
+    @staticmethod
     fn from_bytes(b: Span[Byte], conn: TCPConnection) raises -> HTTPResponse:
         var reader = ByteReader(b)
         var headers = Headers()

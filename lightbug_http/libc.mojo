@@ -285,6 +285,19 @@ struct sockaddr_in:
     var sin_addr: in_addr
     var sin_zero: StaticTuple[c_char, 8]
 
+    fn __init__(out self, address_family: Int, port: UInt16, binary_ip: UInt32):
+        """Construct a sockaddr_in struct.
+
+        Args:
+            address_family: The address family.
+            port: A 16-bit integer port in host byte order, gets converted to network byte order via `htons`.
+            binary_ip: The binary representation of the IP address.
+        """
+        self.sin_family = address_family
+        self.sin_port = htons(port)
+        self.sin_addr = in_addr(binary_ip)
+        self.sin_zero = StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
+
 
 @value
 @register_passable("trivial")
@@ -475,7 +488,13 @@ fn inet_ntop[address_family: Int32, address_length: Int](
     ]()
     var dst = String(capacity=address_length)
     var result = _inet_ntop(address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), dst.unsafe_ptr(), address_length)
-    dst._buffer.size += address_length # Need to modify internal buffer's size for the string to be valid.
+
+    var i = 0
+    while i <= address_length:
+        if result[i] == 0:
+            break
+        i += 1
+    dst._buffer.size = i + 1 # Need to modify internal buffer's size for the string to be valid.
 
     # `inet_ntop` returns NULL on error.
     if not result:
@@ -498,7 +517,7 @@ fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void])
     or -1 if some system error occurred (in which case errno will have been set).
 
     Args:
-        af: Address Family see AF_ aliases.
+        af: Address Family: `AF_INET` or `AF_INET6`.
         src: A UnsafePointer to a string containing the address.
         dst: A UnsafePointer to a buffer to store the result.
     
@@ -522,14 +541,18 @@ fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void])
     ](af, src, dst)
 
 
-fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) raises:
+fn inet_pton[address_family: Int32](src: UnsafePointer[c_char]) raises -> c_uint:
     """Libc POSIX `inet_pton` function. Converts a presentation format address (that is, printable form as held in a character string)
     to network format (usually a struct in_addr or some other internal binary representation, in network byte order).
 
+    Parameters:
+        address_family: Address Family: `AF_INET` or `AF_INET6`.
+
     Args:
-        af: Address Family see AF_ aliases.
         src: A UnsafePointer to a string containing the address.
-        dst: A UnsafePointer to a buffer to store the result.
+    
+    Returns:
+        The binary representation of the ip address.
     
     Raises:
         Error: If an error occurs while converting the address or the input is not a valid address.
@@ -543,12 +566,25 @@ fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) 
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     * This function is valid for `AF_INET` and `AF_INET6`.
     """
-    var result = _inet_pton(af, src, dst)
+    constrained[
+        int(address_family) in [AF_INET, AF_INET6],
+        "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+    ]()
+    var ip_buffer: UnsafePointer[c_void]
+    @parameter
+    if address_family == AF_INET6:
+        ip_buffer = stack_allocation[16, c_void]()
+    else:
+        ip_buffer = stack_allocation[4, c_void]()
+
+    var result = _inet_pton(address_family, src, ip_buffer)
     if result == 0:
         raise Error("inet_pton Error: The input is not a valid address.")
     elif result == -1:
         var errno = get_errno()
         raise Error("inet_pton Error: An error occurred while converting the address. Error code: " + str(errno))
+    
+    return ip_buffer.bitcast[c_uint]().take_pointee()
 
 
 fn _socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
@@ -663,12 +699,11 @@ fn _setsockopt[origin: Origin](
     ](socket, level, option_name, option_value, option_len)
 
 
-fn setsockopt[origin: Origin](
+fn setsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: Pointer[c_void, origin],
-    option_len: socklen_t,
+    option_value: c_void,
 ) raises:
     """Libc POSIX `setsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
 
@@ -677,7 +712,6 @@ fn setsockopt[origin: Origin](
         level: The protocol level.
         option_name: The option to set.
         option_value: A UnsafePointer to the value to set.
-        option_len: The size of the value.
 
     Raises:
         Error: If an error occurs while setting the socket option.
@@ -695,7 +729,7 @@ fn setsockopt[origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
     """
-    var result = _setsockopt(socket, level, option_name, option_value, option_len)
+    var result = _setsockopt(socket, level, option_name, Pointer.address_of(option_value), sizeof[Int]())
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
@@ -754,7 +788,6 @@ fn getsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_len: socklen_t,
 ) raises -> Int:
     """Libc POSIX `getsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
 
@@ -762,7 +795,6 @@ fn getsockopt(
         socket: A File Descriptor.
         level: The protocol level.
         option_name: The option to set.
-        option_len: The size of the value.
     
     Returns:
         The value of the option.
@@ -784,6 +816,7 @@ fn getsockopt(
     * Reference: https://man7.org/linux/man-pages/man3/getsockopt.3p.html
     """
     var option_value = stack_allocation[1, c_void]()
+    var option_len: socklen_t = sizeof[Int]()
     var result = _getsockopt(socket, level, option_name, option_value, Pointer.address_of(option_len))
     if result == -1:
         var errno = get_errno()
@@ -911,17 +944,11 @@ fn _getpeername[origin: Origin](
     ](sockfd, addr, address_len)
 
 
-fn getpeername[origin: Origin](
-    sockfd: c_int,
-    addr: UnsafePointer[sockaddr],
-    address_len: Pointer[socklen_t, origin],
-) raises:
+fn getpeername(file_descriptor: c_int) raises -> sockaddr_in:
     """Libc POSIX `getpeername` function.
 
     Args:
-        sockfd: A File Descriptor.
-        addr: A UnsafePointer to a buffer to store the address of the peer.
-        address_len: A UnsafePointer to the size of the buffer.
+        file_descriptor: A File Descriptor.
 
     Raises:
         Error: If an error occurs while getting the socket name.
@@ -940,7 +967,8 @@ fn getpeername[origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man2/getpeername.2.html
     """
-    var result = _getpeername(sockfd, addr, address_len)
+    var remote_address = stack_allocation[1, sockaddr]()
+    var result = _getpeername(file_descriptor, remote_address, Pointer.address_of(socklen_t(sizeof[sockaddr]())))
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
@@ -957,6 +985,9 @@ fn getpeername[origin: Origin](
             raise Error("getpeername: The argument `socket` is not a socket, it is a file.")
         else:
             raise Error("getpeername: An error occurred while getting the socket name. Error code: " + str(errno))
+
+    # Cast sockaddr struct to sockaddr_in  
+    return remote_address.bitcast[sockaddr_in]().take_pointee()
 
 
 fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
@@ -981,13 +1012,12 @@ fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, ori
     return external_call["bind", c_int, c_int, Pointer[sockaddr_in, origin], socklen_t](socket, address, address_len)
 
 
-fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) raises:
+fn bind(socket: c_int, mut address: sockaddr_in) raises:
     """Libc POSIX `bind` function.
 
     Args:
         socket: A File Descriptor.
         address: A UnsafePointer to the address to bind to.
-        address_len: The size of the address.
     
     Raises:
         Error: If an error occurs while binding the socket.
@@ -1017,7 +1047,7 @@ fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, orig
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
     """
-    var result = _bind(socket, address, address_len)
+    var result = _bind(socket, Pointer.address_of(address), sizeof[sockaddr_in]())
     if result == -1:
         var errno = get_errno()
         if errno == EACCES:
@@ -1147,17 +1177,11 @@ fn _accept[address_origin: MutableOrigin, len_origin: Origin](
     ](socket, address, address_len)
 
 
-fn accept[address_origin: MutableOrigin, len_origin: Origin](
-    socket: c_int,
-    address: Pointer[sockaddr, address_origin],
-    address_len: Pointer[socklen_t, len_origin],
-) raises -> c_int:
+fn accept(socket: c_int) raises -> c_int:
     """Libc POSIX `accept` function.
 
     Args:
         socket: A File Descriptor.
-        address: A UnsafePointer to a buffer to store the address of the peer.
-        address_len: A UnsafePointer to the size of the buffer.
 
     Raises:
         Error: If an error occurs while listening on the socket.
@@ -1185,7 +1209,8 @@ fn accept[address_origin: MutableOrigin, len_origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     """
-    var result = _accept(socket, address, address_len)
+    var remote_address = sockaddr()
+    var result = _accept(socket, Pointer.address_of(remote_address), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
@@ -1221,7 +1246,7 @@ fn accept[address_origin: MutableOrigin, len_origin: Origin](
 
     return result
 
-fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
+fn _connect[origin: Origin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function.
 
     Args: socket: A File Descriptor.
@@ -1240,13 +1265,12 @@ fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, 
     return external_call["connect", c_int](socket, address, address_len)
 
 
-fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) raises:
+fn connect(socket: c_int, address: sockaddr_in) raises:
     """Libc POSIX `connect` function.
 
     Args:
         socket: A File Descriptor.
-        address: A UnsafePointer to the address to connect to.
-        address_len: The size of the address.
+        address: The address to connect to.
     
     Raises:
         Error: If an error occurs while connecting to the socket.
@@ -1273,7 +1297,7 @@ fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) rais
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     """
-    var result = _connect(socket, Pointer.address_of(address), address_len)
+    var result = _connect(socket, Pointer.address_of(address), sizeof[sockaddr_in]())
     if result == -1:
         var errno = get_errno()
         if errno == EACCES:

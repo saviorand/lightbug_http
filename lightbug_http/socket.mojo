@@ -68,7 +68,7 @@ alias SocketClosedError = "Socket: Socket is already closed"
 
 
 
-struct Socket[AddrType: Addr]():
+struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
     """Represents a network file descriptor. Wraps around a file descriptor and provides network functions.
 
     Args:
@@ -81,8 +81,8 @@ struct Socket[AddrType: Addr]():
 
     var fd: Int32
     """The file descriptor of the socket."""
-    var address_family: Int
-    """The address family of the socket."""
+    # var address_family: Int
+    # """The address family of the socket."""
     var socket_type: Int32
     """The socket type."""
     var protocol: Byte
@@ -100,7 +100,7 @@ struct Socket[AddrType: Addr]():
         out self,
         local_address: AddrType = AddrType(),
         remote_address: AddrType = AddrType(),
-        address_family: Int = AF_INET,
+        # address_family: Int = AF_INET,
         socket_type: Int32 = SOCK_STREAM,
         protocol: Byte = 0,
     ) raises:
@@ -109,14 +109,13 @@ struct Socket[AddrType: Addr]():
         Args:
             local_address: The local address of the socket (local address if bound).
             remote_address: The remote address of the socket (peer's address if connected).
-            address_family: The address family of the socket.
             socket_type: The socket type.
             protocol: The protocol.
 
         Raises:
             Error: If the socket creation fails.
         """
-        self.address_family = address_family
+        # self.address_family = address_family
         self.socket_type = socket_type
         self.protocol = protocol
 
@@ -129,25 +128,24 @@ struct Socket[AddrType: Addr]():
     fn __init__(
         out self,
         fd: Int32,
-        address_family: Int,
+        # address_family: Int,
         socket_type: Int32,
         protocol: Byte,
         local_address: AddrType,
-        remote_address: AddrType,
+        remote_address: AddrType = AddrType(),
     ):
         """
         Create a new socket object when you already have a socket file descriptor. Typically through socket.accept().
 
         Args:
             fd: The file descriptor of the socket.
-            address_family: The address family of the socket.
             socket_type: The socket type.
             protocol: The protocol.
             local_address: The local address of the socket (local address if bound).
             remote_address: The remote address of the socket (peer's address if connected).
         """
         self.fd = fd
-        self.address_family = address_family
+        # self.address_family = address_family
         self.socket_type = socket_type
         self.protocol = protocol
         self._local_address = local_address
@@ -162,7 +160,7 @@ struct Socket[AddrType: Addr]():
             existing: The existing socket object to move the data from.
         """
         self.fd = existing.fd
-        self.address_family = existing.address_family
+        # self.address_family = existing.address_family
         self.socket_type = existing.socket_type
         self.protocol = existing.protocol
         self._local_address = existing._local_address^
@@ -207,6 +205,14 @@ struct Socket[AddrType: Addr]():
             The local address of the socket as a UDP address.
         """
         return self._local_address
+    
+    fn set_local_address(mut self, address: AddrType) -> None:
+        """Set the local address of the socket.
+
+        Args:
+            address: The local address to set.
+        """
+        self._local_address = address
 
     fn remote_address(ref self) -> ref [self._remote_address] AddrType:
         """Return the remote address of the socket as a UDP address.
@@ -215,6 +221,14 @@ struct Socket[AddrType: Addr]():
             The remote address of the socket as a UDP address.
         """
         return self._remote_address
+    
+    fn set_remote_address(mut self, address: AddrType) -> None:
+        """Set the remote address of the socket.
+
+        Args:
+            address: The remote address to set.
+        """
+        self._remote_address = address
 
     fn accept(self) raises -> Socket[AddrType]:
         """Accept a connection. The socket must be bound to an address and listening for connections.
@@ -227,26 +241,22 @@ struct Socket[AddrType: Addr]():
         Raises:
             Error: If the connection fails.
         """
-        var remote_address = sockaddr()        
-        var new_sockfd: c_int
+        var new_socket_fd: c_int
         try:
-            new_sockfd = accept(
-                self.fd, 
-                Pointer.address_of(remote_address),
-                Pointer.address_of(socklen_t(sizeof[socklen_t]())))
+            new_socket_fd = accept(self.fd)
         except e:
             logger.error(e)
             raise Error("Socket.accept: Failed to accept connection, system `accept()` returned an error.")
 
-        var remote = self.get_peer_name()
-        return Socket(
-            fd=new_sockfd,
-            address_family=self.address_family,
+        var new_socket = Socket(
+            fd=new_socket_fd,
+            # address_family=self.address_family,
             socket_type=self.socket_type,
             protocol=self.protocol,
             local_address=self.local_address(),
-            remote_address=AddrType(remote.host, int(remote.port)),
         )
+        new_socket.set_remote_address(new_socket.get_peer_name())
+        return new_socket^
 
     fn listen(self, backlog: UInt = 0) raises:
         """Enable a server to accept connections.
@@ -263,7 +273,7 @@ struct Socket[AddrType: Addr]():
             logger.error(e)
             raise Error("Socket.listen: Failed to listen for connections.")
 
-    fn bind[network: String = NetworkType.tcp4.value, address_family: Int = AF_INET](mut self, address: String, port: UInt16) raises:
+    fn bind[network: String = NetworkType.tcp4.value](mut self, address: String, port: UInt16) raises:
         """Bind the socket to address. The socket must not already be bound. (The format of address depends on the address family).
 
         When a socket is created with Socket(), it exists in a name
@@ -281,27 +291,20 @@ struct Socket[AddrType: Addr]():
         Raises:
             Error: If binding the socket fails.
         """
-        var ip_buffer: UnsafePointer[c_void]
-        @parameter
-        if address_family == AF_INET6:
-            ip_buffer = stack_allocation[16, c_void]()
-        else:
-            ip_buffer = stack_allocation[4, c_void]()
-
+        var binary_ip: c_uint
         try:
-            inet_pton(address_family, address.unsafe_ptr(), ip_buffer)
+            binary_ip = inet_pton[address_family](address.unsafe_ptr())
         except e:
             logger.error(e)
             raise Error("ListenConfig.listen: Failed to convert IP address to binary form.")
 
         var local_address = sockaddr_in(
-            sin_family=self.address_family,
-            sin_port=htons(port),
-            sin_addr=in_addr(ip_buffer.bitcast[c_uint]().take_pointee()),
-            sin_zero=StaticTuple[c_char, 8]()
+            address_family=address_family,
+            port=port,
+            binary_ip=binary_ip,
         )
         try:
-            bind(self.fd, Pointer.address_of(local_address), sizeof[sockaddr_in]())
+            bind(self.fd, local_address)
         except e:
             logger.error(e)
             raise Error("Socket.bind: Binding socket failed.")
@@ -352,19 +355,13 @@ struct Socket[AddrType: Addr]():
             raise SocketClosedError
 
         # TODO: Add check to see if the socket is bound and error if not.
-        var remote_address = stack_allocation[1, sockaddr]()
+        var addr_in: sockaddr_in
         try:
-            getpeername(
-                self.fd,
-                remote_address,
-                Pointer.address_of(socklen_t(sizeof[sockaddr]())),
-            )
+            addr_in = getpeername(self.fd)
         except e:
             logger.error(e)
             raise Error("get_peer_name: Failed to get address of remote socket.")
 
-        # Cast sockaddr struct to sockaddr_in to convert binary IP to string.
-        var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
         return HostPort(
             host=binary_ip_to_string[AF_INET](addr_in.sin_addr.s_addr),
             port=binary_port_to_int(addr_in.sin_port),
@@ -383,12 +380,7 @@ struct Socket[AddrType: Addr]():
             Error: If getting the socket option fails.
         """
         try:
-            return getsockopt(
-                self.fd,
-                SOL_SOCKET,
-                option_name,
-                sizeof[Int](),
-            )
+            return getsockopt(self.fd, SOL_SOCKET, option_name)
         except e:
             # TODO: Should this be a warning or an error?
             logger.warn("Socket.get_socket_option: Failed to get socket option.")
@@ -405,13 +397,7 @@ struct Socket[AddrType: Addr]():
             Error: If setting the socket option fails.
         """
         try:
-            setsockopt(
-                self.fd,
-                SOL_SOCKET,
-                option_name,
-                Pointer[c_void].address_of(option_value),
-                sizeof[Int](),
-            )
+            setsockopt(self.fd, SOL_SOCKET, option_name, option_value)
         except e:
             # TODO: Should this be a warning or an error?
             logger.warn("Socket.set_socket_option: Failed to set socket option.")
@@ -421,7 +407,7 @@ struct Socket[AddrType: Addr]():
         """Connect to a remote socket at address.
 
         Args:
-            address: String - The IP address to connect to.
+            address: The IP address to connect to.
             port: The port number to connect to.
 
         Raises:
@@ -433,9 +419,13 @@ struct Socket[AddrType: Addr]():
         else:
             ip = addrinfo_unix().get_ip_address(address)
 
-        var addr = sockaddr_in(self.address_family, htons(port), in_addr(ip.s_addr), StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0))
+        var addr = sockaddr_in(
+            address_family=address_family,
+            port=port, 
+            binary_ip=ip.s_addr
+        )
         try:
-            connect(self.fd, addr, sizeof[sockaddr_in]())
+            connect(self.fd, addr)
         except e:
             logger.error("Socket.connect: Failed to establish a connection to the server.")
             raise e
@@ -669,10 +659,11 @@ struct Socket[AddrType: Addr]():
         """Shut down the socket. The remote end will receive no more data (after queued data is flushed)."""
         try:
             shutdown(self.fd, SHUT_RDWR)
-            self._connected = False
         except e:
             logger.error("Socket.shutdown: Failed to shutdown socket.")
             raise e
+        
+        self._connected = False
 
     fn close(mut self) raises -> None:
         """Mark the socket closed.
