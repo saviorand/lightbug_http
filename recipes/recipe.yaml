@@ -5,7 +5,7 @@ context:
 
 package:
   name: "lightbug_http"
-  version: 0.1.7
+  version: 0.1.8
 
 source:
   - path: ../lightbug_http
