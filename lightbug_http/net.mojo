@@ -3,11 +3,10 @@ from time import sleep, perf_counter_ns
 from memory import UnsafePointer, stack_allocation, Span
 from sys.info import sizeof, os_is_macos
 from sys.ffi import external_call, OpaquePointer
-from sys._libc import free
 from lightbug_http.strings import NetworkType, to_string
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
-from .libc import (
+from lightbug_http.libc import (
     c_void,
     c_int,
     c_uint,
@@ -45,8 +44,8 @@ from .libc import (
     INET_ADDRSTRLEN,
     INET6_ADDRSTRLEN
 )
-from .utils import logger
-from .socket import Socket
+from lightbug_http.utils import logger
+from lightbug_http.socket import Socket
 
 
 alias default_buffer_size = 4096
@@ -72,7 +71,9 @@ trait Connection(Movable):
         ...
 
 
-trait Addr(Stringable, Writable, RepresentableCollectionElement):
+trait Addr(Stringable, Representable, Writable, RepresentableCollectionElement):
+    alias _type: StringLiteral
+    
     fn __init__(out self):
         ...
 
@@ -109,6 +110,13 @@ struct NoTLSListener:
 
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
+    
+    # fn __del__(owned self):
+    #     logger.info("Listener cleaning up", self.socket)
+    #     try:
+    #         self.teardown()
+    #     except e:
+    #         logger.error("NoTLSListener.__del__: Failed to close connection: " + str(e))
 
     fn accept(self) raises -> TCPConnection:
         return TCPConnection(self.socket.accept())
@@ -120,17 +128,7 @@ struct NoTLSListener:
         return self.socket.shutdown()
 
     fn teardown(mut self) raises:
-        try:
-            self.shutdown()
-        except e:
-            logger.error("NoTLSListener.close: Failed to shutdown listener: " + str(e))
-            logger.error(e)
-
-        try:
-            self.close()
-        except e:
-            logger.error(e)
-            raise Error("NoTLSListener.close: Failed to close listener.")
+        self.socket.teardown()
 
     fn addr(self) -> TCPAddr:
         return self.socket.local_address()
@@ -208,13 +206,23 @@ struct TCPConnection(Connection):
 
     fn __moveinit__(inout self, owned existing: Self):
         self.socket = existing.socket^
+    
+    # fn __del__(owned self):
+    #     logger.info("TCPConnection cleaning up", self.socket)
+    #     try:
+    #         self.teardown()
+    #     except e:
+    #         logger.error("TCPConnection.__del__: Failed to close connection: " + str(e))
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:
             return self.socket.receive_into(buf)
         except e:
-            logger.error(e)
-            raise Error("TCPConnection.read: Failed to read data from connection.")
+            if str(e) == "EOF":
+                raise e
+            else:
+                logger.error(e)
+                raise Error("TCPConnection.read: Failed to read data from connection.")
 
     fn write(self, buf: Span[Byte]) raises -> Int:
         if buf[-1] == 0:
@@ -228,6 +236,10 @@ struct TCPConnection(Connection):
 
     fn close(mut self) raises:
         self.socket.close()
+    
+    fn teardown(mut self) raises:
+        logger.info("TCPConnection teardown")
+        self.socket.teardown()
     
     fn is_closed(self) -> Bool:
         return self.socket._closed
@@ -364,7 +376,8 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
     Returns:
         The socket file descriptor.
     """
-    var socket = Socket(remote_address=TCPAddr(host, int(port)))
+    var socket = Socket[TCPAddr]()
+    logger.info("Socket create connection, fd:", socket.fd)
     try:
         socket.connect(host, port)
     except e:
@@ -381,6 +394,7 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
 
 @value
 struct TCPAddr(Addr):
+    alias _type = "TCPAddr"
     var ip: String
     var port: UInt16
     var zone: String  # IPv6 addressing zone
@@ -415,11 +429,12 @@ struct TCPAddr(Addr):
     fn write_to[W: Writer, //](self, mut writer: W):
         writer.write(
             "TCPAddr(",
-            "ip=", self.ip,
+            "ip=", repr(self.ip),
             ", port=", str(self.port),
-            ", zone=", self.zone,
+            ", zone=", repr(self.zone),
             ")"
         )
+
 
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
     var host: String = ""

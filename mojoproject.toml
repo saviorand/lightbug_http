@@ -11,7 +11,7 @@ build = { cmd = "rattler-build build --recipe recipes -c https://conda.modular.c
 publish = { cmd = "bash scripts/publish.sh", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
 test = { cmd = "magic run mojo test -I . tests/lightbug_http" }
 integration_test = { cmd = "bash scripts/integration_test.sh" }
-bench = { cmd = "magic run mojo benchmark/bench.mojo -I ." }
+bench = { cmd = "magic run mojo -I . benchmark/bench.mojo" }
 bench_server = { cmd = "bash scripts/bench_server.sh" }
 format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 

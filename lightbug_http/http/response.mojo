@@ -211,10 +211,12 @@ struct HTTPResponse(Writable, Stringable):
         if HeaderKey.SERVER not in self.headers:
             writer.write("server: lightbug_http", lineBreak)
 
-        writer.write(self.headers)
-        writer.write(self.cookies)
-        writer.write(lineBreak)
-        writer.write(to_string(self.body_raw))
+        writer.write(
+            self.headers,
+            self.cookies,
+            lineBreak,
+            to_string(self.body_raw)
+        )
 
     fn _encoded(mut self) -> Bytes:
         """Encodes response as bytes.
@@ -223,28 +225,15 @@ struct HTTPResponse(Writable, Stringable):
         no longer be considered valid.
         """
         var writer = ByteWriter()
-        writer.write(self.protocol)
-        writer.write(whitespace)
-        writer.consuming_write(bytes(str(self.status_code)))
-        writer.write(whitespace)
-        writer.write(self.status_text)
-        writer.write(lineBreak)
-        writer.write("server: lightbug_http")
-        writer.write(lineBreak)
-
+        writer.write(self.protocol, whitespace, str(self.status_code), whitespace, self.status_text, lineBreak, "server: lightbug_http", lineBreak)
         if HeaderKey.DATE not in self.headers:
             try:
-                var current_time = now(utc=True).__str__()
-                write_header(writer, HeaderKey.DATE, current_time)
+                write_header(writer, HeaderKey.DATE, str(now(utc=True)))
             except:
                 pass
-
-        writer.write(self.headers)
-        writer.write(self.cookies)
-        writer.write(lineBreak)
+        writer.write(self.headers, self.cookies, lineBreak)
         writer.consuming_write(self.body_raw)
-
         return writer.consume()
 
     fn __str__(self) -> String:
-        return to_string(self)
+        return String.write(self)

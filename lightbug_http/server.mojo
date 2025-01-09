@@ -31,7 +31,7 @@ struct Server(Movable):
     var _max_request_body_size: Int
     var tcp_keep_alive: Bool
 
-    var ln: NoTLSListener
+    # var ln: NoTLSListener
 
     fn __init__(
         out self,
@@ -50,7 +50,7 @@ struct Server(Movable):
         self.max_requests_per_connection = max_requests_per_connection
         self._max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
-        self.ln = NoTLSListener(Socket[TCPAddr]())
+        # self.ln = NoTLSListener(Socket[TCPAddr]())
     
     fn __moveinit__(mut self, owned other: Server) -> None:
         self.error_handler = other.error_handler
@@ -60,7 +60,7 @@ struct Server(Movable):
         self.max_requests_per_connection = other.max_requests_per_connection
         self._max_request_body_size = other._max_request_body_size
         self.tcp_keep_alive = other.tcp_keep_alive
-        self.ln = other.ln^
+        # self.ln = other.ln^
 
     fn address(self) -> String:
         return self._address
@@ -114,9 +114,10 @@ struct Server(Movable):
         Raises:
             If there is an error while serving requests.
         """
-        self.ln = ln^
+        # self.ln = ln^
         while True:
-            var conn = self.ln.accept()
+            var conn = ln.accept()
+            logger.info("Serving", conn.socket)
             self.serve_connection(conn, handler)
 
     fn serve_connection[T: HTTPService](mut self, mut conn: TCPConnection, mut handler: T) raises -> None:
@@ -143,11 +144,17 @@ struct Server(Movable):
             # TODO: We should read until 0 bytes are received. 
             # If we completely fill the buffer haven't read the full request, we end up processing a partial request.
             var b = Bytes(capacity=default_buffer_size)
-            var bytes_recv = conn.read(b)
-            # TODO: Should the connection be closed here? The client should close it for 1.1 http.
-            if bytes_recv == 0:
-                conn.close()
-                break
+            try:
+                _ = conn.read(b)
+            except e:
+                if str(e) == "EOF":
+                    # TODO: Should the connection be closed here? The client should close it for 1.1 http.
+                    logger.info("Read 0 bytes from peer, connection is closed.")
+                    conn.teardown()
+                    break
+                else:
+                    logger.error(e)
+                    raise Error("Server.serve_connection: Failed to read request")
 
             var request: HTTPRequest
             try:
@@ -163,7 +170,7 @@ struct Server(Movable):
                 if not conn.is_closed():
                     try:
                         _ = conn.write(encode(InternalError()))
-                        conn.close()
+                        conn.teardown()
                     except e:
                         logger.error(e)
                         raise Error("Failed to send InternalError response")
@@ -171,15 +178,18 @@ struct Server(Movable):
 
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
             if close_connection:
+                logger.info("Telling client to close connection!")
                 res.set_connection_close()
 
             try:
+                logger.info("Sending response to peer...", res)
                 _ = conn.write(encode(res^))
             except e:
-                conn.close()
+                logger.warn("write failed closing connection", e)
+                conn.teardown()
                 break
             
             if close_connection:
-                conn.close()
+                conn.teardown()
                 break
 

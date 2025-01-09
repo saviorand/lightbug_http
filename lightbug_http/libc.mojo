@@ -1541,6 +1541,12 @@ fn _shutdown(socket: c_int, how: c_int) -> c_int:
     return external_call["shutdown", c_int, c_int, c_int](socket, how)
 
 
+alias ShutdownInvalidDescriptorError = "ShutdownError (EBADF): The argument `socket` is an invalid descriptor."
+alias ShutdownInvalidArgumentError = "ShutdownError (EINVAL): Invalid argument passed."
+alias ShutdownNotConnectedError = "ShutdownError (ENOTCONN): The socket is not connected."
+alias ShutdownNotSocketError = "ShutdownError (ENOTSOCK): The file descriptor is not associated with a socket."
+
+
 fn shutdown(socket: c_int, how: c_int) raises:
     """Libc POSIX `shutdown` function.
 
@@ -1567,13 +1573,13 @@ fn shutdown(socket: c_int, how: c_int) raises:
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
-            raise Error("ShutdownError: The argument `socket` is an invalid descriptor.")
+            raise ShutdownInvalidDescriptorError
         elif errno == EINVAL:
-            raise Error("ShutdownError: Invalid argument passed.")
+            raise ShutdownInvalidArgumentError
         elif errno == ENOTCONN:
-            raise Error("ShutdownError: The socket is not connected.")
+            raise ShutdownNotConnectedError
         elif errno == ENOTSOCK:
-            raise Error("ShutdownError: The file descriptor is not associated with a socket.")
+            raise ShutdownNotSocketError
         else:
             raise Error("ShutdownError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
 
@@ -1625,11 +1631,17 @@ fn _close(fildes: c_int) -> c_int:
     return external_call["close", c_int, c_int](fildes)
 
 
-fn close(fildes: c_int) raises:
+alias CloseInvalidDescriptorError = "CloseError (EBADF): The file_descriptor argument is not a valid open file descriptor."
+alias CloseInterruptedError = "CloseError (EINTR): The close() function was interrupted by a signal."
+alias CloseRWError = "CloseError (EIO): An I/O error occurred while reading from or writing to the file system."
+alias CloseOutOfSpaceError = "CloseError (ENOSPC or EDQUOT): On NFS, these errors are not normally reported against the first write which exceeds the available storage space, but instead against a subsequent write(2), fsync(2), or close()."
+
+
+fn close(file_descriptor: c_int) raises:
     """Libc POSIX `close` function.
 
     Args:
-        fildes: A File Descriptor to close.
+        file_descriptor: A File Descriptor to close.
     
     Raises:
         SocketError: If an error occurs while creating the socket.
@@ -1649,16 +1661,16 @@ fn close(fildes: c_int) raises:
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/close.3p.html
     """
-    if _close(fildes) == -1:
+    if _close(file_descriptor) == -1:
         var errno = get_errno()
         if errno == EBADF:
-            raise Error("CloseError (EBADF): The fildes argument is not a valid open file descriptor.")
+            raise CloseInvalidDescriptorError
         elif errno == EINTR:
-            raise Error("CloseError (EINTR): The close() function was interrupted by a signal.")
+            raise CloseInterruptedError
         elif errno == EIO:
-            raise Error("CloseError (EIO): An I/O error occurred while reading from or writing to the file system.")
+            raise CloseRWError
         elif int(errno) in [ENOSPC, EDQUOT]:
-            raise Error("CloseError (ENOSPC or EDQUOT): On NFS, these errors are not normally reported against the first write which exceeds the available storage space, but instead against a subsequent write(2), fsync(2), or close().")
+            raise CloseOutOfSpaceError
         else:
             raise Error("SocketError: An error occurred while creating the socket. Error code: " + str(errno))
 

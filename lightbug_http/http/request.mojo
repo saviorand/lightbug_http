@@ -107,24 +107,23 @@ struct HTTPRequest(Writable, Stringable):
         self.body_raw = r.bytes(content_length)
         self.set_content_length(content_length)
 
-    fn write_to[T: Writer](self, mut writer: T):
+    fn write_to[T: Writer, //](self, mut writer: T):
         writer.write(self.method, whitespace)
         path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
             path += "?" + self.uri.query_string
 
-        writer.write(path)
-
         writer.write(
+            path,
             whitespace,
             self.protocol,
             lineBreak,
+            self.headers,
+            self.cookies,
+            lineBreak,
+            to_string(self.body_raw)
         )
 
-        self.headers.write_to(writer)
-        self.cookies.write_to(writer)
-        writer.write(lineBreak)
-        writer.write(to_string(self.body_raw))
 
     # TODO: If we want to consume the args for speed, then this should be owned and not mut. self is being consumed and is invalid after this call.
     fn _encoded(owned self) -> Bytes:
@@ -134,25 +133,24 @@ struct HTTPRequest(Writable, Stringable):
         no longer be considered valid.
         """
         var writer = ByteWriter()
-        writer.write(self.method)
-        writer.write(whitespace)
         var path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
             path += "?" + self.uri.query_string
-        writer.write(path)
-        writer.write(whitespace)
-        writer.write(self.protocol)
-        writer.write(lineBreak)
-
-        writer.write(self.headers)
-        writer.write(self.cookies)
-        # self.headers.encode_to(writer)
-        # self.cookies.encode_to(writer)
-        writer.write(lineBreak)
-
+        
+        writer.write(
+            self.method,
+            whitespace,
+            path,
+            whitespace,
+            self.protocol,
+            lineBreak,
+            self.headers,
+            self.cookies,
+            lineBreak,
+        )
         writer.consuming_write(self.body_raw)
 
         return writer.consume()
 
     fn __str__(self) -> String:
-        return to_string(self)
+        return String.write(self)

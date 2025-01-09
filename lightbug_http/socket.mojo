@@ -1,6 +1,9 @@
 from memory import Span, stack_allocation
 from utils import StaticTuple
-from .libc import (
+from sys import sizeof, external_call
+from sys.info import os_is_macos
+from memory import Pointer, UnsafePointer
+from lightbug_http.libc import (
     socket,
     connect,
     recv,
@@ -9,12 +12,9 @@ from .libc import (
     # sendto,
     shutdown,
     inet_pton,
-    # inet_ntoa,
     inet_ntop,
     htons,
     ntohs,
-    # getaddrinfo,
-    # getaddrinfo_unix,
     gai_strerror,
     bind,
     listen,
@@ -27,17 +27,12 @@ from .libc import (
     sockaddr,
     sockaddr_in,
     addrinfo,
-    # addrinfo_unix,
     socklen_t,
     c_void,
     c_uint,
     c_char,
     c_int,
     in_addr,
-    # AddressFamily,
-    # AddressInformation,
-    # SocketOptions,
-    # SocketType,
     SHUT_RDWR,
     SOL_SOCKET,
     AF_INET,
@@ -45,30 +40,21 @@ from .libc import (
     SOCK_STREAM,
     INET_ADDRSTRLEN,
     SO_REUSEADDR,
-    SO_RCVTIMEO
+    SO_RCVTIMEO,
+    CloseInvalidDescriptorError,
+    ShutdownInvalidArgumentError
 )
-# from .ip import (
-#     binary_ip_to_string,
-#     build_sockaddr,
-#     build_sockaddr_in,
-#     binary_port_to_int,
-#     convert_sockaddr_to_host_port,
-# )
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.strings import NetworkType
-
-from .net import Addr, TCPAddr, HostPort, default_buffer_size, binary_port_to_int, binary_ip_to_string, resolve_internet_addr, addrinfo_macos, addrinfo_unix
-from sys import sizeof, external_call
-from sys.info import os_is_macos
-from memory import Pointer, UnsafePointer
-from .utils import logger
+from lightbug_http.net import Addr, TCPAddr, HostPort, default_buffer_size, binary_port_to_int, binary_ip_to_string, resolve_internet_addr, addrinfo_macos, addrinfo_unix
+from lightbug_http.utils import logger
 
 
 alias SocketClosedError = "Socket: Socket is already closed"
 
 
 
-struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
+struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stringable, Writable):
     """Represents a network file descriptor. Wraps around a file descriptor and provides network functions.
 
     Args:
@@ -120,6 +106,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
         self.protocol = protocol
 
         self.fd = socket(address_family, socket_type, 0)
+        logger.info("New FD:", str(self.fd))
         self._local_address = local_address
         self._remote_address = remote_address
         self._closed = False
@@ -168,35 +155,69 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
         self._closed = existing._closed
         self._connected = existing._connected
     
-    fn _teardown(mut self) raises:
+    fn teardown(mut self) raises:
         """Close the socket and free the file descriptor."""
         if self._connected:
             try:
-                shutdown(self.fd, SHUT_RDWR)
+                self.shutdown()
             except e:
-                logger.error("Socket._teardown: Failed to shutdown listener: " + str(e))
-                logger.error(e)
+                logger.debug("Socket.teardown: Failed to shutdown socket: " + str(e))
 
         if not self._closed:
             try:
-                close(self.fd)
+                self.close()
             except e:
-                logger.error(e)
-                raise Error("Socket._teardown: Failed to close listener.")
+                logger.error("Socket.teardown: Failed to close socket.")
+                raise e
 
     fn __enter__(owned self) -> Self:
         return self^
 
     fn __exit__(mut self) raises:
-        self._teardown()
+        self.teardown()
 
-    fn __del__(owned self):
-        """Close the socket when the object is deleted."""
-        if not self._closed:
-            try:
-                self._teardown()
-            except e:
-                logger.error("Socket.__del__: Failed to close socket during deletion:", str(e))
+    # TODO: Seems to be bugged if this is included. Mojo tries to delete a mystical 0 fd socket that was never initialized?
+    # fn __del__(owned self):
+    #     """Close the socket when the object is deleted."""
+    #     logger.info("In socket del", self)
+    #     try:
+    #         self.teardown()
+    #     except e:
+    #         logger.debug("Socket.__del__: Failed to close socket during deletion:", str(e))
+    
+    fn __str__(self) -> String:
+        return String.write(self)
+    
+    fn __repr__(self) -> String:
+        return String.write(self)
+    
+    fn write_to[W: Writer, //](self, mut writer: W):
+        @parameter
+        fn af() -> String:
+            if address_family == AF_INET:
+                return "AF_INET"
+            else:
+                return "AF_INET6"
+
+        writer.write(
+            "Socket[",
+            AddrType._type,
+            ", ",
+            af(),
+            "]",
+            "(",
+            "fd=",
+            str(self.fd),
+            ", _local_address=",
+            repr(self._local_address),
+            ", _remote_address=",
+            repr(self._remote_address),
+            ", _closed=",
+            str(self._closed),
+            ", _connected=",
+            str(self._connected),
+            ")"
+        )
 
     fn local_address(ref self) -> ref [self._local_address] AddrType:
         """Return the local address of the socket as a UDP address.
@@ -431,6 +452,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
             raise e
 
         var remote = self.get_peer_name()
+        logger.info("Socket.connect: connected to", remote.host, "on port", remote.port, "fd", self.fd)
         self._remote_address = AddrType(remote.host, remote.port)
 
     # @always_inline
@@ -660,9 +682,13 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
         try:
             shutdown(self.fd, SHUT_RDWR)
         except e:
-            logger.error("Socket.shutdown: Failed to shutdown socket.")
-            raise e
-        
+            # For the other errors, either the socket is already closed or the descriptor is invalid.
+            # At that point we can feasibly say that the socket is already shut down.
+            if str(e) == ShutdownInvalidArgumentError:
+                logger.error("Socket.shutdown: Failed to shutdown socket.")
+                raise e
+            logger.debug(e)
+
         self._connected = False
 
     fn close(mut self) raises -> None:
@@ -673,11 +699,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET]():
         Raises:
             Error: If closing the socket fails.
         """
+        logger.info("Closing socket", self)
         try:
             close(self.fd)
         except e:
-            logger.error("Socket.close: Failed to close socket.")
-            raise e
+            # If the file descriptor is invalid, then it was most likely already closed.
+            # Other errors indicate a failure while attempting to close the socket.
+            if str(e) != CloseInvalidDescriptorError:
+                logger.error("Socket.close: Failed to close socket.")
+                raise e
+            logger.debug(e)
 
         self._closed = True
 

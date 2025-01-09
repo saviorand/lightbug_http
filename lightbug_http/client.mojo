@@ -1,4 +1,6 @@
-from .libc import (
+from collections import Dict
+from memory import UnsafePointer
+from lightbug_http.libc import (
     c_int,
     AF_INET,
     SOCK_STREAM,
@@ -15,29 +17,24 @@ from lightbug_http.header import Headers, HeaderKey
 from lightbug_http.net import create_connection, TCPConnection
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.utils import ByteReader, logger
-from collections import Dict
-
+from lightbug_http.pool_manager import PoolManager
 
 struct Client:
     var host: String
     var port: Int
     var name: String
 
-    # var _connections: Dict[String, TCPConnection]
+    var _connections: PoolManager
 
     fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
-        # self._connections = Dict[String, TCPConnection]()
+        self._connections = PoolManager(10)
 
     # fn __del__(owned self):
-    #     for conn in self._connections.values():
-    #         try:
-    #             conn[].close()
-    #         except:
-    #             # TODO: Add an optional debug log entry here
-    #             pass
+    #     logger.info("Client.__del__")
+    #     self._connections.clear()
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
@@ -84,22 +81,30 @@ struct Client:
             else:
                 port = 80
 
-        var conn: TCPConnection
+        # var conn: TCPConnection
         var cached_connection = False
-        conn = create_connection(host_str, port)
+        # var conn = create_connection(host_str, port)
 
+        if host_str not in self._connections:
+            try:
+                logger.info("Creating a new connection to host.")
+                self._connections.give(host_str, create_connection(host_str, port))
+            except e:
+                logger.error(e)
+                raise Error("Client.do: Failed to create a connection to host.")
         # try:
-        #     pass
-        #     # conn = self._connections[host_str]
-        #     # cached_connection = True
+        #     self._connections.mapping[host_str]
+        #     cached_connection = True
         # except:
         #     # If connection is not cached, create a new one.
         #     try:
-        #         conn = create_connection(host_str, port)
-        #         # self._connections[host_str] = conn
+        #         # conn = create_connection(host_str, port)
+        #         self._connections.mapping[host_str] = create_connection(host_str, port)
         #     except e:
         #         logger.error(e)
         #         raise Error("Client.do: Failed to create a connection to host.")
+
+        var conn = self._connections.take(host_str)
 
         var bytes_sent: Int
         try:
@@ -108,7 +113,7 @@ struct Client:
             # Maybe peer reset ungracefully, so try a fresh connection
             if str(e) == "SendError: Connection reset by peer.":
                 logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
-                self._close_conn(host_str)
+                conn.teardown()
                 if cached_connection:
                     return self.do(req^)
             logger.error("Client.do: Failed to send message.")
@@ -116,27 +121,42 @@ struct Client:
 
         # TODO: What if the response is too large for the buffer? We should read until the end of the response.
         var new_buf = Bytes(capacity=default_buffer_size)
-        var bytes_recv = conn.read(new_buf)
-
-        if bytes_recv == 0:
-            self._close_conn(host_str)
-            if cached_connection:
-                return self.do(req^)
-            raise Error("Client.do: No response received from the server.")
 
         try:
-            var res = HTTPResponse.from_bytes(new_buf, conn)
-            if res.is_redirect():
-                self._close_conn(host_str)
-                return self._handle_redirect(req^, res^)
-            if res.connection_close():
-                self._close_conn(host_str)
-            return res
+            logger.info("Reading response from peer...")
+            _ = conn.read(new_buf)
         except e:
-            self._close_conn(host_str)
-            raise e
+            if str(e) == "EOF":
+                conn.teardown()
+                if cached_connection:
+                    return self.do(req^)
+                raise Error("Client.do: No response received from the server.")
+            else:
+                logger.error(e)
+                raise Error("Client.do: Failed to read response from peer.")
 
-        return HTTPResponse(Bytes())
+        var res: HTTPResponse
+        try:
+            res = HTTPResponse.from_bytes(new_buf, conn)
+        except e:
+            logger.error("Failed to parse a response...")
+            try:
+                conn.teardown()
+            except:
+                logger.error("Failed to teardown connection...")
+            raise e
+        
+        if res.is_redirect():
+            conn.teardown()
+            return self._handle_redirect(req^, res^)
+        elif res.connection_close():
+            logger.info("client should close connection!")
+            conn.teardown()
+        else:
+            # Persist the connection by giving it back to the pool manager.
+            self._connections.give(host_str, conn^)
+        return res
+
 
     fn _handle_redirect(
         mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
@@ -160,8 +180,7 @@ struct Client:
         original_req.uri = new_uri
         return self.do(original_req^)
 
-    fn _close_conn(mut self, host: String) raises:
-        pass
-        # if host in self._connections:
-        #     self._connections[host].close()
-        #     _ = self._connections.pop(host)
+    # fn _close_conn(mut self, host: String) raises:
+    #     if host in self._connections:
+    #     #     # self._connections.get(host).close()
+    #         _ = self._connections.delete(host)

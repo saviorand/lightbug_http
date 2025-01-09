@@ -23,7 +23,7 @@ struct IntegrationTest:
 
     fn test_redirect(mut self):
         alias name = "test_redirect"
-        logger.info("Testing redirect...")
+        logger.info("~~~ Testing redirect ~~~")
         var h = Headers(Header(HeaderKey.CONNECTION, 'keep-alive'))
         try:
             var res = self.client.do(HTTPRequest(u("redirect"), headers=h))
@@ -41,7 +41,7 @@ struct IntegrationTest:
 
     fn test_close_connection(mut self):
         alias name = "test_close_connection"
-        logger.info("Testing close connection...")
+        logger.info("~~~ Testing close connection ~~~")
         var h = Headers(Header(HeaderKey.CONNECTION, 'close'))
         try:
             var res = self.client.do(HTTPRequest(u("close-connection"), headers=h))
@@ -57,7 +57,7 @@ struct IntegrationTest:
 
     fn test_server_error(mut self):
         alias name = "test_server_error"
-        logger.info("Testing internal server error...")
+        logger.info("~~~ Testing internal server error ~~~")
         try:
             var res = self.client.do(HTTPRequest(u("error")))
             assert_equal(res.status_code, StatusCode.INTERNAL_ERROR)
@@ -69,15 +69,17 @@ struct IntegrationTest:
             self.mark_failed(name)
             return
 
-    fn run_tests(mut self):
+    fn run_tests(mut self) -> Dict[String, String]:
         logger.info("Running Client Integration Tests...")
         self.test_redirect()
         self.test_close_connection()
         self.test_server_error()
 
-        for test in self.results.items():
-            print(test[].key + ":", test[].value)
+        return self.results
+
 
 fn main():
     var test = IntegrationTest()
-    test.run_tests()
+    var results = test.run_tests()
+    for test in results.items():
+        print(test[].key + ":", test[].value)

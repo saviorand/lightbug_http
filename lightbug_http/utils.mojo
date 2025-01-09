@@ -1,7 +1,7 @@
+from memory import memcpy, Span
 from lightbug_http.io.bytes import Bytes, Byte
 from lightbug_http.strings import BytesConstant
 from lightbug_http.net import default_buffer_size
-from memory import memcpy, Span
 
 
 @always_inline
@@ -192,4 +192,4 @@ struct Logger():
         self._log_message(msg, LogLevel.FATAL)
 
 
-alias logger = Logger()
+alias logger = Logger(LogLevel.DEBUG)
