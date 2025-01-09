@@ -81,30 +81,29 @@ struct Client:
             else:
                 port = 80
 
-        # var conn: TCPConnection
         var cached_connection = False
-        # var conn = create_connection(host_str, port)
-
-        if host_str not in self._connections:
-            try:
-                logger.info("Creating a new connection to host.")
-                self._connections.give(host_str, create_connection(host_str, port))
-            except e:
+        var conn: TCPConnection
+        try:
+            conn = self._connections.take(host_str)
+            cached_connection = True
+        except e:
+            if str(e) == "PoolManager.take: Key not found.":
+                conn = create_connection(host_str, port)
+            else:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
-        # try:
-        #     self._connections.mapping[host_str]
-        #     cached_connection = True
-        # except:
-        #     # If connection is not cached, create a new one.
+
+        # if host_str not in self._connections:
         #     try:
-        #         # conn = create_connection(host_str, port)
-        #         self._connections.mapping[host_str] = create_connection(host_str, port)
+        #         logger.info("Creating a new connection to host.")
+        #         conn = create_connection(host_str, port)
+        #         # self._connections.give(host_str, create_connection(host_str, port))
         #     except e:
         #         logger.error(e)
         #         raise Error("Client.do: Failed to create a connection to host.")
-
-        var conn = self._connections.take(host_str)
+        # else:
+        #     conn = self._connections.take(host_str)
+        #     cached_connection = True
 
         var bytes_sent: Int
         try:
@@ -119,7 +118,7 @@ struct Client:
             logger.error("Client.do: Failed to send message.")
             raise e
 
-        # TODO: What if the response is too large for the buffer? We should read until the end of the response.
+        # TODO: What if the response is too large for the buffer? We should read until the end of the response. (@thatstoasty)
         var new_buf = Bytes(capacity=default_buffer_size)
 
         try:
@@ -146,14 +145,15 @@ struct Client:
                 logger.error("Failed to teardown connection...")
             raise e
         
+        # Redirects should not keep the connection alive, as redirects can send the client to a different server.
         if res.is_redirect():
             conn.teardown()
             return self._handle_redirect(req^, res^)
+        # Server told the client to close the connection, we can assume the server closed their side after sending the response.
         elif res.connection_close():
-            logger.info("client should close connection!")
             conn.teardown()
+        # Otherwise, persist the connection by giving it back to the pool manager.
         else:
-            # Persist the connection by giving it back to the pool manager.
             self._connections.give(host_str, conn^)
         return res
 
@@ -179,8 +179,3 @@ struct Client:
             new_uri.path = new_location
         original_req.uri = new_uri
         return self.do(original_req^)
-
-    # fn _close_conn(mut self, host: String) raises:
-    #     if host in self._connections:
-    #     #     # self._connections.get(host).close()
-    #         _ = self._connections.delete(host)

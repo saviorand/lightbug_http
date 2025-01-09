@@ -106,7 +106,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         self.protocol = protocol
 
         self.fd = socket(address_family, socket_type, 0)
-        logger.info("New FD:", str(self.fd))
         self._local_address = local_address
         self._remote_address = remote_address
         self._closed = False
@@ -115,7 +114,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
     fn __init__(
         out self,
         fd: Int32,
-        # address_family: Int,
         socket_type: Int32,
         protocol: Byte,
         local_address: AddrType,
@@ -132,7 +130,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             remote_address: The remote address of the socket (peer's address if connected).
         """
         self.fd = fd
-        # self.address_family = address_family
         self.socket_type = socket_type
         self.protocol = protocol
         self._local_address = local_address
@@ -452,7 +449,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             raise e
 
         var remote = self.get_peer_name()
-        logger.info("Socket.connect: connected to", remote.host, "on port", remote.port, "fd", self.fd)
         self._remote_address = AddrType(remote.host, remote.port)
 
     # @always_inline
@@ -699,7 +695,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         Raises:
             Error: If closing the socket fails.
         """
-        logger.info("Closing socket", self)
         try:
             close(self.fd)
         except e:

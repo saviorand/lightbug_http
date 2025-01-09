@@ -238,7 +238,6 @@ struct TCPConnection(Connection):
         self.socket.close()
     
     fn teardown(mut self) raises:
-        logger.info("TCPConnection teardown")
         self.socket.teardown()
     
     fn is_closed(self) -> Bool:
@@ -377,7 +376,6 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
         The socket file descriptor.
     """
     var socket = Socket[TCPAddr]()
-    logger.info("Socket create connection, fd:", socket.fd)
     try:
         socket.connect(host, port)
     except e:

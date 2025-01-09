@@ -31,8 +31,6 @@ struct Server(Movable):
     var _max_request_body_size: Int
     var tcp_keep_alive: Bool
 
-    # var ln: NoTLSListener
-
     fn __init__(
         out self,
         error_handler: ErrorHandler = ErrorHandler(),
@@ -50,7 +48,6 @@ struct Server(Movable):
         self.max_requests_per_connection = max_requests_per_connection
         self._max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
-        # self.ln = NoTLSListener(Socket[TCPAddr]())
     
     fn __moveinit__(mut self, owned other: Server) -> None:
         self.error_handler = other.error_handler
@@ -60,7 +57,6 @@ struct Server(Movable):
         self.max_requests_per_connection = other.max_requests_per_connection
         self._max_request_body_size = other._max_request_body_size
         self.tcp_keep_alive = other.tcp_keep_alive
-        # self.ln = other.ln^
 
     fn address(self) -> String:
         return self._address
@@ -114,10 +110,9 @@ struct Server(Movable):
         Raises:
             If there is an error while serving requests.
         """
-        # self.ln = ln^
         while True:
             var conn = ln.accept()
-            logger.info("Serving", conn.socket)
+            logger.debug("Connection accepted! Serving:", conn.socket)
             self.serve_connection(conn, handler)
 
     fn serve_connection[T: HTTPService](mut self, mut conn: TCPConnection, mut handler: T) raises -> None:
@@ -148,8 +143,6 @@ struct Server(Movable):
                 _ = conn.read(b)
             except e:
                 if str(e) == "EOF":
-                    # TODO: Should the connection be closed here? The client should close it for 1.1 http.
-                    logger.info("Read 0 bytes from peer, connection is closed.")
                     conn.teardown()
                     break
                 else:
@@ -168,21 +161,22 @@ struct Server(Movable):
                 res = handler.func(request)
             except:
                 if not conn.is_closed():
+                    # Try to send back an internal server error, but always attempt to teardown the connection.
                     try:
+                        # TODO: Move InternalError response to an alias when Mojo can support Dict operations at compile time. (@thatstoasty)
                         _ = conn.write(encode(InternalError()))
-                        conn.teardown()
                     except e:
                         logger.error(e)
                         raise Error("Failed to send InternalError response")
+                    finally:
+                        conn.teardown()
                 return
 
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
             if close_connection:
-                logger.info("Telling client to close connection!")
                 res.set_connection_close()
 
             try:
-                logger.info("Sending response to peer...", res)
                 _ = conn.write(encode(res^))
             except e:
                 logger.warn("write failed closing connection", e)
