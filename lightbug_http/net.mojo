@@ -141,10 +141,10 @@ struct NoTLSListener:
 
 
 struct ListenConfig:
-    var __keep_alive: Duration
+    var _keep_alive: Duration
 
     fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
-        self.__keep_alive = keep_alive
+        self._keep_alive = keep_alive
 
     fn listen[address_family: Int = AF_INET](mut self, network: String, address: String) raises -> NoTLSListener:
         constrained[

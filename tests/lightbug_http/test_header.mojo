@@ -15,12 +15,9 @@ def test_header_case_insensitive():
 
 
 def test_parse_request_header():
-    var headers_str = bytes(
-        """GET /index.html HTTP/1.1\r\nHost:example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"""
-    )
+    var headers_str = "GET /index.html HTTP/1.1\r\nHost:example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n"
     var header = Headers()
-    var b = Bytes(headers_str)
-    var reader = ByteReader(Span(b))
+    var reader = ByteReader(headers_str.as_bytes())
     var method: String
     var protocol: String
     var uri: String

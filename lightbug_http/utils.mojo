@@ -77,6 +77,7 @@ struct ByteReader[origin: Origin]:
         self._inner = b
         self.read_pos = 0
     
+    @always_inline
     fn available(self) -> Bool:
         return self.read_pos < len(self._inner)
     
@@ -141,7 +142,7 @@ struct ByteReader[origin: Origin]:
     @always_inline
     fn skip_carriage_return(mut self):
         for i in range(self.read_pos, len(self._inner)):
-            if not self._inner[i] != BytesConstant.rChar:
+            if self._inner[i] != BytesConstant.rChar:
                 break
             self.increment(2)
 

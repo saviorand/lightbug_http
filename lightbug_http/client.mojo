@@ -26,11 +26,11 @@ struct Client:
 
     var _connections: PoolManager[TCPConnection]
 
-    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
+    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888, cached_connections: Int = 10):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
-        self._connections = PoolManager[TCPConnection](10)
+        self._connections = PoolManager[TCPConnection](cached_connections)
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.

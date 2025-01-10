@@ -96,19 +96,19 @@ struct URI(Writable, Stringable, Representable):
         writer.write(
             "URI(",
             "scheme=",
-            self.scheme,
+            repr(self.scheme),
             ", host=",
-            self.host,
+            repr(self.host),
             ", path=",
-            self.path,
+            repr(self.path),
             ", _original_path=",
-            self._original_path,
+            repr(self._original_path),
             ", query_string=",
-            self.query_string,
+            repr(self.query_string),
             ", full_uri=",
-            self.full_uri,
+            repr(self.full_uri),
             ", request_uri=",
-            self.request_uri,
+            repr(self.request_uri),
             ")"
         )
 
@@ -117,8 +117,3 @@ struct URI(Writable, Stringable, Representable):
 
     fn is_http(self) -> Bool:
         return self.scheme == http or len(self.scheme) == 0
-
-
-fn normalise_path(path: String, path_original: String) -> String:
-    # TODO: implement
-    return path
