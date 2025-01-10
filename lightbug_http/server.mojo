@@ -136,14 +136,15 @@ struct Server(Movable):
         while True:
             req_number += 1
 
-            # TODO: We should read until 0 bytes are received. 
+            # TODO: We should read until 0 bytes are received. (@thatstoasty)
             # If we completely fill the buffer haven't read the full request, we end up processing a partial request.
             var b = Bytes(capacity=default_buffer_size)
             try:
                 _ = conn.read(b)
             except e:
+                conn.teardown()
+                # 0 bytes were read from the peer, which indicates their side of the connection was closed.
                 if str(e) == "EOF":
-                    conn.teardown()
                     break
                 else:
                     logger.error(e)

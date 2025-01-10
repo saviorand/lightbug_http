@@ -60,8 +60,14 @@ trait Connection(Movable):
 
     fn write(self, buf: Span[Byte]) raises -> Int:
         ...
-
+    
     fn close(mut self) raises:
+        ...
+
+    fn shutdown(mut self) raises -> None:
+        ...
+
+    fn teardown(mut self) raises:
         ...
 
     fn local_addr(mut self) -> TCPAddr:
@@ -236,6 +242,9 @@ struct TCPConnection(Connection):
 
     fn close(mut self) raises:
         self.socket.close()
+    
+    fn shutdown(mut self) raises:
+        self.socket.shutdown()
     
     fn teardown(mut self) raises:
         self.socket.teardown()

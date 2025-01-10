@@ -192,4 +192,5 @@ struct Logger():
         self._log_message(msg, LogLevel.FATAL)
 
 
-alias logger = Logger(LogLevel.DEBUG)
+# alias logger = Logger(LogLevel.DEBUG)
+alias logger = Logger()

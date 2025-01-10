@@ -24,13 +24,13 @@ struct Client:
     var port: Int
     var name: String
 
-    var _connections: PoolManager
+    var _connections: PoolManager[TCPConnection]
 
     fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
-        self._connections = PoolManager(10)
+        self._connections = PoolManager[TCPConnection](10)
 
     # fn __del__(owned self):
     #     logger.info("Client.__del__")
@@ -93,18 +93,6 @@ struct Client:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
 
-        # if host_str not in self._connections:
-        #     try:
-        #         logger.info("Creating a new connection to host.")
-        #         conn = create_connection(host_str, port)
-        #         # self._connections.give(host_str, create_connection(host_str, port))
-        #     except e:
-        #         logger.error(e)
-        #         raise Error("Client.do: Failed to create a connection to host.")
-        # else:
-        #     conn = self._connections.take(host_str)
-        #     cached_connection = True
-
         var bytes_sent: Int
         try:
             bytes_sent = conn.write(encode(req))
@@ -122,7 +110,6 @@ struct Client:
         var new_buf = Bytes(capacity=default_buffer_size)
 
         try:
-            logger.info("Reading response from peer...")
             _ = conn.read(new_buf)
         except e:
             if str(e) == "EOF":
