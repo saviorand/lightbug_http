@@ -19,6 +19,7 @@ from lightbug_http.io.bytes import Bytes
 from lightbug_http.utils import ByteReader, logger
 from lightbug_http.pool_manager import PoolManager
 
+
 struct Client:
     var host: String
     var port: Int
@@ -128,7 +129,7 @@ struct Client:
             except:
                 logger.error("Failed to teardown connection...")
             raise e
-        
+
         # Redirects should not keep the connection alive, as redirects can send the client to a different server.
         if res.is_redirect():
             logger.debug("Tearing down connection before redirect.")
@@ -142,7 +143,6 @@ struct Client:
             self._connections.give(host_str, conn^)
         return res
 
-
     fn _handle_redirect(
         mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
@@ -152,7 +152,7 @@ struct Client:
             new_location = original_response.headers[HeaderKey.LOCATION]
         except e:
             raise Error("Client._handle_redirect: `Location` header was not received in the response.")
-        
+
         if new_location and new_location.startswith("http"):
             new_uri = URI.parse(new_location)
             original_req.headers[HeaderKey.HOST] = new_uri.host

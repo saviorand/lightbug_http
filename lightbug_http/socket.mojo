@@ -42,16 +42,25 @@ from lightbug_http.libc import (
     SO_REUSEADDR,
     SO_RCVTIMEO,
     CloseInvalidDescriptorError,
-    ShutdownInvalidArgumentError
+    ShutdownInvalidArgumentError,
 )
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.strings import NetworkType
-from lightbug_http.net import Addr, TCPAddr, HostPort, default_buffer_size, binary_port_to_int, binary_ip_to_string, resolve_internet_addr, addrinfo_macos, addrinfo_unix
+from lightbug_http.net import (
+    Addr,
+    TCPAddr,
+    HostPort,
+    default_buffer_size,
+    binary_port_to_int,
+    binary_ip_to_string,
+    resolve_internet_addr,
+    addrinfo_macos,
+    addrinfo_unix,
+)
 from lightbug_http.utils import logger
 
 
 alias SocketClosedError = "Socket: Socket is already closed"
-
 
 
 struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stringable, Writable):
@@ -151,7 +160,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         self._remote_address = existing._remote_address^
         self._closed = existing._closed
         self._connected = existing._connected
-    
+
     fn teardown(mut self) raises:
         """Close the socket and free the file descriptor."""
         if self._connected:
@@ -181,13 +190,13 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
     #         self.teardown()
     #     except e:
     #         logger.debug("Socket.__del__: Failed to close socket during deletion:", str(e))
-    
+
     fn __str__(self) -> String:
         return String.write(self)
-    
+
     fn __repr__(self) -> String:
         return String.write(self)
-    
+
     fn write_to[W: Writer, //](self, mut writer: W):
         @parameter
         fn af() -> String:
@@ -213,7 +222,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             str(self._closed),
             ", _connected=",
             str(self._connected),
-            ")"
+            ")",
         )
 
     fn local_address(ref self) -> ref [self._local_address] AddrType:
@@ -223,7 +232,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             The local address of the socket as a UDP address.
         """
         return self._local_address
-    
+
     fn set_local_address(mut self, address: AddrType) -> None:
         """Set the local address of the socket.
 
@@ -239,7 +248,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             The remote address of the socket as a UDP address.
         """
         return self._remote_address
-    
+
     fn set_remote_address(mut self, address: AddrType) -> None:
         """Set the remote address of the socket.
 
@@ -431,17 +440,14 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         Raises:
             Error: If connecting to the remote socket fails.
         """
+
         @parameter
         if os_is_macos():
             ip = addrinfo_macos().get_ip_address(address)
         else:
             ip = addrinfo_unix().get_ip_address(address)
 
-        var addr = sockaddr_in(
-            address_family=address_family,
-            port=port, 
-            binary_ip=ip.s_addr
-        )
+        var addr = sockaddr_in(address_family=address_family, port=port, binary_ip=ip.s_addr)
         try:
             connect(self.fd, addr)
         except e:
@@ -484,7 +490,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
     fn send(self, buffer: Span[Byte]) raises -> Int:
         if buffer[-1] == 0:
             raise Error("Socket.send: Buffer must not be null-terminated.")
-        
+
         try:
             return send(self.fd, buffer.unsafe_ptr(), len(buffer), 0)
         except e:
@@ -514,7 +520,9 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
                 sent = self.send(src[total_bytes_sent:])
             except e:
                 logger.error(e)
-                raise Error("Socket.send_all: Failed to send message, wrote" + str(total_bytes_sent) + "bytes before failing.")
+                raise Error(
+                    "Socket.send_all: Failed to send message, wrote" + str(total_bytes_sent) + "bytes before failing."
+                )
 
             total_bytes_sent += sent
             attempts += 1
@@ -548,16 +556,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
     #         raise Error("Socket.send_to: Failed to send message to remote socket at: " + address + ":" + str(port))
 
     #     return bytes_sent
-    
+
     fn _receive(self, mut buffer: Bytes) raises -> Int:
         """Receive data from the socket into the buffer.
 
         Args:
             buffer: The buffer to read data into.
-        
+
         Returns:
             The buffer with the received data, and an error if one occurred.
-        
+
         Raises:
             Error: If reading data from the socket fails.
             EOF: If 0 bytes are received, return EOF.
@@ -579,7 +587,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             raise Error("EOF")
 
         return bytes_received
-    
+
     fn receive(self, size: Int = default_buffer_size) raises -> List[Byte, True]:
         """Receive data from the socket into the buffer with capacity of `size` bytes.
 
@@ -592,16 +600,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         var buffer = Bytes(capacity=size)
         _ = self._receive(buffer)
         return buffer
-    
+
     fn receive_into(self, mut buffer: Bytes) raises -> Int:
         """Receive data from the socket into the buffer.
 
         Args:
             buffer: The buffer to read data into.
-        
+
         Returns:
             The buffer with the received data, and an error if one occurred.
-        
+
         Raises:
             Error: If reading data from the socket fails.
             EOF: If 0 bytes are received, return EOF.

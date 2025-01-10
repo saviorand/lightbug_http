@@ -67,7 +67,7 @@ struct URI(Writable, Stringable, Representable):
             original_path = request_uri[:n]
             query_string = request_uri[n + 1 :]
         else:
-            original_path= request_uri
+            original_path = request_uri
             query_string = ""
 
         return URI(
@@ -88,7 +88,7 @@ struct URI(Writable, Stringable, Representable):
         if len(self.query_string) > 0:
             result.write("?", self.query_string)
         return result^
-    
+
     fn __repr__(self) -> String:
         return String.write(self)
 
@@ -109,7 +109,7 @@ struct URI(Writable, Stringable, Representable):
             repr(self.full_uri),
             ", request_uri=",
             repr(self.request_uri),
-            ")"
+            ")",
         )
 
     fn is_https(self) -> Bool:

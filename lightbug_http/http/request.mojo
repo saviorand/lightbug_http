@@ -42,7 +42,7 @@ struct HTTPRequest(Writable, Stringable):
             method, uri, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + str(e))
-        
+
         var cookies = RequestCookieJar()
         try:
             cookies.parse_cookies(headers)
@@ -53,7 +53,9 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
             raise Error("HTTPRequest.from_bytes: Request body too large.")
 
-        var request = HTTPRequest(URI.parse(addr + uri), headers=headers, method=method, protocol=protocol, cookies=cookies)
+        var request = HTTPRequest(
+            URI.parse(addr + uri), headers=headers, method=method, protocol=protocol, cookies=cookies
+        )
         try:
             request.read_body(reader, content_length, max_body_size)
         except e:
@@ -121,7 +123,7 @@ struct HTTPRequest(Writable, Stringable):
             self.headers,
             self.cookies,
             lineBreak,
-            to_string(self.body_raw)
+            to_string(self.body_raw),
         )
 
     fn encode(owned self) -> Bytes:
@@ -133,7 +135,7 @@ struct HTTPRequest(Writable, Stringable):
         var path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
             path.write("?", self.uri.query_string)
-        
+
         var writer = ByteWriter()
         writer.write(
             self.method,

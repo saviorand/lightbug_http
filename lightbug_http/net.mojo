@@ -42,7 +42,7 @@ from lightbug_http.libc import (
     getpeername,
     gai_strerror,
     INET_ADDRSTRLEN,
-    INET6_ADDRSTRLEN
+    INET6_ADDRSTRLEN,
 )
 from lightbug_http.utils import logger
 from lightbug_http.socket import Socket
@@ -60,7 +60,7 @@ trait Connection(Movable):
 
     fn write(self, buf: Span[Byte]) raises -> Int:
         ...
-    
+
     fn close(mut self) raises:
         ...
 
@@ -79,13 +79,13 @@ trait Connection(Movable):
 
 trait Addr(Stringable, Representable, Writable, RepresentableCollectionElement):
     alias _type: StringLiteral
-    
+
     fn __init__(out self):
         ...
 
     fn __init__(out self, ip: String, port: UInt16):
         ...
-    
+
     @implicit
     fn __init__(out self, host_port: HostPort):
         ...
@@ -103,20 +103,19 @@ trait AnAddrInfo:
 
 
 struct NoTLSListener:
-    """A TCP listener that listens for incoming connections and can accept them.
-    """
+    """A TCP listener that listens for incoming connections and can accept them."""
 
     var socket: Socket[TCPAddr]
 
     fn __init__(out self, owned socket: Socket[TCPAddr]):
         self.socket = socket^
-    
+
     fn __init__(out self) raises:
         self.socket = Socket[TCPAddr]()
 
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
-    
+
     # fn __del__(owned self):
     #     logger.info("Listener cleaning up", self.socket)
     #     try:
@@ -147,10 +146,7 @@ struct ListenConfig:
         self._keep_alive = keep_alive
 
     fn listen[address_family: Int = AF_INET](mut self, network: String, address: String) raises -> NoTLSListener:
-        constrained[
-            address_family in [AF_INET, AF_INET6],
-            "Address family must be either AF_INET or AF_INET6."
-        ]()
+        constrained[address_family in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
         var addr: TCPAddr
         try:
             addr = resolve_internet_addr(network, address)
@@ -189,7 +185,7 @@ struct ListenConfig:
                     logger.error("ListenConfig.listen: Failed to shutdown socket:", e)
                     # TODO: Should shutdown failure be a hard failure? We can still ungracefully close the socket.
                 sleep(UInt(1))
-        
+
         try:
             socket.listen(128)
         except e:
@@ -212,7 +208,7 @@ struct TCPConnection(Connection):
 
     fn __moveinit__(inout self, owned existing: Self):
         self.socket = existing.socket^
-    
+
     # fn __del__(owned self):
     #     logger.info("TCPConnection cleaning up", self.socket)
     #     try:
@@ -233,7 +229,7 @@ struct TCPConnection(Connection):
     fn write(self, buf: Span[Byte]) raises -> Int:
         if buf[-1] == 0:
             raise Error("TCPConnection.write: Buffer must not be null-terminated.")
-        
+
         try:
             return self.socket.send(buf)
         except e:
@@ -242,13 +238,13 @@ struct TCPConnection(Connection):
 
     fn close(mut self) raises:
         self.socket.close()
-    
+
     fn shutdown(mut self) raises:
         self.socket.shutdown()
-    
+
     fn teardown(mut self) raises:
         self.socket.teardown()
-    
+
     fn is_closed(self) -> Bool:
         return self.socket._closed
 
@@ -266,6 +262,7 @@ struct addrinfo_macos(AnAddrInfo):
     For MacOS, I had to swap the order of ai_canonname and ai_addr.
     https://stackoverflow.com/questions/53575101/calling-getaddrinfo-directly-from-python-ai-addr-is-null-pointer.
     """
+
     var ai_flags: c_int
     var ai_family: c_int
     var ai_socktype: c_int
@@ -285,10 +282,10 @@ struct addrinfo_macos(AnAddrInfo):
         self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_next = OpaquePointer()
 
-    fn get_ip_address(self, host: String) raises -> in_addr:       
+    fn get_ip_address(self, host: String) raises -> in_addr:
         """Returns an IP address based on the host.
         This is a MacOS-specific implementation.
-        
+
         Args:
             host: String - The host to get the IP from.
 
@@ -296,12 +293,7 @@ struct addrinfo_macos(AnAddrInfo):
             The IP address.
         """
         var result = UnsafePointer[Self]()
-        var hints = Self(
-            ai_flags=0,
-            ai_family=AF_INET,
-            ai_socktype=SOCK_STREAM,
-            ai_protocol=0
-        )
+        var hints = Self(ai_flags=0, ai_family=AF_INET, ai_socktype=SOCK_STREAM, ai_protocol=0)
         try:
             getaddrinfo(host, String(), hints, result)
         except e:
@@ -315,7 +307,8 @@ struct addrinfo_macos(AnAddrInfo):
         var ip = result[].ai_addr.bitcast[sockaddr_in]()[].sin_addr
         freeaddrinfo(result)
         return ip
- 
+
+
 @value
 @register_passable("trivial")
 struct addrinfo_unix(AnAddrInfo):
@@ -353,12 +346,7 @@ struct addrinfo_unix(AnAddrInfo):
             The IP address.
         """
         var result = UnsafePointer[Self]()
-        var hints = Self(
-            ai_flags=0,
-            ai_family=AF_INET,
-            ai_socktype=SOCK_STREAM,
-            ai_protocol=0
-        )
+        var hints = Self(ai_flags=0, ai_family=AF_INET, ai_socktype=SOCK_STREAM, ai_protocol=0)
         try:
             getaddrinfo(host, String(), hints, result)
         except e:
@@ -380,7 +368,7 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
     Args:
         host: The host to connect to.
         port: The port to connect on.
-    
+
     Returns:
         The socket file descriptor.
     """
@@ -395,7 +383,6 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
             logger.error("Failed to shutdown socket: " + str(e))
         raise Error("Failed to establish a connection to the server.")
 
-    
     return TCPConnection(socket^)
 
 
@@ -415,7 +402,7 @@ struct TCPAddr(Addr):
         self.ip = ip
         self.port = port
         self.zone = ""
-    
+
     @implicit
     fn __init__(out self, host_port: HostPort):
         self.ip = host_port.host
@@ -429,18 +416,12 @@ struct TCPAddr(Addr):
         if self.zone != "":
             return join_host_port(self.ip + "%" + self.zone, str(self.port))
         return join_host_port(self.ip, str(self.port))
-    
+
     fn __repr__(self) -> String:
         return String.write(self)
-    
+
     fn write_to[W: Writer, //](self, mut writer: W):
-        writer.write(
-            "TCPAddr(",
-            "ip=", repr(self.ip),
-            ", port=", str(self.port),
-            ", zone=", repr(self.zone),
-            ")"
-        )
+        writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
 
 
 fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
@@ -527,10 +508,10 @@ struct HostPort:
 
 fn binary_port_to_int(port: UInt16) -> Int:
     """Convert a binary port to an integer.
-    
+
     Args:
         port: The binary port.
-    
+
     Returns:
         The port as an integer.
     """
@@ -549,11 +530,9 @@ fn binary_ip_to_string[address_family: Int32](owned ip_address: UInt32) raises -
     Returns:
         The IP address as a string.
     """
-    constrained[
-        int(address_family) in [AF_INET, AF_INET6],
-        "Address family must be either AF_INET or AF_INET6."
-    ]()
+    constrained[int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
     var ip: String
+
     @parameter
     if address_family == AF_INET:
         ip = inet_ntop[address_family, INET_ADDRSTRLEN](ip_address)
@@ -563,12 +542,14 @@ fn binary_ip_to_string[address_family: Int32](owned ip_address: UInt32) raises -
     return ip
 
 
-fn _getaddrinfo[T: AnAddrInfo, hints_origin: MutableOrigin, result_origin: MutableOrigin, //](
+fn _getaddrinfo[
+    T: AnAddrInfo, hints_origin: MutableOrigin, result_origin: MutableOrigin, //
+](
     nodename: UnsafePointer[c_char],
     servname: UnsafePointer[c_char],
     hints: Pointer[T, hints_origin],
     res: Pointer[UnsafePointer[T], result_origin],
-)-> c_int:
+) -> c_int:
     """Libc POSIX `getaddrinfo` function.
 
     Args:
@@ -576,7 +557,7 @@ fn _getaddrinfo[T: AnAddrInfo, hints_origin: MutableOrigin, result_origin: Mutab
         servname: The service name.
         hints: A Pointer to the hints.
         res: A UnsafePointer to the result.
-    
+
     Returns:
         0 on success, an error code on failure.
 
@@ -598,12 +579,9 @@ fn _getaddrinfo[T: AnAddrInfo, hints_origin: MutableOrigin, result_origin: Mutab
     ](nodename, servname, hints, res)
 
 
-fn getaddrinfo[T: AnAddrInfo, //](
-    node: String,
-    service: String,
-    mut hints: T,
-    mut res: UnsafePointer[T],
-) raises:
+fn getaddrinfo[
+    T: AnAddrInfo, //
+](node: String, service: String, mut hints: T, mut res: UnsafePointer[T],) raises:
     """Libc POSIX `getaddrinfo` function.
 
     Args:
@@ -611,7 +589,7 @@ fn getaddrinfo[T: AnAddrInfo, //](
         service: The service name.
         hints: A Pointer to the hints.
         res: A UnsafePointer to the result.
-    
+
     Raises:
         Error: If an error occurs while attempting to receive data from the socket.
         EAI_AGAIN: The name could not be resolved at this time. Future attempts may succeed.
@@ -632,7 +610,9 @@ fn getaddrinfo[T: AnAddrInfo, //](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
     """
-    var result = _getaddrinfo(node.unsafe_ptr(), service.unsafe_ptr(), Pointer.address_of(hints), Pointer.address_of(res))
+    var result = _getaddrinfo(
+        node.unsafe_ptr(), service.unsafe_ptr(), Pointer.address_of(hints), Pointer.address_of(res)
+    )
     if result != 0:
         # gai_strerror returns a char buffer that we don't know the length of.
         # TODO: Perhaps switch to writing bytes once the Writer trait allows writing individual bytes.

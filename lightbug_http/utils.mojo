@@ -19,7 +19,7 @@ struct ByteWriter(Writer):
 
     fn __init__(out self, capacity: Int = default_buffer_size):
         self._inner = Bytes(capacity=capacity)
-    
+
     @always_inline
     fn write_bytes(mut self, bytes: Span[Byte]) -> None:
         """Writes the contents of `bytes` into the internal buffer.
@@ -28,7 +28,7 @@ struct ByteWriter(Writer):
             bytes: The bytes to write.
         """
         self._inner.extend(bytes)
-    
+
     fn write[*Ts: Writable](mut self, *args: *Ts) -> None:
         """Write data to the `Writer`.
 
@@ -38,6 +38,7 @@ struct ByteWriter(Writer):
         Args:
             args: The data to write.
         """
+
         @parameter
         fn write_arg[T: Writable](arg: T):
             arg.write_to(self)
@@ -76,11 +77,11 @@ struct ByteReader[origin: Origin]:
     fn __init__(out self, ref b: Span[Byte, origin]):
         self._inner = b
         self.read_pos = 0
-    
+
     @always_inline
     fn available(self) -> Bool:
         return self.read_pos < len(self._inner)
-    
+
     fn __len__(self) -> Int:
         return len(self._inner) - self.read_pos
 
@@ -88,16 +89,16 @@ struct ByteReader[origin: Origin]:
         if not self.available():
             raise EndOfReaderError
         return self._inner[self.read_pos]
-    
+
     fn read_bytes(mut self, n: Int = -1) raises -> Span[Byte, origin]:
         var count = n
         var start = self.read_pos
         if n == -1:
             count = len(self)
 
-        if start+ count > len(self._inner):
+        if start + count > len(self._inner):
             raise OutOfBoundsError
-        
+
         self.read_pos += count
         return self._inner[start : start + count]
 
@@ -120,12 +121,12 @@ struct ByteReader[origin: Origin]:
             if is_newline(self._inner[i]):
                 break
             self.increment()
-    
+
         # If we are at the end of the buffer, there is no newline to check for.
         var ret = self._inner[start : self.read_pos]
         if not self.available():
             return ret
-        
+
         if self._inner[self.read_pos] == BytesConstant.rChar:
             self.increment(2)
         else:
@@ -155,7 +156,7 @@ struct ByteReader[origin: Origin]:
         return self^._inner[self.read_pos : self.read_pos + len(self) + 1]
 
 
-struct LogLevel():
+struct LogLevel:
     alias FATAL = 0
     alias ERROR = 1
     alias WARN = 2
@@ -164,7 +165,7 @@ struct LogLevel():
 
 
 @value
-struct Logger():
+struct Logger:
     var level: Int
 
     fn __init__(out self, level: Int = LogLevel.INFO):
@@ -179,41 +180,51 @@ struct Logger():
 
     fn info[*Ts: Writable](self, *messages: *Ts):
         var msg = String.write("\033[36mINFO\033[0m  - ")
+
         @parameter
         fn write_message[T: Writable](message: T):
             msg.write(message, " ")
+
         messages.each[write_message]()
         self._log_message(msg, LogLevel.INFO)
 
     fn warn[*Ts: Writable](self, *messages: *Ts):
         var msg = String.write("\033[33mWARN\033[0m  - ")
+
         @parameter
         fn write_message[T: Writable](message: T):
             msg.write(message, " ")
+
         messages.each[write_message]()
         self._log_message(msg, LogLevel.WARN)
 
     fn error[*Ts: Writable](self, *messages: *Ts):
         var msg = String.write("\033[31mERROR\033[0m - ")
+
         @parameter
         fn write_message[T: Writable](message: T):
             msg.write(message, " ")
+
         messages.each[write_message]()
         self._log_message(msg, LogLevel.ERROR)
 
     fn debug[*Ts: Writable](self, *messages: *Ts):
         var msg = String.write("\033[34mDEBUG\033[0m - ")
+
         @parameter
         fn write_message[T: Writable](message: T):
             msg.write(message, " ")
+
         messages.each[write_message]()
         self._log_message(msg, LogLevel.DEBUG)
 
     fn fatal[*Ts: Writable](self, *messages: *Ts):
         var msg = String.write("\033[35mFATAL\033[0m - ")
+
         @parameter
         fn write_message[T: Writable](message: T):
             msg.write(message, " ")
+
         messages.each[write_message]()
         self._log_message(msg, LogLevel.FATAL)
 

@@ -18,8 +18,7 @@ alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 
 struct Server(Movable):
-    """A Mojo-based server that accept incoming requests and delivers HTTP services.
-    """
+    """A Mojo-based server that accept incoming requests and delivers HTTP services."""
 
     var error_handler: ErrorHandler
 
@@ -48,7 +47,7 @@ struct Server(Movable):
         self.max_requests_per_connection = max_requests_per_connection
         self._max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
-    
+
     fn __moveinit__(mut self, owned other: Server) -> None:
         self.error_handler = other.error_handler^
         self.name = other.name
@@ -155,7 +154,7 @@ struct Server(Movable):
             except e:
                 logger.error(e)
                 raise Error("Server.serve_connection: Failed to parse request")
-            
+
             var res: HTTPResponse
             try:
                 res = handler.func(request)
@@ -182,8 +181,7 @@ struct Server(Movable):
             except e:
                 conn.teardown()
                 break
-            
+
             if close_connection:
                 conn.teardown()
                 break
-

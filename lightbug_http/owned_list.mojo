@@ -6,8 +6,10 @@ from memory import Pointer, UnsafePointer, memcpy, Span
 
 from collections import Optional
 
+
 trait EqualityComparableMovable(EqualityComparable, Movable):
     """A trait for types that are both `EqualityComparable` and `Movable`."""
+
     ...
 
 
@@ -63,9 +65,7 @@ struct _OwningListIter[
             return self.index
 
 
-struct OwningList[T: Movable](
-    Movable, Sized, Boolable
-):
+struct OwningList[T: Movable](Movable, Sized, Boolable):
     """The `List` type is a dynamically-allocated list.
 
     It supports pushing and popping from the back resizing the underlying
@@ -123,9 +123,7 @@ struct OwningList[T: Movable](
     # Operator dunders
     # ===-------------------------------------------------------------------===#
 
-    fn __contains__[
-        U: EqualityComparableMovable, //
-    ](self: OwningList[U, *_], value: U) -> Bool:
+    fn __contains__[U: EqualityComparableMovable, //](self: OwningList[U, *_], value: U) -> Bool:
         """Verify if a given value is present in the list.
 
         Parameters:
@@ -151,7 +149,6 @@ struct OwningList[T: Movable](
         """
         return _OwningListIter(0, Pointer.address_of(self))
 
-
     # ===-------------------------------------------------------------------===#
     # Trait implementations
     # ===-------------------------------------------------------------------===#
@@ -173,9 +170,7 @@ struct OwningList[T: Movable](
         return len(self) > 0
 
     @no_inline
-    fn __str__[
-        U: RepresentableCollectionElement, //
-    ](self: OwningList[U, *_]) -> String:
+    fn __str__[U: RepresentableCollectionElement, //](self: OwningList[U, *_]) -> String:
         """Returns a string representation of a `List`.
 
         When the compiler supports conditional methods, then a simple `str(my_list)` will
@@ -195,9 +190,7 @@ struct OwningList[T: Movable](
         return output^
 
     @no_inline
-    fn write_to[
-        W: Writer, U: RepresentableCollectionElement, //
-    ](self: OwningList[U, *_], mut writer: W):
+    fn write_to[W: Writer, U: RepresentableCollectionElement, //](self: OwningList[U, *_], mut writer: W):
         """Write `my_list.__str__()` to a `Writer`.
 
         Parameters:
@@ -215,9 +208,7 @@ struct OwningList[T: Movable](
         writer.write("]")
 
     @no_inline
-    fn __repr__[
-        U: RepresentableCollectionElement, //
-    ](self: OwningList[U, *_]) -> String:
+    fn __repr__[U: RepresentableCollectionElement, //](self: OwningList[U, *_]) -> String:
         """Returns a string representation of a `List`.
 
         Note that since we can't condition methods on a trait yet,
@@ -409,12 +400,7 @@ struct OwningList[T: Movable](
     # TODO: Remove explicit self type when issue 1876 is resolved.
     fn index[
         C: EqualityComparableMovable, //
-    ](
-        ref self: OwningList[C, *_],
-        value: C,
-        start: Int = 0,
-        stop: Optional[Int] = None,
-    ) raises -> Int:
+    ](ref self: OwningList[C, *_], value: C, start: Int = 0, stop: Optional[Int] = None,) raises -> Int:
         """
         Returns the index of the first occurrence of a value in a list
         restricted by the range given the start and stop bounds.

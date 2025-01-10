@@ -18,11 +18,13 @@ struct PoolManager[ConnectionType: Connection]():
         self._connections = OwningList[ConnectionType](capacity=capacity)
         self._capacity = capacity
         self.mapping = Dict[String, Int]()
-    
+
     fn __del__(owned self):
-        logger.debug("PoolManager shutting down and closing remaining connections before destruction:", self._connections.size)
+        logger.debug(
+            "PoolManager shutting down and closing remaining connections before destruction:", self._connections.size
+        )
         self.clear()
-    
+
     fn give(mut self, host: String, owned value: ConnectionType) raises:
         if host in self.mapping:
             self._connections[self.mapping[host]] = value^
@@ -35,7 +37,7 @@ struct PoolManager[ConnectionType: Connection]():
         self.mapping[host] = self._connections.size
         self._connections.size += 1
         logger.debug("Checked in connection for peer:", host + ", at index:", self._connections.size)
-    
+
     fn take(mut self, host: String) raises -> ConnectionType:
         var index: Int
         try:
@@ -49,10 +51,10 @@ struct PoolManager[ConnectionType: Connection]():
         for kv in self.mapping.items():
             if kv[].value > index:
                 self.mapping[kv[].key] -= 1
-        
+
         logger.debug("Checked out connection for peer:", host + ", from index:", self._connections.size + 1)
         return connection^
-    
+
     fn clear(mut self):
         while self._connections:
             var connection = self._connections.pop(0)
@@ -62,15 +64,15 @@ struct PoolManager[ConnectionType: Connection]():
                 # TODO: This is used in __del__, would be nice if we didn't have to absorb the error.
                 logger.error("Failed to tear down connection. Error:", e)
         self.mapping.clear()
-    
+
     fn __contains__(self, host: String) -> Bool:
         return host in self.mapping
-    
+
     fn __setitem__(mut self, host: String, owned value: ConnectionType) raises -> None:
         if host in self.mapping:
             self._connections[self.mapping[host]] = value^
         else:
             self.give(host, value^)
-    
+
     fn __getitem__(self, host: String) raises -> ref [self._connections] ConnectionType:
         return self._connections[self.mapping[host]]

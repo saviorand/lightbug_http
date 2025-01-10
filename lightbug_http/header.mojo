@@ -28,7 +28,7 @@ struct Header(Writable, Stringable):
 
     fn __str__(self) -> String:
         return String.write(self)
-    
+
     fn write_to[T: Writer, //](self, mut writer: T):
         writer.write(self.key + ": ", self.value, lineBreak)
 
@@ -69,7 +69,7 @@ struct Headers(Writable, Stringable):
             return self._inner[key.lower()]
         except:
             raise Error("KeyError: Key not found in headers: " + key)
-    
+
     @always_inline
     fn get(self, key: String) -> Optional[String]:
         return self._inner.get(key.lower())
