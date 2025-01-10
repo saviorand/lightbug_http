@@ -136,16 +136,18 @@ struct ByteReader[origin: Origin]:
     @always_inline
     fn skip_whitespace(mut self):
         for i in range(self.read_pos, len(self._inner)):
-            if not is_space(self._inner[i]):
+            if is_space(self._inner[i]):
+                self.increment()
+            else:
                 break
-            self.increment()
 
     @always_inline
     fn skip_carriage_return(mut self):
         for i in range(self.read_pos, len(self._inner)):
-            if self._inner[i] != BytesConstant.rChar:
+            if self._inner[i] == BytesConstant.rChar:
+                self.increment(2)
+            else:
                 break
-            self.increment(2)
 
     @always_inline
     fn increment(mut self, v: Int = 1):

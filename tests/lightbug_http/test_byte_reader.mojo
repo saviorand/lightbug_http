@@ -4,6 +4,7 @@ from lightbug_http.io.bytes import Bytes
 
 alias example = "Hello, World!"
 
+
 def test_peek():
     var r = ByteReader("H".as_bytes())
     testing.assert_equal(r.peek(), 72)
@@ -64,10 +65,10 @@ def test_skip_whitespace():
 
 
 def test_skip_carriage_return():
-    var r = ByteReader("\n\r\nHola".as_bytes())
+    var r = ByteReader("\r\nHola".as_bytes())
     r.skip_carriage_return()
     testing.assert_equal(r.read_pos, 2)
-    testing.assert_equal(Bytes(r.read_bytes(4)), Bytes(10, 72, 111, 108))
+    testing.assert_equal(Bytes(r.read_bytes(4)), Bytes(72, 111, 108, 97))
 
 
 def test_consume():
