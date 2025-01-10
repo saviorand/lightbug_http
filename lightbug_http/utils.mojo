@@ -65,6 +65,10 @@ struct ByteWriter(Writer):
         return ret^
 
 
+alias EndOfReaderError = "No more bytes to read."
+alias OutOfBoundsError = "Tried to read past the end of the ByteReader."
+
+
 struct ByteReader[origin: Origin]:
     var _inner: Span[Byte, origin]
     var read_pos: Int
@@ -72,16 +76,37 @@ struct ByteReader[origin: Origin]:
     fn __init__(out self, ref b: Span[Byte, origin]):
         self._inner = b
         self.read_pos = 0
+    
+    fn available(self) -> Bool:
+        return self.read_pos < len(self._inner)
+    
+    fn __len__(self) -> Int:
+        return len(self._inner) - self.read_pos
 
-    fn peek(self) -> Byte:
-        if self.read_pos >= len(self._inner):
-            return 0
+    fn peek(self) raises -> Byte:
+        if not self.available():
+            raise EndOfReaderError
         return self._inner[self.read_pos]
+    
+    fn read_bytes(mut self, n: Int = -1) raises -> Span[Byte, origin]:
+        var count = n
+        var start = self.read_pos
+        if n == -1:
+            count = len(self)
+
+        if start+ count > len(self._inner):
+            raise OutOfBoundsError
+        
+        self.read_pos += count
+        return self._inner[start : start + count]
 
     fn read_until(mut self, char: Byte) -> Span[Byte, origin]:
         var start = self.read_pos
-        while self.peek() != char:
+        for i in range(start, len(self._inner)):
+            if self._inner[i] == char:
+                break
             self.increment()
+
         return self._inner[start : self.read_pos]
 
     @always_inline
@@ -90,10 +115,17 @@ struct ByteReader[origin: Origin]:
 
     fn read_line(mut self) -> Span[Byte, origin]:
         var start = self.read_pos
-        while not is_newline(self.peek()) and self.read_pos < len(self._inner):
+        for i in range(start, len(self._inner)):
+            if is_newline(self._inner[i]):
+                break
             self.increment()
+    
+        # If we are at the end of the buffer, there is no newline to check for.
         var ret = self._inner[start : self.read_pos]
-        if self.peek() == BytesConstant.rChar:
+        if not self.available():
+            return ret
+        
+        if self._inner[self.read_pos] == BytesConstant.rChar:
             self.increment(2)
         else:
             self.increment()
@@ -101,12 +133,16 @@ struct ByteReader[origin: Origin]:
 
     @always_inline
     fn skip_whitespace(mut self):
-        while is_space(self.peek()):
+        for i in range(self.read_pos, len(self._inner)):
+            if not is_space(self._inner[i]):
+                break
             self.increment()
 
     @always_inline
-    fn skip_newlines(mut self):
-        while self.peek() == BytesConstant.rChar:
+    fn skip_carriage_return(mut self):
+        for i in range(self.read_pos, len(self._inner)):
+            if not self._inner[i] != BytesConstant.rChar:
+                break
             self.increment(2)
 
     @always_inline
@@ -114,17 +150,8 @@ struct ByteReader[origin: Origin]:
         self.read_pos += v
 
     @always_inline
-    fn bytes(mut self, bytes_len: Int = -1) -> Bytes:
-        var pos = self.read_pos
-        var read_len: Int
-        if bytes_len == -1:
-            self.read_pos = -1
-            read_len = len(self._inner) - pos
-        else:
-            self.read_pos += bytes_len
-            read_len = bytes_len
-
-        return self._inner[pos : pos + read_len + 1]
+    fn consume(owned self, bytes_len: Int = -1) -> Bytes:
+        return self^._inner[self.read_pos : self.read_pos + len(self) + 1]
 
 
 struct LogLevel():

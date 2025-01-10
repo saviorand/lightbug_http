@@ -50,7 +50,7 @@ struct HTTPResponse(Writable, Stringable):
             var properties = headers.parse_raw(reader)
             protocol, status_code, status_text = properties[0], properties[1], properties[2]
             cookies.from_headers(properties[3])
-            reader.skip_newlines()
+            reader.skip_carriage_return()
         except e:
             raise Error("Failed to parse response headers: " + str(e))
     
@@ -80,7 +80,7 @@ struct HTTPResponse(Writable, Stringable):
             var properties = headers.parse_raw(reader)
             protocol, status_code, status_text = properties[0], properties[1], properties[2]
             cookies.from_headers(properties[3])
-            reader.skip_newlines()
+            reader.skip_carriage_return()
         except e:
             raise Error("Failed to parse response headers: " + e.__str__())
     
@@ -95,7 +95,7 @@ struct HTTPResponse(Writable, Stringable):
 
         var transfer_encoding = response.headers.get(HeaderKey.TRANSFER_ENCODING)
         if transfer_encoding and transfer_encoding.value() == "chunked":
-            var b = reader.bytes()
+            var b = Bytes(reader.read_bytes())
             var buff = Bytes(capacity=default_buffer_size)
             try:
                 while conn.read(buff) > 0:
@@ -165,7 +165,7 @@ struct HTTPResponse(Writable, Stringable):
         self.status_code = status_code
         self.status_text = status_text
         self.protocol = protocol
-        self.body_raw = reader.bytes(0)
+        self.body_raw = reader.read_bytes(0)
         self.set_content_length(len(self.body_raw))
         if HeaderKey.CONNECTION not in self.headers:
             self.set_connection_keep_alive()
@@ -217,7 +217,7 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader) raises -> None:
-        self.body_raw = r.bytes(self.content_length())
+        self.body_raw = r.read_bytes(self.content_length())
         self.set_content_length(len(self.body_raw))
 
     fn read_chunks(mut self, chunks: Bytes) raises:
@@ -226,8 +226,8 @@ struct HTTPResponse(Writable, Stringable):
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
                 break
-            var data = reader.bytes(size)
-            reader.skip_newlines()
+            var data = reader.read_bytes(size)
+            reader.skip_carriage_return()
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
 

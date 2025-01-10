@@ -103,7 +103,7 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        self.body_raw = r.bytes(content_length)
+        self.body_raw = r.read_bytes(content_length)
         self.set_content_length(content_length)
 
     fn write_to[T: Writer, //](self, mut writer: T):
