@@ -86,7 +86,7 @@ struct Cookie(CollectionElement):
         self.partitioned = partitioned
 
     fn __str__(self) -> String:
-        return "Name: " + self.name + " Value: " + self.value
+        return String.write("Name: ", self.name, " Value: ", self.value)
 
     fn __copyinit__(out self: Cookie, existing: Cookie):
         self.name = existing.name
@@ -101,15 +101,15 @@ struct Cookie(CollectionElement):
         self.partitioned = existing.partitioned
 
     fn __moveinit__(out self: Cookie, owned existing: Cookie):
-        self.name = existing.name
-        self.value = existing.value
-        self.max_age = existing.max_age
-        self.expires = existing.expires
-        self.domain = existing.domain
-        self.path = existing.path
+        self.name = existing.name^
+        self.value = existing.value^
+        self.max_age = existing.max_age^
+        self.expires = existing.expires^
+        self.domain = existing.domain^
+        self.path = existing.path^
         self.secure = existing.secure
         self.http_only = existing.http_only
-        self.same_site = existing.same_site
+        self.same_site = existing.same_site^
         self.partitioned = existing.partitioned
 
     fn clear_cookie(mut self):
@@ -120,23 +120,23 @@ struct Cookie(CollectionElement):
         return Header(HeaderKey.SET_COOKIE, self.build_header_value())
 
     fn build_header_value(self) -> String:
-        var header_value = self.name + Cookie.EQUAL + self.value
+        var header_value = String.write(self.name, Cookie.EQUAL, self.value)
         if self.expires.is_datetime():
             var v = self.expires.http_date_timestamp()
             if v:
-                header_value += Cookie.SEPERATOR + Cookie.EXPIRES + Cookie.EQUAL + v.value()
+                header_value.write(Cookie.SEPERATOR, Cookie.EXPIRES, Cookie.EQUAL, v.value())
         if self.max_age:
-            header_value += Cookie.SEPERATOR + Cookie.MAX_AGE + Cookie.EQUAL + str(self.max_age.value().total_seconds)
+            header_value.write(Cookie.SEPERATOR, Cookie.MAX_AGE, Cookie.EQUAL, str(self.max_age.value().total_seconds))
         if self.domain:
-            header_value += Cookie.SEPERATOR + Cookie.DOMAIN + Cookie.EQUAL + self.domain.value()
+            header_value.write(Cookie.SEPERATOR, Cookie.DOMAIN, Cookie.EQUAL, self.domain.value())
         if self.path:
-            header_value += Cookie.SEPERATOR + Cookie.PATH + Cookie.EQUAL + self.path.value()
+            header_value.write(Cookie.SEPERATOR, Cookie.PATH, Cookie.EQUAL, self.path.value())
         if self.secure:
-            header_value += Cookie.SEPERATOR + Cookie.SECURE
+            header_value.write(Cookie.SEPERATOR, Cookie.SECURE)
         if self.http_only:
-            header_value += Cookie.SEPERATOR + Cookie.HTTP_ONLY
+            header_value.write(Cookie.SEPERATOR, Cookie.HTTP_ONLY)
         if self.same_site:
-            header_value += Cookie.SEPERATOR + Cookie.SAME_SITE + Cookie.EQUAL + str(self.same_site.value())
+            header_value.write(Cookie.SEPERATOR, Cookie.SAME_SITE, Cookie.EQUAL, str(self.same_site.value()))
         if self.partitioned:
-            header_value += Cookie.SEPERATOR + Cookie.PARTITIONED
+            header_value.write(Cookie.SEPERATOR, Cookie.PARTITIONED)
         return header_value

@@ -22,9 +22,15 @@ struct HeaderKey:
 
 
 @value
-struct Header:
+struct Header(Writable, Stringable):
     var key: String
     var value: String
+
+    fn __str__(self) -> String:
+        return String.write(self)
+    
+    fn write_to[T: Writer, //](self, mut writer: T):
+        writer.write(self.key + ": ", self.value, lineBreak)
 
 
 @always_inline

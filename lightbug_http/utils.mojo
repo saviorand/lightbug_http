@@ -22,9 +22,7 @@ struct ByteWriter(Writer):
     
     @always_inline
     fn write_bytes(mut self, bytes: Span[Byte]) -> None:
-        """Writes the contents of `src` into the internal buffer.
-        If `total_bytes_written` < `len(src)`, it also returns an error explaining
-        why the write is short.
+        """Writes the contents of `bytes` into the internal buffer.
 
         Args:
             bytes: The bytes to write.
@@ -92,7 +90,7 @@ struct ByteReader[origin: Origin]:
 
     fn read_line(mut self) -> Span[Byte, origin]:
         var start = self.read_pos
-        while not is_newline(self.peek()):
+        while not is_newline(self.peek()) and self.read_pos < len(self._inner):
             self.increment()
         var ret = self._inner[start : self.read_pos]
         if self.peek() == BytesConstant.rChar:
@@ -192,5 +190,5 @@ struct Logger():
         self._log_message(msg, LogLevel.FATAL)
 
 
-# alias logger = Logger(LogLevel.DEBUG)
-alias logger = Logger()
+alias logger = Logger(LogLevel.DEBUG)
+# alias logger = Logger()

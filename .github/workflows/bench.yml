@@ -1,0 +1,19 @@
+name: Run the benchmarking suite
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run the test suite
+        run: |
+          curl -ssL https://magic.modular.com | bash
+          source $HOME/.bash_profile
+          magic run bench
+          magic run bench_server
+

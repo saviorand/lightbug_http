@@ -50,7 +50,7 @@ struct Server(Movable):
         self.tcp_keep_alive = tcp_keep_alive
     
     fn __moveinit__(mut self, owned other: Server) -> None:
-        self.error_handler = other.error_handler
+        self.error_handler = other.error_handler^
         self.name = other.name
         self._address = other._address
         self.max_concurrent_connections = other.max_concurrent_connections
@@ -58,7 +58,7 @@ struct Server(Movable):
         self._max_request_body_size = other._max_request_body_size
         self.tcp_keep_alive = other.tcp_keep_alive
 
-    fn address(self) -> String:
+    fn address(self) -> ref [self._address] String:
         return self._address
 
     fn set_address(mut self, own_address: String) -> None:
@@ -77,10 +77,9 @@ struct Server(Movable):
         Returns:
             Concurrency level for the server.
         """
-        var concurrency = self.max_concurrent_connections
-        if concurrency <= 0:
-            concurrency = DefaultConcurrency
-        return concurrency
+        if self.max_concurrent_connections <= 0:
+            return DefaultConcurrency
+        return self.max_concurrent_connections
 
     fn listen_and_serve[T: HTTPService](mut self, address: String, mut handler: T) raises:
         """Listen for incoming connections and serve HTTP requests.
@@ -112,7 +111,6 @@ struct Server(Movable):
         """
         while True:
             var conn = ln.accept()
-            logger.debug("Connection accepted! Serving:", conn.socket)
             self.serve_connection(conn, handler)
 
     fn serve_connection[T: HTTPService](mut self, mut conn: TCPConnection, mut handler: T) raises -> None:
@@ -128,6 +126,7 @@ struct Server(Movable):
         Raises:
             If there is an error while serving the connection.
         """
+        logger.debug("Connection accepted! Serving:", conn.socket)
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
@@ -173,6 +172,7 @@ struct Server(Movable):
                         conn.teardown()
                 return
 
+            # If the server is set to not support keep-alive connections, or the client requests a connection close, we mark the connection to be closed.
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
             if close_connection:
                 res.set_connection_close()
@@ -180,7 +180,6 @@ struct Server(Movable):
             try:
                 _ = conn.write(encode(res^))
             except e:
-                logger.warn("write failed closing connection", e)
                 conn.teardown()
                 break
             

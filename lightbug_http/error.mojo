@@ -1,7 +1,6 @@
 from lightbug_http.http import HTTPResponse
-from lightbug_http.io.bytes import bytes
 
-alias TODO_MESSAGE = String("TODO").as_bytes()
+alias TODO_MESSAGE = "TODO".as_bytes()
 
 
 # TODO: Custom error handlers provided by the user

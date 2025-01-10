@@ -34,7 +34,7 @@ struct PoolManager[ConnectionType: Connection]():
         self._connections[self._connections.size] = value^
         self.mapping[host] = self._connections.size
         self._connections.size += 1
-        logger.debug("Checked out connection for peer:", host + ", from index:", self._connections.size)
+        logger.debug("Checked in connection for peer:", host + ", at index:", self._connections.size)
     
     fn take(mut self, host: String) raises -> ConnectionType:
         var index: Int

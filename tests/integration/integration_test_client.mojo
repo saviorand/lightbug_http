@@ -5,7 +5,7 @@ from lightbug_http.utils import logger
 from testing import *
 
 fn u(s: String) raises -> URI:
-    return URI.parse_raises("http://127.0.0.1:8080/" + s)
+    return URI.parse("http://127.0.0.1:8080/" + s)
 
 struct IntegrationTest:
     var client: Client

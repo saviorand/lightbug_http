@@ -1,4 +1,4 @@
-alias Bytes = List[Byte, True] # TODO: We need to push upstream changes to Mojo so bytes correctly uses List[Byte, True] for the trivial type optimization.
+alias Bytes = List[Byte, True]
 
 
 @always_inline

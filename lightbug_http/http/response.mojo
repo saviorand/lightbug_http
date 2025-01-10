@@ -54,20 +54,18 @@ struct HTTPResponse(Writable, Stringable):
         except e:
             raise Error("Failed to parse response headers: " + str(e))
     
-        var response = HTTPResponse(
-            Bytes(),
-            headers=headers,
-            cookies=cookies,
-            protocol=protocol,
-            status_code=int(status_code),
-            status_text=status_text,
-        )
         try:
-            response.read_body(reader)
-            return response
+            return HTTPResponse(
+                reader=reader,
+                headers=headers,
+                cookies=cookies,
+                protocol=protocol,
+                status_code=int(status_code),
+                status_text=status_text,
+            )
         except e:
             logger.error(e)
-            raise Error("Failed to read request body: ")
+            raise Error("Failed to read request body")
 
     @staticmethod
     fn from_bytes(b: Span[Byte], conn: TCPConnection) raises -> HTTPResponse:
@@ -98,7 +96,6 @@ struct HTTPResponse(Writable, Stringable):
         var transfer_encoding = response.headers.get(HeaderKey.TRANSFER_ENCODING)
         if transfer_encoding and transfer_encoding.value() == "chunked":
             var b = reader.bytes()
-
             var buff = Bytes(capacity=default_buffer_size)
             try:
                 while conn.read(buff) > 0:
@@ -145,6 +142,35 @@ struct HTTPResponse(Writable, Stringable):
             self.set_connection_keep_alive()
         if HeaderKey.CONTENT_LENGTH not in self.headers:
             self.set_content_length(len(body_bytes))
+        if HeaderKey.DATE not in self.headers:
+            try:
+                var current_time = now(utc=True).__str__()
+                self.headers[HeaderKey.DATE] = current_time
+            except:
+                pass
+    
+    fn __init__(
+        mut self,
+        mut reader: ByteReader,
+        headers: Headers = Headers(),
+        cookies: ResponseCookieJar = ResponseCookieJar(),
+        status_code: Int = 200,
+        status_text: String = "OK",
+        protocol: String = strHttp11,
+    ) raises:
+        self.headers = headers
+        self.cookies = cookies
+        if HeaderKey.CONTENT_TYPE not in self.headers:
+            self.headers[HeaderKey.CONTENT_TYPE] = "application/octet-stream"
+        self.status_code = status_code
+        self.status_text = status_text
+        self.protocol = protocol
+        self.body_raw = reader.bytes(0)
+        self.set_content_length(len(self.body_raw))
+        if HeaderKey.CONNECTION not in self.headers:
+            self.set_connection_keep_alive()
+        if HeaderKey.CONTENT_LENGTH not in self.headers:
+            self.set_content_length(len(self.body_raw))
         if HeaderKey.DATE not in self.headers:
             try:
                 var current_time = now(utc=True).__str__()
@@ -218,7 +244,7 @@ struct HTTPResponse(Writable, Stringable):
             to_string(self.body_raw)
         )
 
-    fn _encoded(mut self) -> Bytes:
+    fn encode(owned self) -> Bytes:
         """Encodes response as bytes.
 
         This method consumes the data in this request and it should
@@ -232,7 +258,7 @@ struct HTTPResponse(Writable, Stringable):
             except:
                 pass
         writer.write(self.headers, self.cookies, lineBreak)
-        writer.consuming_write(self.body_raw)
+        writer.consuming_write(self^.body_raw)
         return writer.consume()
 
     fn __str__(self) -> String:

@@ -32,10 +32,6 @@ struct Client:
         self.name = "lightbug_http_client"
         self._connections = PoolManager[TCPConnection](10)
 
-    # fn __del__(owned self):
-    #     logger.info("Client.__del__")
-    #     self._connections.clear()
-
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
@@ -88,6 +84,7 @@ struct Client:
             cached_connection = True
         except e:
             if str(e) == "PoolManager.take: Key not found.":
+                logger.debug("Creating a new connection.")
                 conn = create_connection(host_str, port)
             else:
                 logger.error(e)
@@ -134,6 +131,7 @@ struct Client:
         
         # Redirects should not keep the connection alive, as redirects can send the client to a different server.
         if res.is_redirect():
+            logger.debug("Tearing down connection before redirect.")
             conn.teardown()
             return self._handle_redirect(req^, res^)
         # Server told the client to close the connection, we can assume the server closed their side after sending the response.
@@ -156,10 +154,7 @@ struct Client:
             raise Error("Client._handle_redirect: `Location` header was not received in the response.")
         
         if new_location and new_location.startswith("http"):
-            try:
-                new_uri = URI.parse_raises(new_location)
-            except e:
-                raise Error("Client._handle_redirect: Failed to parse the new URI - " + str(e))
+            new_uri = URI.parse(new_location)
             original_req.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_req.uri
