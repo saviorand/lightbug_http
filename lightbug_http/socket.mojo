@@ -53,7 +53,6 @@ from lightbug_http.net import (
     default_buffer_size,
     binary_port_to_int,
     binary_ip_to_string,
-    resolve_internet_addr,
     addrinfo_macos,
     addrinfo_unix,
 )

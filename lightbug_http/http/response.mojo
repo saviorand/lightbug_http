@@ -48,12 +48,13 @@ struct HTTPResponse(Writable, Stringable):
 
         try:
             var properties = headers.parse_raw(reader)
+            print(headers)
             protocol, status_code, status_text = properties[0], properties[1], properties[2]
             cookies.from_headers(properties[3])
             reader.skip_carriage_return()
         except e:
             raise Error("Failed to parse response headers: " + str(e))
-    
+
         try:
             return HTTPResponse(
                 reader=reader,
@@ -82,8 +83,8 @@ struct HTTPResponse(Writable, Stringable):
             cookies.from_headers(properties[3])
             reader.skip_carriage_return()
         except e:
-            raise Error("Failed to parse response headers: " + e.__str__())
-    
+            raise Error("Failed to parse response headers: " + str(e))
+
         var response = HTTPResponse(
             Bytes(),
             headers=headers,
@@ -101,14 +102,17 @@ struct HTTPResponse(Writable, Stringable):
                 while conn.read(buff) > 0:
                     b += buff
 
-                    if buff[-5] == byte('0') and buff[-4] == byte('\r')
-                        and buff[-3] == byte('\n')
-                        and buff[-2] == byte('\r')
-                        and buff[-1] == byte('\n'):
+                    if (
+                        buff[-5] == byte("0")
+                        and buff[-4] == byte("\r")
+                        and buff[-3] == byte("\n")
+                        and buff[-2] == byte("\r")
+                        and buff[-1] == byte("\n")
+                    ):
                         break
 
                     buff.resize(0)
-                response.read_chunks(b^)
+                response.read_chunks(b)
                 return response
             except e:
                 logger.error(e)
@@ -144,11 +148,11 @@ struct HTTPResponse(Writable, Stringable):
             self.set_content_length(len(body_bytes))
         if HeaderKey.DATE not in self.headers:
             try:
-                var current_time = now(utc=True).__str__()
+                var current_time = str(now(utc=True))
                 self.headers[HeaderKey.DATE] = current_time
             except:
                 pass
-    
+
     fn __init__(
         mut self,
         mut reader: ByteReader,
@@ -165,7 +169,7 @@ struct HTTPResponse(Writable, Stringable):
         self.status_code = status_code
         self.status_text = status_text
         self.protocol = protocol
-        self.body_raw = reader.read_bytes(0)
+        self.body_raw = reader.read_bytes()
         self.set_content_length(len(self.body_raw))
         if HeaderKey.CONNECTION not in self.headers:
             self.set_connection_keep_alive()
@@ -173,27 +177,27 @@ struct HTTPResponse(Writable, Stringable):
             self.set_content_length(len(self.body_raw))
         if HeaderKey.DATE not in self.headers:
             try:
-                var current_time = now(utc=True).__str__()
+                var current_time = str(now(utc=True))
                 self.headers[HeaderKey.DATE] = current_time
             except:
                 pass
 
-    fn get_body_bytes(self) -> Bytes:
-        return self.body_raw
+    fn get_body(self) -> StringSlice[__origin_of(self.body_raw)]:
+        return StringSlice(unsafe_from_utf8=Span(self.body_raw))
 
     @always_inline
     fn set_connection_close(mut self):
         self.headers[HeaderKey.CONNECTION] = "close"
-
-    @always_inline
-    fn set_connection_keep_alive(mut self):
-        self.headers[HeaderKey.CONNECTION] = "keep-alive"
 
     fn connection_close(self) -> Bool:
         var result = self.headers.get(HeaderKey.CONNECTION)
         if not result:
             return False
         return result.value() == "close"
+
+    @always_inline
+    fn set_connection_keep_alive(mut self):
+        self.headers[HeaderKey.CONNECTION] = "keep-alive"
 
     @always_inline
     fn set_content_length(mut self, l: Int):
@@ -220,8 +224,8 @@ struct HTTPResponse(Writable, Stringable):
         self.body_raw = r.read_bytes(self.content_length())
         self.set_content_length(len(self.body_raw))
 
-    fn read_chunks(mut self, chunks: Bytes) raises:
-        var reader = ByteReader(Span(chunks))
+    fn read_chunks(mut self, chunks: Span[Byte]) raises:
+        var reader = ByteReader(chunks)
         while True:
             var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
             if size == 0:
@@ -237,12 +241,7 @@ struct HTTPResponse(Writable, Stringable):
         if HeaderKey.SERVER not in self.headers:
             writer.write("server: lightbug_http", lineBreak)
 
-        writer.write(
-            self.headers,
-            self.cookies,
-            lineBreak,
-            to_string(self.body_raw)
-        )
+        writer.write(self.headers, self.cookies, lineBreak, to_string(self.body_raw))
 
     fn encode(owned self) -> Bytes:
         """Encodes response as bytes.
@@ -251,7 +250,16 @@ struct HTTPResponse(Writable, Stringable):
         no longer be considered valid.
         """
         var writer = ByteWriter()
-        writer.write(self.protocol, whitespace, str(self.status_code), whitespace, self.status_text, lineBreak, "server: lightbug_http", lineBreak)
+        writer.write(
+            self.protocol,
+            whitespace,
+            str(self.status_code),
+            whitespace,
+            self.status_text,
+            lineBreak,
+            "server: lightbug_http",
+            lineBreak,
+        )
         if HeaderKey.DATE not in self.headers:
             try:
                 write_header(writer, HeaderKey.DATE, str(now(utc=True)))

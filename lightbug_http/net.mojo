@@ -77,7 +77,7 @@ trait Connection(Movable):
         ...
 
 
-trait Addr(Stringable, Representable, Writable, RepresentableCollectionElement):
+trait Addr(Stringable, Representable, Writable, EqualityComparableCollectionElement):
     alias _type: StringLiteral
 
     fn __init__(out self):
@@ -145,11 +145,11 @@ struct ListenConfig:
     fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self._keep_alive = keep_alive
 
-    fn listen[address_family: Int = AF_INET](mut self, network: String, address: String) raises -> NoTLSListener:
+    fn listen[network: NetworkType, address_family: Int = AF_INET](mut self, address: String) raises -> NoTLSListener:
         constrained[address_family in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
         var addr: TCPAddr
         try:
-            addr = resolve_internet_addr(network, address)
+            addr = resolve_internet_addr[network](address)
         except e:
             raise Error("ListenConfig.listen: Failed to resolve host address - " + str(e))
 
@@ -412,6 +412,12 @@ struct TCPAddr(Addr):
     fn network(self) -> String:
         return NetworkType.tcp.value
 
+    fn __eq__(self, other: TCPAddr) -> Bool:
+        return self.ip == other.ip and self.port == other.port and self.zone == other.zone
+
+    fn __ne__(self, other: TCPAddr) -> Bool:
+        return not self == other
+
     fn __str__(self) -> String:
         if self.zone != "":
             return join_host_port(self.ip + "%" + self.zone, str(self.port))
@@ -424,31 +430,23 @@ struct TCPAddr(Addr):
         writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
 
 
-fn resolve_internet_addr(network: String, address: String) raises -> TCPAddr:
-    var host: String = ""
-    var port: UInt16 = 0
-    if (
-        network == NetworkType.tcp.value
-        or network == NetworkType.tcp4.value
-        or network == NetworkType.tcp6.value
-        or network == NetworkType.udp.value
-        or network == NetworkType.udp4.value
-        or network == NetworkType.udp6.value
-    ):
-        if address != "":
-            var host_port = HostPort.from_string(address)
-            host = host_port.host
-            port = host_port.port
-    elif network == NetworkType.ip.value or network == NetworkType.ip4.value or network == NetworkType.ip6.value:
-        if address != "":
-            host = address
-    elif network == NetworkType.unix.value:
-        raise Error("Couldn't resolve internet address as Unix addresses not supported yet")
+fn resolve_internet_addr[network: NetworkType](address: String) raises -> TCPAddr:
+    constrained[
+        network in NetworkType.SUPPORTED_TYPES,
+        "Unsupported network type for internet address resolution. Unix addresses are not supported yet.",
+    ]()
+    if address == "":
+        raise Error("Address must not be empty.")
+
+    @parameter
+    # Either TCP/UDP or IP addresses
+    if network in NetworkType.TCP_TYPES or network in NetworkType.UDP_TYPES:
+        return TCPAddr(HostPort.from_string(address))
     else:
-        raise Error("Received an unsupported network type for internet address resolution: " + network)
-    return TCPAddr(host, port)
+        return TCPAddr(address, 0)
 
 
+# TODO: Support IPv6 long form.
 fn join_host_port(host: String, port: String) -> String:
     if host.find(":") != -1:  # must be IPv6 literal
         return "[" + host + "]:" + port
@@ -465,40 +463,43 @@ struct HostPort:
     var port: UInt16
 
     @staticmethod
-    fn from_string(hostport: String) raises -> HostPort:
+    fn from_string(address: String) raises -> HostPort:
+        var colon_index = address.rfind(":")
+        if colon_index == -1:
+            raise MissingPortError
+
         var host: String = ""
         var port: String = ""
-        var colon_index = hostport.rfind(":")
         var j: Int = 0
         var k: Int = 0
 
-        if colon_index == -1:
-            raise MissingPortError
-        if hostport[0] == "[":
-            var end_bracket_index = hostport.find("]")
+        if address[0] == "[":
+            var end_bracket_index = address.find("]")
             if end_bracket_index == -1:
                 raise Error("missing ']' in address")
-            if end_bracket_index + 1 == len(hostport):
+
+            if end_bracket_index + 1 == len(address):
                 raise MissingPortError
             elif end_bracket_index + 1 == colon_index:
-                host = hostport[1:end_bracket_index]
+                host = address[1:end_bracket_index]
                 j = 1
                 k = end_bracket_index + 1
             else:
-                if hostport[end_bracket_index + 1] == ":":
+                if address[end_bracket_index + 1] == ":":
                     raise TooManyColonsError
                 else:
                     raise MissingPortError
         else:
-            host = hostport[:colon_index]
+            host = address[:colon_index]
             if host.find(":") != -1:
                 raise TooManyColonsError
-        if hostport[j:].find("[") != -1:
-            raise Error("unexpected '[' in address")
-        if hostport[k:].find("]") != -1:
-            raise Error("unexpected ']' in address")
-        port = hostport[colon_index + 1 :]
 
+        if address[j:].find("[") != -1:
+            raise Error("unexpected '[' in address")
+        if address[k:].find("]") != -1:
+            raise Error("unexpected ']' in address")
+
+        port = address[colon_index + 1 :]
         if port == "":
             raise MissingPortError
         if host == "":

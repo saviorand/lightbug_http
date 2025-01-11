@@ -6,7 +6,7 @@ from collections import Dict, Optional
 from collections.dict import RepresentableKeyElement
 from lightbug_http.net import create_connection, TCPConnection, Connection
 from lightbug_http.utils import logger
-from lightbug_http.owned_list import OwningList
+from lightbug_http.owning_list import OwningList
 
 
 struct PoolManager[ConnectionType: Connection]():
