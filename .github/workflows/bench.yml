@@ -15,5 +15,4 @@ jobs:
           curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
           magic run bench
-          magic run bench_server
-
+          # magic run bench_server # Commented out until we get `wrk` installed
