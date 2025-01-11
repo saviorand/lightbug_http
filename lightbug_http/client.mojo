@@ -24,13 +24,21 @@ struct Client:
     var host: String
     var port: Int
     var name: String
+    var allow_redirects: Bool
 
     var _connections: PoolManager[TCPConnection]
 
-    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888, cached_connections: Int = 10):
+    fn __init__(
+        out self,
+        host: String = "127.0.0.1",
+        port: Int = 8888,
+        cached_connections: Int = 10,
+        allow_redirects: Bool = False,
+    ):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
+        self.allow_redirects = allow_redirects
         self._connections = PoolManager[TCPConnection](cached_connections)
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
@@ -130,7 +138,7 @@ struct Client:
             raise e
 
         # Redirects should not keep the connection alive, as redirects can send the client to a different server.
-        if res.is_redirect():
+        if self.allow_redirects and res.is_redirect():
             conn.teardown()
             return self._handle_redirect(req^, res^)
         # Server told the client to close the connection, we can assume the server closed their side after sending the response.

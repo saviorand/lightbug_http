@@ -14,7 +14,7 @@ struct IntegrationTest:
     var results: Dict[String, String]
 
     fn __init__(out self):
-        self.client = Client()
+        self.client = Client(allow_redirects=True)
         self.results = Dict[String, String]()
 
     fn mark_successful(mut self, name: String):

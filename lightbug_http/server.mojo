@@ -126,7 +126,9 @@ struct Server(Movable):
         Raises:
             If there is an error while serving the connection.
         """
-        logger.debug("Connection accepted! Serving:", conn.socket)
+        logger.debug(
+            "Connection accepted! IP:", conn.socket._remote_address.ip, "Port:", conn.socket._remote_address.port
+        )
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
@@ -156,9 +158,9 @@ struct Server(Movable):
                 logger.error(e)
                 raise Error("Server.serve_connection: Failed to parse request")
 
-            var res: HTTPResponse
+            var response: HTTPResponse
             try:
-                res = handler.func(request)
+                response = handler.func(request)
             except:
                 if not conn.is_closed():
                     # Try to send back an internal server error, but always attempt to teardown the connection.
@@ -175,10 +177,11 @@ struct Server(Movable):
             # If the server is set to not support keep-alive connections, or the client requests a connection close, we mark the connection to be closed.
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
             if close_connection:
-                res.set_connection_close()
+                response.set_connection_close()
 
+            logger.debug(request.method, request.uri.path, response.status_code)
             try:
-                _ = conn.write(encode(res^))
+                _ = conn.write(encode(response^))
             except e:
                 conn.teardown()
                 break
