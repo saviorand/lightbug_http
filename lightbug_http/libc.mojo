@@ -762,7 +762,7 @@ fn setsockopt(
                 "setsockopt: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid."
             )
         elif errno == ENOPROTOOPT:
-            raise Error("setsockopt: The option is unknown at the level indicated.")
+            raise Error("setsockopt [InvalidProtocol]: The option is unknown at the level indicated.")
         elif errno == ENOTSOCK:
             raise Error("setsockopt: The argument `socket` is not a socket.")
         else:
