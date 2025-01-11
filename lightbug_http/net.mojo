@@ -22,6 +22,7 @@ from lightbug_http.libc import (
     SOCK_STREAM,
     SOL_SOCKET,
     SO_REUSEADDR,
+    SO_REUSEPORT,
     SHUT_RDWR,
     htons,
     ntohs,
@@ -161,7 +162,13 @@ struct ListenConfig:
             raise Error("ListenConfig.listen: Failed to create listener due to socket creation failure.")
 
         try:
-            socket.set_socket_option(SO_REUSEADDR, 1)
+
+            @parameter
+            # REUSEADDR doesn't work on ubuntu.
+            if os_is_macos():
+                socket.set_socket_option(SO_REUSEADDR, 1)
+            else:
+                socket.set_socket_option(SO_REUSEPORT, 1)
         except e:
             logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
             # TODO: Maybe raise here if we want to make this a hard failure.
