@@ -8,10 +8,8 @@ struct IntegrationTestService(HTTPService):
         if p == "/redirect":
             return HTTPResponse(
                 "get off my lawn".as_bytes(),
-                headers=Headers(
-                    Header(HeaderKey.LOCATION, "/rd-destination")
-                ),
-                status_code=StatusCode.PERMANENT_REDIRECT
+                headers=Headers(Header(HeaderKey.LOCATION, "/rd-destination")),
+                status_code=StatusCode.PERMANENT_REDIRECT,
             )
         elif p == "/rd-destination":
             return OK("yay you made it")
@@ -26,5 +24,4 @@ struct IntegrationTestService(HTTPService):
 fn main() raises:
     var server = Server(tcp_keep_alive=True)
     var service = IntegrationTestService()
-    server.listen_and_serve("127.0.0.1:8080", service)
-            
+    server.listen_and_serve("127.0.0.1:8000", service)

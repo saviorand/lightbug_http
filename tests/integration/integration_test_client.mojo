@@ -4,8 +4,10 @@ from lightbug_http.client import Client
 from lightbug_http.utils import logger
 from testing import *
 
+
 fn u(s: String) raises -> URI:
-    return URI.parse("http://127.0.0.1:8080/" + s)
+    return URI.parse("http://127.0.0.1:8000/" + s)
+
 
 struct IntegrationTest:
     var client: Client
@@ -14,17 +16,17 @@ struct IntegrationTest:
     fn __init__(out self):
         self.client = Client()
         self.results = Dict[String, String]()
-    
+
     fn mark_successful(mut self, name: String):
         self.results[name] = "✅"
-    
+
     fn mark_failed(mut self, name: String):
         self.results[name] = "❌"
 
     fn test_redirect(mut self):
         alias name = "test_redirect"
         print("\n~~~ Testing redirect ~~~")
-        var h = Headers(Header(HeaderKey.CONNECTION, 'keep-alive'))
+        var h = Headers(Header(HeaderKey.CONNECTION, "keep-alive"))
         try:
             var res = self.client.do(HTTPRequest(u("redirect"), headers=h))
             assert_equal(res.status_code, StatusCode.OK)
@@ -42,7 +44,7 @@ struct IntegrationTest:
     fn test_close_connection(mut self):
         alias name = "test_close_connection"
         print("\n~~~ Testing close connection ~~~")
-        var h = Headers(Header(HeaderKey.CONNECTION, 'close'))
+        var h = Headers(Header(HeaderKey.CONNECTION, "close"))
         try:
             var res = self.client.do(HTTPRequest(u("close-connection"), headers=h))
             assert_equal(res.status_code, StatusCode.OK)

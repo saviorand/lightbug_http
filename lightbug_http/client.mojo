@@ -85,7 +85,6 @@ struct Client:
             cached_connection = True
         except e:
             if str(e) == "PoolManager.take: Key not found.":
-                logger.debug("Creating a new connection.")
                 conn = create_connection(host_str, port)
             else:
                 logger.error(e)
@@ -132,7 +131,6 @@ struct Client:
 
         # Redirects should not keep the connection alive, as redirects can send the client to a different server.
         if res.is_redirect():
-            logger.debug("Tearing down connection before redirect.")
             conn.teardown()
             return self._handle_redirect(req^, res^)
         # Server told the client to close the connection, we can assume the server closed their side after sending the response.
