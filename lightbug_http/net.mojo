@@ -148,12 +148,11 @@ struct ListenConfig:
 
     fn listen[network: NetworkType, address_family: Int = AF_INET](mut self, address: String) raises -> NoTLSListener:
         constrained[address_family in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
-        var addr: TCPAddr
-        try:
-            addr = resolve_internet_addr[network](address)
-        except e:
-            raise Error("ListenConfig.listen: Failed to resolve host address - " + str(e))
-
+        constrained[
+            network in NetworkType.SUPPORTED_TYPES,
+            "Unsupported network type for internet address resolution. Unix addresses are not supported yet.",
+        ]()
+        var addr = TCPAddr(HostPort.from_string(address))
         var socket: Socket[TCPAddr]
         try:
             socket = Socket[TCPAddr]()
@@ -435,22 +434,6 @@ struct TCPAddr(Addr):
 
     fn write_to[W: Writer, //](self, mut writer: W):
         writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
-
-
-fn resolve_internet_addr[network: NetworkType](address: String) raises -> TCPAddr:
-    constrained[
-        network in NetworkType.SUPPORTED_TYPES,
-        "Unsupported network type for internet address resolution. Unix addresses are not supported yet.",
-    ]()
-    if address == "":
-        raise Error("Address must not be empty.")
-
-    @parameter
-    # Either TCP/UDP or IP addresses
-    if network in NetworkType.TCP_TYPES or network in NetworkType.UDP_TYPES:
-        return TCPAddr(HostPort.from_string(address))
-    else:
-        return TCPAddr(address, 0)
 
 
 # TODO: Support IPv6 long form.
