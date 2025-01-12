@@ -27,12 +27,12 @@ test_client() {
     (magic run mojo build -D LB_LOG_LEVEL=DEBUG -I . --debug-level full tests/integration/integration_test_client.mojo) || exit 1
 
     echo "[INFO] Starting Python server..."
-    magic run fastapi dev tests/integration/integration_server.py &
+    magic run fastapi run tests/integration/integration_server.py &
     sleep 5
 
     ./integration_test_client
     rm ./integration_test_client
-    kill_server "fastapi dev"
+    kill_server "fastapi run"
 }
 
 test_server
