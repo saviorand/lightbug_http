@@ -1,6 +1,11 @@
 #!/bin/bash
-
 echo "[INFO] Building mojo binaries.."
+
+kill_server() {
+    pid=$(ps aux | grep "$1" | grep -v grep | awk '{print $2}' | head -n 1)
+    kill $pid
+    wait $pid 2>/dev/null
+}
 
 test_server() {
     (magic run mojo build -D LB_LOG_LEVEL=DEBUG -I . --debug-level full tests/integration/integration_test_server.mojo) || exit 1
@@ -13,16 +18,8 @@ test_server() {
     echo "[INFO] Testing server with Python client"
     magic run python3 tests/integration/integration_client.py
 
-    kill $!
-    wait $! 2>/dev/null
-
     rm ./integration_test_server
-}
-
-kill_fastapi() {
-    pids=$(ps aux | grep "fastapi dev" | grep -v grep | awk '{print $2}')
-    kill $(echo $pids | head -n 1)
-    kill $(echo $pids | head -n 2)
+    kill_server "integration_test_server"
 }
 
 test_client() {
@@ -35,7 +32,7 @@ test_client() {
 
     ./integration_test_client
     rm ./integration_test_client
-    kill_fastapi
+    kill_server "fastapi dev"
 }
 
 test_server
