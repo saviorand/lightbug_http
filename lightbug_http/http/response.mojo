@@ -150,7 +150,7 @@ struct HTTPResponse(Writable, Stringable):
                 var current_time = str(now(utc=True))
                 self.headers[HeaderKey.DATE] = current_time
             except:
-                pass
+                logger.debug("DATE header not set, unable to get current time and it was instead omitted.")
 
     fn __init__(
         mut self,

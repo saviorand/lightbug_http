@@ -456,36 +456,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         var remote = self.get_peer_name()
         self._remote_address = AddrType(remote.host, remote.port)
 
-    # @always_inline
-    # fn write_bytes(mut self, bytes: Span[Byte]) raises -> None:
-    #     """Write a `Span[Byte]` to this `Writer`.
-
-    #     Args:
-    #         bytes: The string slice to write to this Writer. Must NOT be null-terminated.
-    #     """
-    #     if len(bytes) == 0:
-    #         return
-
-    #     var bytes_sent = send(self.fd, bytes.unsafe_ptr(), len(bytes), 0)
-    #     # if bytes_sent == -1:
-    #     #     abort("Failed to send message")
-
-    # fn write[*Ts: Writable](mut self, *args: *Ts) -> None:
-    #     """Write data to the File Descriptor.
-
-    #     Parameters:
-    #         Ts: The types of data to write to the file descriptor.
-
-    #     Args:
-    #         args: The data to write to the file descriptor.
-    #     """
-
-    #     @parameter
-    #     fn write_arg[T: Writable](arg: T):
-    #         arg.write_to(self)
-
-    #     args.each[write_arg]()
-
     fn send(self, buffer: Span[Byte]) raises -> Int:
         if buffer[-1] == 0:
             raise Error("Socket.send: Buffer must not be null-terminated.")
@@ -525,36 +495,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
 
             total_bytes_sent += sent
             attempts += 1
-
-    # fn send_to(mut self, src: Span[Byte], address: String, port: Int) raises -> Int:
-    #     """Send data to the a remote address by connecting to the remote socket before sending.
-    #     The socket must be not already be connected to a remote socket.
-
-    #     Args:
-    #         src: The data to send.
-    #         address: The IP address to connect to.
-    #         port: The port number to connect to.
-
-    #     Returns:
-    #         The number of bytes sent.
-
-    #     Raises:
-    #         Error: If sending the data fails.
-    #     """
-    #     sa = build_sockaddr(address, port, self.address_family)
-    #     bytes_sent = sendto(
-    #         self.fd,
-    #         src.unsafe_ptr(),
-    #         len(src),
-    #         0,
-    #         Pointer.address_of(sa),
-    #         sizeof[sockaddr_in](),
-    #     )
-
-    #     if bytes_sent == -1:
-    #         raise Error("Socket.send_to: Failed to send message to remote socket at: " + address + ":" + str(port))
-
-    #     return bytes_sent
 
     fn _receive(self, mut buffer: Bytes) raises -> Int:
         """Receive data from the socket into the buffer.
@@ -614,71 +554,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             EOF: If 0 bytes are received, return EOF.
         """
         return self._receive(buffer)
-
-    # fn receive_from(self, mut buffer: Bytes) raises -> (List[Byte, True], HostPort):
-    #     """Receive data from the socket into the buffer dest.
-
-    #     Args:
-    #         buffer: The buffer to read data into.
-
-    #     Returns:
-    #         The number of bytes read, the remote address, and an error if one occurred.
-
-    #     Raises:
-    #         Error: If reading data from the socket fails.
-    #     """
-    #     remote_address = sockaddr()
-    #     # remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
-    #     remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
-    #     buffer = UnsafePointer[Byte].alloc(size)
-    #     bytes_received = recvfrom(
-    #         self.fd,
-    #         buffer,
-    #         size,
-    #         0,
-    #         Pointer.address_of(remote_address),
-    #         Pointer.address_of(remote_address_ptr_size),
-    #     )
-
-    #     if bytes_received == 0:
-    #         raise "EOF"
-    #     elif bytes_received == -1:
-    #         raise Error("Failed to read from socket, received a -1 response.")
-
-    #     remote = convert_sockaddr_to_host_port(remote_address)
-    #     return List[Byte, True](ptr=buffer, length=bytes_received, capacity=size), remote
-
-    # fn receive_from_into(mut self, mut dest: List[Byte, True]) raises -> (Int, HostPort):
-    #     """Receive data from the socket into the buffer dest.
-
-    #     Args:
-    #         dest: The buffer to read data into.
-
-    #     Returns:
-    #         The number of bytes read, the remote address, and an error if one occurred.
-
-    #     Raises:
-    #         Error: If reading data from the socket fails.
-    #     """
-    #     remote_address = sockaddr()
-    #     # remote_address_ptr = UnsafePointer[sockaddr].alloc(1)
-    #     remote_address_ptr_size = socklen_t(sizeof[sockaddr]())
-    #     bytes_read = recvfrom(
-    #         self.fd,
-    #         dest.unsafe_ptr() + len(dest),
-    #         dest.capacity - dest.size,
-    #         0,
-    #         Pointer.address_of(remote_address),
-    #         Pointer.address_of(remote_address_ptr_size),
-    #     )
-    #     dest.size += bytes_read
-
-    #     if bytes_read == 0:
-    #         raise "EOF"
-    #     elif bytes_read == -1:
-    #         raise Error("Socket.receive_from_into: Failed to read from socket, received a -1 response.")
-
-    #     return bytes_read, convert_sockaddr_to_host_port(remote_address)
 
     fn shutdown(mut self) raises -> None:
         """Shut down the socket. The remote end will receive no more data (after queued data is flushed)."""
