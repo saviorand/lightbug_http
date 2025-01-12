@@ -1,23 +1,23 @@
 import testing
-from lightbug_http.net import join_host_port, HostPort, TCPAddr
+from lightbug_http.net import join_host_port, parse_address, TCPAddr
 from lightbug_http.strings import NetworkType
 
 
 def test_split_host_port():
     # IPv4
-    var hp = HostPort.from_string("127.0.0.1:8080")
-    testing.assert_equal(hp.host, "127.0.0.1")
-    testing.assert_equal(hp.port, 8080)
+    var hp = parse_address("127.0.0.1:8080")
+    testing.assert_equal(hp[0], "127.0.0.1")
+    testing.assert_equal(hp[1], 8080)
 
     # IPv6
-    hp = HostPort.from_string("[::1]:8080")
-    testing.assert_equal(hp.host, "::1")
-    testing.assert_equal(hp.port, 8080)
+    hp = parse_address("[::1]:8080")
+    testing.assert_equal(hp[0], "::1")
+    testing.assert_equal(hp[1], 8080)
 
     # # TODO: IPv6 long form - Not supported yet.
-    # hp = HostPort.from_string("0:0:0:0:0:0:0:1:8080")
-    # testing.assert_equal(hp.host, "0:0:0:0:0:0:0:1")
-    # testing.assert_equal(hp.port, 8080)
+    # hp = parse_address("0:0:0:0:0:0:0:1:8080")
+    # testing.assert_equal(hp[0], "0:0:0:0:0:0:0:1")
+    # testing.assert_equal(hp[1], 8080)
 
 
 def test_join_host_port():

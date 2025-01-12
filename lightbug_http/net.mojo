@@ -87,10 +87,6 @@ trait Addr(Stringable, Representable, Writable, EqualityComparableCollectionElem
     fn __init__(out self, ip: String, port: UInt16):
         ...
 
-    @implicit
-    fn __init__(out self, host_port: HostPort):
-        ...
-
     fn network(self) -> String:
         ...
 
@@ -116,13 +112,6 @@ struct NoTLSListener:
 
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
-
-    # fn __del__(owned self):
-    #     logger.info("Listener cleaning up", self.socket)
-    #     try:
-    #         self.teardown()
-    #     except e:
-    #         logger.error("NoTLSListener.__del__: Failed to close connection: " + str(e))
 
     fn accept(self) raises -> TCPConnection:
         return TCPConnection(self.socket.accept())
@@ -152,7 +141,8 @@ struct ListenConfig:
             network in NetworkType.SUPPORTED_TYPES,
             "Unsupported network type for internet address resolution. Unix addresses are not supported yet.",
         ]()
-        var addr = TCPAddr(HostPort.from_string(address))
+        var local = parse_address(address)
+        var addr = TCPAddr(local[0], local[1])
         var socket: Socket[TCPAddr]
         try:
             socket = Socket[TCPAddr]()
@@ -214,13 +204,6 @@ struct TCPConnection(Connection):
 
     fn __moveinit__(inout self, owned existing: Self):
         self.socket = existing.socket^
-
-    # fn __del__(owned self):
-    #     logger.info("TCPConnection cleaning up", self.socket)
-    #     try:
-    #         self.teardown()
-    #     except e:
-    #         logger.error("TCPConnection.__del__: Failed to close connection: " + str(e))
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:
@@ -409,12 +392,6 @@ struct TCPAddr(Addr):
         self.port = port
         self.zone = ""
 
-    @implicit
-    fn __init__(out self, host_port: HostPort):
-        self.ip = host_port.host
-        self.port = host_port.port
-        self.zone = ""
-
     fn network(self) -> String:
         return NetworkType.tcp.value
 
@@ -447,54 +424,56 @@ alias MissingPortError = Error("missing port in address")
 alias TooManyColonsError = Error("too many colons in address")
 
 
-@value
-struct HostPort:
-    var host: String
-    var port: UInt16
+fn parse_address(address: String) raises -> (String, UInt16):
+    """Parse an address string into a host and port.
 
-    @staticmethod
-    fn from_string(address: String) raises -> HostPort:
-        var colon_index = address.rfind(":")
-        if colon_index == -1:
+    Args:
+        address: The address string.
+
+    Returns:
+        A tuple containing the host and port.
+    """
+    var colon_index = address.rfind(":")
+    if colon_index == -1:
+        raise MissingPortError
+
+    var host: String = ""
+    var port: String = ""
+    var j: Int = 0
+    var k: Int = 0
+
+    if address[0] == "[":
+        var end_bracket_index = address.find("]")
+        if end_bracket_index == -1:
+            raise Error("missing ']' in address")
+
+        if end_bracket_index + 1 == len(address):
             raise MissingPortError
-
-        var host: String = ""
-        var port: String = ""
-        var j: Int = 0
-        var k: Int = 0
-
-        if address[0] == "[":
-            var end_bracket_index = address.find("]")
-            if end_bracket_index == -1:
-                raise Error("missing ']' in address")
-
-            if end_bracket_index + 1 == len(address):
-                raise MissingPortError
-            elif end_bracket_index + 1 == colon_index:
-                host = address[1:end_bracket_index]
-                j = 1
-                k = end_bracket_index + 1
-            else:
-                if address[end_bracket_index + 1] == ":":
-                    raise TooManyColonsError
-                else:
-                    raise MissingPortError
+        elif end_bracket_index + 1 == colon_index:
+            host = address[1:end_bracket_index]
+            j = 1
+            k = end_bracket_index + 1
         else:
-            host = address[:colon_index]
-            if host.find(":") != -1:
+            if address[end_bracket_index + 1] == ":":
                 raise TooManyColonsError
+            else:
+                raise MissingPortError
+    else:
+        host = address[:colon_index]
+        if host.find(":") != -1:
+            raise TooManyColonsError
 
-        if address[j:].find("[") != -1:
-            raise Error("unexpected '[' in address")
-        if address[k:].find("]") != -1:
-            raise Error("unexpected ']' in address")
+    if address[j:].find("[") != -1:
+        raise Error("unexpected '[' in address")
+    if address[k:].find("]") != -1:
+        raise Error("unexpected ']' in address")
 
-        port = address[colon_index + 1 :]
-        if port == "":
-            raise MissingPortError
-        if host == "":
-            raise Error("missing host")
-        return HostPort(host, int(port))
+    port = address[colon_index + 1 :]
+    if port == "":
+        raise MissingPortError
+    if host == "":
+        raise Error("missing host")
+    return host, UInt16(int(port))
 
 
 fn binary_port_to_int(port: UInt16) -> Int:

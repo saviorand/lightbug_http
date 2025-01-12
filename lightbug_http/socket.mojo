@@ -49,7 +49,6 @@ from lightbug_http.strings import NetworkType
 from lightbug_http.net import (
     Addr,
     TCPAddr,
-    HostPort,
     default_buffer_size,
     binary_port_to_int,
     binary_ip_to_string,
@@ -75,8 +74,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
 
     var fd: Int32
     """The file descriptor of the socket."""
-    # var address_family: Int
-    # """The address family of the socket."""
     var socket_type: Int32
     """The socket type."""
     var protocol: Byte
@@ -94,7 +91,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         out self,
         local_address: AddrType = AddrType(),
         remote_address: AddrType = AddrType(),
-        # address_family: Int = AF_INET,
         socket_type: Int32 = SOCK_STREAM,
         protocol: Byte = 0,
     ) raises:
@@ -109,7 +105,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         Raises:
             Error: If the socket creation fails.
         """
-        # self.address_family = address_family
         self.socket_type = socket_type
         self.protocol = protocol
 
@@ -152,7 +147,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             existing: The existing socket object to move the data from.
         """
         self.fd = existing.fd
-        # self.address_family = existing.address_family
         self.socket_type = existing.socket_type
         self.protocol = existing.protocol
         self._local_address = existing._local_address^
@@ -276,12 +270,12 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
 
         var new_socket = Socket(
             fd=new_socket_fd,
-            # address_family=self.address_family,
             socket_type=self.socket_type,
             protocol=self.protocol,
             local_address=self.local_address(),
         )
-        new_socket.set_remote_address(new_socket.get_peer_name())
+        var peer = new_socket.get_peer_name()
+        new_socket.set_remote_address(AddrType(peer[0], peer[1]))
         return new_socket^
 
     fn listen(self, backlog: UInt = 0) raises:
@@ -336,9 +330,9 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             raise Error("Socket.bind: Binding socket failed.")
 
         var local = self.get_sock_name()
-        self._local_address = AddrType(local.host, int(local.port))
+        self._local_address = AddrType(local[0], local[1])
 
-    fn get_sock_name(self) raises -> HostPort:
+    fn get_sock_name(self) raises -> (String, UInt16):
         """Return the address of the socket.
 
         Returns:
@@ -363,12 +357,11 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             raise Error("get_sock_name: Failed to get address of local socket.")
 
         var addr_in = local_address.bitcast[sockaddr_in]().take_pointee()
-        return HostPort(
-            host=binary_ip_to_string[AF_INET](addr_in.sin_addr.s_addr),
-            port=binary_port_to_int(addr_in.sin_port),
+        return binary_ip_to_string[address_family](addr_in.sin_addr.s_addr), UInt16(
+            binary_port_to_int(addr_in.sin_port)
         )
 
-    fn get_peer_name(self) raises -> HostPort:
+    fn get_peer_name(self) raises -> (String, UInt16):
         """Return the address of the peer connected to the socket.
 
         Returns:
@@ -388,9 +381,8 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             logger.error(e)
             raise Error("get_peer_name: Failed to get address of remote socket.")
 
-        return HostPort(
-            host=binary_ip_to_string[AF_INET](addr_in.sin_addr.s_addr),
-            port=binary_port_to_int(addr_in.sin_port),
+        return binary_ip_to_string[address_family](addr_in.sin_addr.s_addr), UInt16(
+            binary_port_to_int(addr_in.sin_port)
         )
 
     fn get_socket_option(self, option_name: Int) raises -> Int:
@@ -454,7 +446,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             raise e
 
         var remote = self.get_peer_name()
-        self._remote_address = AddrType(remote.host, remote.port)
+        self._remote_address = AddrType(remote[0], remote[1])
 
     fn send(self, buffer: Span[Byte]) raises -> Int:
         if buffer[-1] == 0:
