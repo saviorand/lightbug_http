@@ -19,7 +19,7 @@ test_server() {
     magic run python3 tests/integration/integration_client.py
 
     rm ./integration_test_server
-    kill_server "integration_test_server"
+    kill_server "integration_test_server" || echo "Failed to kill Mojo server"
 }
 
 test_client() {
@@ -32,7 +32,7 @@ test_client() {
 
     ./integration_test_client
     rm ./integration_test_client
-    kill_server "fastapi run"
+    kill_server "fastapi run" || echo "Failed to kill fastapi server"
 }
 
 test_server

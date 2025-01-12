@@ -179,7 +179,13 @@ struct Server(Movable):
             if close_connection:
                 response.set_connection_close()
 
-            logger.debug(request.method, request.uri.path, response.status_code)
+            logger.debug(
+                conn.socket._remote_address.ip,
+                str(conn.socket._remote_address.port),
+                request.method,
+                request.uri.path,
+                response.status_code,
+            )
             try:
                 _ = conn.write(encode(response^))
             except e:
