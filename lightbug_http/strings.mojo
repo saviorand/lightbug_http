@@ -1,6 +1,5 @@
 from utils import StringSlice
 from memory import Span
-from lightbug_http.io.bytes import Bytes
 from lightbug_http.io.bytes import Bytes, bytes, byte
 
 alias strSlash = "/"
@@ -33,7 +32,7 @@ struct BytesConstant:
 
 
 @value
-struct NetworkType:
+struct NetworkType(EqualityComparableCollectionElement):
     var value: String
 
     alias empty = NetworkType("")
@@ -47,6 +46,39 @@ struct NetworkType:
     alias ip4 = NetworkType("ip4")
     alias ip6 = NetworkType("ip6")
     alias unix = NetworkType("unix")
+
+    alias SUPPORTED_TYPES = [
+        Self.tcp,
+        Self.tcp4,
+        Self.tcp6,
+        Self.udp,
+        Self.udp4,
+        Self.udp6,
+        Self.ip,
+        Self.ip4,
+        Self.ip6,
+    ]
+    alias TCP_TYPES = [
+        Self.tcp,
+        Self.tcp4,
+        Self.tcp6,
+    ]
+    alias UDP_TYPES = [
+        Self.udp,
+        Self.udp4,
+        Self.udp6,
+    ]
+    alias IP_TYPES = [
+        Self.ip,
+        Self.ip4,
+        Self.ip6,
+    ]
+
+    fn __eq__(self, other: NetworkType) -> Bool:
+        return self.value == other.value
+
+    fn __ne__(self, other: NetworkType) -> Bool:
+        return self.value != other.value
 
 
 @value

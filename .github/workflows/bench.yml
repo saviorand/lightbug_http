@@ -1,11 +1,11 @@
-name: Run the testing suite
+name: Run the benchmarking suite
 
 on:
   workflow_call:
 
 jobs:
   test:
-    name: Run tests
+    name: Run benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -14,6 +14,5 @@ jobs:
         run: |
           curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
-          magic run test
-          magic run integration_tests_py
-          magic run integration_tests_external
+          magic run bench
+          # magic run bench_server # Commented out until we get `wrk` installed

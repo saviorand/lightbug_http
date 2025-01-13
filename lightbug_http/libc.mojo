@@ -76,28 +76,29 @@ alias EPIPE = 32
 alias EDOM = 33
 alias ERANGE = 34
 alias EWOULDBLOCK = EAGAIN
-alias EINPROGRESS = 36
-alias EALREADY = 37
-alias ENOTSOCK = 38
-alias EDESTADDRREQ = 39
-alias EMSGSIZE = 40
-alias ENOPROTOOPT = 42
-alias EAFNOSUPPORT = 47
-alias EADDRINUSE = 48
-alias EADDRNOTAVAIL = 49
-alias ENETUNREACH = 51
-alias ECONNABORTED = 53
-alias ECONNRESET = 54
-alias ENOBUFS = 55
-alias EISCONN = 56
-alias ENOTCONN = 57
-alias ETIMEDOUT = 60
-alias ECONNREFUSED = 61
-alias ELOOP = 62
-alias ENAMETOOLONG = 63
-alias EDQUOT = 69
-alias EPROTO = 100
-alias EOPNOTSUPP = 102
+alias EINPROGRESS = 36 if os_is_macos() else 115
+alias EALREADY = 37 if os_is_macos() else 114
+alias ENOTSOCK = 38 if os_is_macos() else 88
+alias EDESTADDRREQ = 39 if os_is_macos() else 89
+alias EMSGSIZE = 40 if os_is_macos() else 90
+alias ENOPROTOOPT = 42 if os_is_macos() else 92
+alias EAFNOSUPPORT = 47 if os_is_macos() else 97
+alias EADDRINUSE = 48 if os_is_macos() else 98
+alias EADDRNOTAVAIL = 49 if os_is_macos() else 99
+alias ENETUNREACH = 51 if os_is_macos() else 101
+alias ECONNABORTED = 53 if os_is_macos() else 103
+alias ECONNRESET = 54 if os_is_macos() else 104
+alias ENOBUFS = 55 if os_is_macos() else 105
+alias EISCONN = 56 if os_is_macos() else 106
+alias ENOTCONN = 57 if os_is_macos() else 107
+alias ETIMEDOUT = 60 if os_is_macos() else 110
+alias ECONNREFUSED = 61 if os_is_macos() else 111
+alias ELOOP = 62 if os_is_macos() else 40
+alias ENAMETOOLONG = 63 if os_is_macos() else 36
+alias EDQUOT = 69 if os_is_macos() else 122
+alias ENOMSG = 91 if os_is_macos() else 42
+alias EPROTO = 100 if os_is_macos() else 71
+alias EOPNOTSUPP = 102 if os_is_macos() else 95
 
 # --- ( Network Related Constants )---------------------------------------------
 alias sa_family_t = c_ushort
@@ -144,7 +145,7 @@ alias AF_SIP = 29  # Simple Internet Protocol
 alias AF_KEY = 30
 alias pseudo_AF_HDRCMPLT = 31  # Used by BPF to not rewrite headers in interface output routine
 alias AF_BLUETOOTH = 32  # Bluetooth
-alias AF_MPLS = 33              # MPLS
+alias AF_MPLS = 33  # MPLS
 alias pseudo_AF_PFLOW = 34  # pflow
 alias pseudo_AF_PIPEX = 35  # PIPEX
 alias AF_FRAME = 36  # frame (Ethernet) sockets
@@ -172,12 +173,12 @@ alias PF_HYLINK = AF_HYLINK
 alias PF_APPLETALK = AF_APPLETALK
 alias PF_ROUTE = AF_ROUTE
 alias PF_LINK = AF_LINK
-alias PF_XTP = pseudo_AF_XTP # really just proto family, no AF
+alias PF_XTP = pseudo_AF_XTP  # really just proto family, no AF
 alias PF_COIP = AF_COIP
 alias PF_CNT = AF_CNT
 alias PF_IPX = AF_IPX  # same format as = AF_NS
 alias PF_INET6 = AF_INET6
-alias PF_RTIP = pseudo_AF_RTIP # same format as AF_INET
+alias PF_RTIP = pseudo_AF_RTIP  # same format as AF_INET
 alias PF_PIP = pseudo_AF_PIP
 alias PF_ISDN = AF_ISDN
 alias PF_NATM = AF_NATM
@@ -219,7 +220,7 @@ alias SHUT_RD = 0
 alias SHUT_WR = 1
 alias SHUT_RDWR = 2
 
-alias SOL_SOCKET = 0xffff
+alias SOL_SOCKET = 0xFFFF
 
 # Socket option flags
 # TODO: These are probably platform specific, on MacOS I have these values, but we should check on Linux.
@@ -285,6 +286,19 @@ struct sockaddr_in:
     var sin_addr: in_addr
     var sin_zero: StaticTuple[c_char, 8]
 
+    fn __init__(out self, address_family: Int, port: UInt16, binary_ip: UInt32):
+        """Construct a sockaddr_in struct.
+
+        Args:
+            address_family: The address family.
+            port: A 16-bit integer port in host byte order, gets converted to network byte order via `htons`.
+            binary_ip: The binary representation of the IP address.
+        """
+        self.sin_family = address_family
+        self.sin_port = htons(port)
+        self.sin_addr = in_addr(binary_ip)
+        self.sin_zero = StaticTuple[c_char, 8](0, 0, 0, 0, 0, 0, 0, 0)
+
 
 @value
 @register_passable("trivial")
@@ -347,10 +361,10 @@ fn htons(hostshort: c_ushort) -> c_ushort:
 
     Args:
         hostshort: A 16-bit integer in host byte order.
-    
+
     Returns:
         The value provided in network byte order.
-    
+
     #### C Function
     ```c
     uint16_t htons(uint16_t hostshort)
@@ -370,12 +384,12 @@ fn ntohl(netlong: c_uint) -> c_uint:
 
     Returns:
         The value provided in host byte order.
-    
+
     #### C Function
     ```c
     uint32_t ntohl(uint32_t netlong)
     ```
-    
+
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/htonl.3p.html
     """
@@ -390,12 +404,12 @@ fn ntohs(netshort: c_ushort) -> c_ushort:
 
     Returns:
         The value provided in host byte order.
-    
+
     #### C Function
     ```c
     uint16_t ntohs(uint16_t netshort)
     ```
-    
+
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/htonl.3p.html
     """
@@ -418,7 +432,7 @@ fn _inet_ntop(
 
     Returns:
         A UnsafePointer to the buffer containing the result.
-    
+
     #### C Function
     ```c
     const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size)
@@ -437,28 +451,26 @@ fn _inet_ntop(
     ](af, src, dst, size)
 
 
-fn inet_ntop(
-    af: c_int,
-    src: UnsafePointer[c_void],
-    dst: UnsafePointer[c_char],
-    size: socklen_t,
-) raises -> String:
+fn inet_ntop[
+    address_family: Int32, address_length: Int
+](ip_address: UInt32,) raises -> String:
     """Libc POSIX `inet_ntop` function.
 
+    Parameters:
+        address_family: Address Family see AF_ aliases.
+        address_length: Address length.
+
     Args:
-        af: Address Family see AF_ aliases.
-        src: A UnsafePointer to a binary address.
-        dst: A UnsafePointer to a buffer to store the result.
-        size: The size of the buffer.
+        ip_address: Binary IP address.
 
     Returns:
-        A UnsafePointer to the buffer containing the result.
-    
+        The IP Address in the human readable format.
+
     Raises:
         Error: If an error occurs while converting the address.
         EAFNOSUPPORT: `*src` was not an `AF_INET` or `AF_INET6` family address.
         ENOSPC: The buffer size, `size`, was not large enough to store the presentation form of the address.
-    
+
     #### C Function
     ```c
     const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size)
@@ -467,7 +479,24 @@ fn inet_ntop(
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     """
-    var result = _inet_ntop(af, src, dst, size)
+    constrained[
+        int(address_family) in [AF_INET, AF_INET6], "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+    ]()
+    constrained[
+        address_length in [INET_ADDRSTRLEN, INET6_ADDRSTRLEN],
+        "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN.",
+    ]()
+    var dst = String(capacity=address_length)
+    var result = _inet_ntop(
+        address_family, UnsafePointer.address_of(ip_address).bitcast[c_void](), dst.unsafe_ptr(), address_length
+    )
+
+    var i = 0
+    while i <= address_length:
+        if result[i] == 0:
+            break
+        i += 1
+    dst._buffer.size = i + 1  # Need to modify internal buffer's size for the string to be valid.
 
     # `inet_ntop` returns NULL on error.
     if not result:
@@ -475,12 +504,15 @@ fn inet_ntop(
         if errno == EAFNOSUPPORT:
             raise Error("inet_ntop Error: `*src` was not an `AF_INET` or `AF_INET6` family address.")
         elif errno == ENOSPC:
-            raise Error("inet_ntop Error: The buffer size, `size`, was not large enough to store the presentation form of the address.")
+            raise Error(
+                "inet_ntop Error: The buffer size, `size`, was not large enough to store the presentation form of the"
+                " address."
+            )
         else:
             raise Error("inet_ntop Error: An error occurred while converting the address. Error code: " + str(errno))
-    
+
     # We want the string representation of the address, so it's ok to take ownership of the pointer here.
-    return String(ptr=result, length=int(size))
+    return dst
 
 
 fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) -> c_int:
@@ -490,13 +522,13 @@ fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void])
     or -1 if some system error occurred (in which case errno will have been set).
 
     Args:
-        af: Address Family see AF_ aliases.
+        af: Address Family: `AF_INET` or `AF_INET6`.
         src: A UnsafePointer to a string containing the address.
         dst: A UnsafePointer to a buffer to store the result.
-    
+
     Returns:
         1 on success, 0 if the input is not a valid address, -1 on error.
-    
+
     #### C Function
     ```c
     int inet_pton(int af, const char *restrict src, void *restrict dst)
@@ -514,18 +546,22 @@ fn _inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void])
     ](af, src, dst)
 
 
-fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) raises:
+fn inet_pton[address_family: Int32](src: UnsafePointer[c_char]) raises -> c_uint:
     """Libc POSIX `inet_pton` function. Converts a presentation format address (that is, printable form as held in a character string)
     to network format (usually a struct in_addr or some other internal binary representation, in network byte order).
 
+    Parameters:
+        address_family: Address Family: `AF_INET` or `AF_INET6`.
+
     Args:
-        af: Address Family see AF_ aliases.
         src: A UnsafePointer to a string containing the address.
-        dst: A UnsafePointer to a buffer to store the result.
-    
+
+    Returns:
+        The binary representation of the ip address.
+
     Raises:
         Error: If an error occurs while converting the address or the input is not a valid address.
-        
+
     #### C Function
     ```c
     int inet_pton(int af, const char *restrict src, void *restrict dst)
@@ -535,12 +571,25 @@ fn inet_pton(af: c_int, src: UnsafePointer[c_char], dst: UnsafePointer[c_void]) 
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     * This function is valid for `AF_INET` and `AF_INET6`.
     """
-    var result = _inet_pton(af, src, dst)
+    constrained[
+        int(address_family) in [AF_INET, AF_INET6], "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+    ]()
+    var ip_buffer: UnsafePointer[c_void]
+
+    @parameter
+    if address_family == AF_INET6:
+        ip_buffer = stack_allocation[16, c_void]()
+    else:
+        ip_buffer = stack_allocation[4, c_void]()
+
+    var result = _inet_pton(address_family, src, ip_buffer)
     if result == 0:
         raise Error("inet_pton Error: The input is not a valid address.")
     elif result == -1:
         var errno = get_errno()
         raise Error("inet_pton Error: An error occurred while converting the address. Error code: " + str(errno))
+
+    return ip_buffer.bitcast[c_uint]().take_pointee()
 
 
 fn _socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
@@ -573,9 +622,9 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) raises -> c_int:
         type: Socket Type see SOCK_ aliases.
         protocol: The protocol to use.
 
-    Returns: 
+    Returns:
         A File Descriptor or -1 in case of failure.
-    
+
     Raises:
         SocketError: If an error occurs while creating the socket.
         EACCES: Permission to create a socket of the specified type and/or protocol is denied.
@@ -598,26 +647,42 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) raises -> c_int:
     if fd == -1:
         var errno = get_errno()
         if errno == EACCES:
-            raise Error("SocketError (EACCES): Permission to create a socket of the specified type and/or protocol is denied.")
+            raise Error(
+                "SocketError (EACCES): Permission to create a socket of the specified type and/or protocol is denied."
+            )
         elif errno == EAFNOSUPPORT:
             raise Error("SocketError (EAFNOSUPPORT): The implementation does not support the specified address family.")
         elif errno == EINVAL:
-            raise Error("SocketError (EINVAL): Invalid flags in type, Unknown protocol, or protocol family not available.")
+            raise Error(
+                "SocketError (EINVAL): Invalid flags in type, Unknown protocol, or protocol family not available."
+            )
         elif errno == EMFILE:
-            raise Error("SocketError (EMFILE): The per-process limit on the number of open file descriptors has been reached.")
+            raise Error(
+                "SocketError (EMFILE): The per-process limit on the number of open file descriptors has been reached."
+            )
         elif errno == ENFILE:
-            raise Error("SocketError (ENFILE): The system-wide limit on the total number of open files has been reached.")
+            raise Error(
+                "SocketError (ENFILE): The system-wide limit on the total number of open files has been reached."
+            )
         elif int(errno) in [ENOBUFS, ENOMEM]:
-            raise Error("SocketError (ENOBUFS or ENOMEM): Insufficient memory is available. The socket cannot be created until sufficient resources are freed.")
+            raise Error(
+                "SocketError (ENOBUFS or ENOMEM): Insufficient memory is available. The socket cannot be created until"
+                " sufficient resources are freed."
+            )
         elif errno == EPROTONOSUPPORT:
-            raise Error("SocketError (EPROTONOSUPPORT): The protocol type or the specified protocol is not supported within this domain.")
+            raise Error(
+                "SocketError (EPROTONOSUPPORT): The protocol type or the specified protocol is not supported within"
+                " this domain."
+            )
         else:
             raise Error("SocketError: An error occurred while creating the socket. Error code: " + str(errno))
 
     return fd
 
 
-fn _setsockopt[origin: Origin](
+fn _setsockopt[
+    origin: Origin
+](
     socket: c_int,
     level: c_int,
     option_name: c_int,
@@ -655,12 +720,11 @@ fn _setsockopt[origin: Origin](
     ](socket, level, option_name, option_value, option_len)
 
 
-fn setsockopt[origin: Origin](
+fn setsockopt(
     socket: c_int,
     level: c_int,
     option_name: c_int,
-    option_value: Pointer[c_void, origin],
-    option_len: socklen_t,
+    option_value: c_void,
 ) raises:
     """Libc POSIX `setsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
 
@@ -669,7 +733,6 @@ fn setsockopt[origin: Origin](
         level: The protocol level.
         option_name: The option to set.
         option_value: A UnsafePointer to the value to set.
-        option_len: The size of the value.
 
     Raises:
         Error: If an error occurs while setting the socket option.
@@ -687,7 +750,7 @@ fn setsockopt[origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
     """
-    var result = _setsockopt(socket, level, option_name, option_value, option_len)
+    var result = _setsockopt(socket, level, option_name, Pointer.address_of(option_value), sizeof[Int]())
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
@@ -695,27 +758,121 @@ fn setsockopt[origin: Origin](
         elif errno == EFAULT:
             raise Error("setsockopt: The argument `option_value` points outside the process's allocated address space.")
         elif errno == EINVAL:
-            raise Error("setsockopt: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid.")
+            raise Error(
+                "setsockopt: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid."
+            )
         elif errno == ENOPROTOOPT:
-            raise Error("setsockopt: The option is unknown at the level indicated.")
+            raise Error("setsockopt [InvalidProtocol]: The option is unknown at the level indicated.")
         elif errno == ENOTSOCK:
             raise Error("setsockopt: The argument `socket` is not a socket.")
         else:
             raise Error("setsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
 
 
-fn _getsockname[origin: Origin](
+fn _getsockopt[
+    len_origin: Origin
+](
     socket: c_int,
-    address: UnsafePointer[sockaddr],
-    address_len: Pointer[socklen_t, origin],
+    level: c_int,
+    option_name: c_int,
+    option_value: UnsafePointer[c_void],
+    option_len: Pointer[socklen_t, len_origin],
 ) -> c_int:
+    """Libc POSIX `setsockopt` function.
+
+    Args:
+        socket: A File Descriptor.
+        level: The protocol level.
+        option_name: The option to set.
+        option_value: A Pointer to the value to set.
+        option_len: The size of the value.
+
+    Returns:
+        0 on success, -1 on error.
+
+    #### C Function
+    ```c
+    int getsockopt(int socket, int level, int option_name, const void *option_value, socklen_t option_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/setsockopt.3p.html
+    """
+    return external_call[
+        "getsockopt",
+        c_int,  # FnName, RetType
+        c_int,
+        c_int,
+        c_int,
+        UnsafePointer[c_void],
+        Pointer[socklen_t, len_origin],  # Args
+    ](socket, level, option_name, option_value, option_len)
+
+
+fn getsockopt(
+    socket: c_int,
+    level: c_int,
+    option_name: c_int,
+) raises -> Int:
+    """Libc POSIX `getsockopt` function. Manipulate options for the socket referred to by the file descriptor, `socket`.
+
+    Args:
+        socket: A File Descriptor.
+        level: The protocol level.
+        option_name: The option to set.
+
+    Returns:
+        The value of the option.
+
+    Raises:
+        Error: If an error occurs while setting the socket option.
+        EBADF: The argument `socket` is not a valid descriptor.
+        EFAULT: The argument `option_value` points outside the process's allocated address space.
+        EINVAL: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid.
+        ENOPROTOOPT: The option is unknown at the level indicated.
+        ENOTSOCK: The argument `socket` is not a socket.
+
+    #### C Function
+    ```c
+    int getsockopt(int sockfd, int level, int optname, void optval[restrict *.optlen], socklen_t *restrict optlen);
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/getsockopt.3p.html
+    """
+    var option_value = stack_allocation[1, c_void]()
+    var option_len: socklen_t = sizeof[Int]()
+    var result = _getsockopt(socket, level, option_name, option_value, Pointer.address_of(option_len))
+    if result == -1:
+        var errno = get_errno()
+        if errno == EBADF:
+            raise Error("getsockopt: The argument `socket` is not a valid descriptor.")
+        elif errno == EFAULT:
+            raise Error("getsockopt: The argument `option_value` points outside the process's allocated address space.")
+        elif errno == EINVAL:
+            raise Error(
+                "getsockopt: The argument `option_len` is invalid. Can sometimes occur when `option_value` is invalid."
+            )
+        elif errno == ENOPROTOOPT:
+            raise Error("getsockopt: The option is unknown at the level indicated.")
+        elif errno == ENOTSOCK:
+            raise Error("getsockopt: The argument `socket` is not a socket.")
+        else:
+            raise Error("getsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
+
+    return option_value.bitcast[Int]().take_pointee()
+
+
+fn _getsockname[
+    origin: Origin
+](socket: c_int, address: UnsafePointer[sockaddr], address_len: Pointer[socklen_t, origin],) -> c_int:
     """Libc POSIX `getsockname` function.
 
     Args:
         socket: A File Descriptor.
         address: A UnsafePointer to a buffer to store the address of the peer.
         address_len: A UnsafePointer to the size of the buffer.
-    
+
     Returns:
         0 on success, -1 on error.
 
@@ -736,18 +893,16 @@ fn _getsockname[origin: Origin](
     ](socket, address, address_len)
 
 
-fn getsockname[origin: Origin](
-    socket: c_int,
-    address: UnsafePointer[sockaddr],
-    address_len: Pointer[socklen_t, origin],
-) raises:
+fn getsockname[
+    origin: Origin
+](socket: c_int, address: UnsafePointer[sockaddr], address_len: Pointer[socklen_t, origin],) raises:
     """Libc POSIX `getsockname` function.
 
     Args:
         socket: A File Descriptor.
         address: A UnsafePointer to a buffer to store the address of the peer.
         address_len: A UnsafePointer to the size of the buffer.
-    
+
     Raises:
         Error: If an error occurs while getting the socket name.
         EBADF: The argument `socket` is not a valid descriptor.
@@ -770,7 +925,9 @@ fn getsockname[origin: Origin](
         if errno == EBADF:
             raise Error("getsockname: The argument `socket` is not a valid descriptor.")
         elif errno == EFAULT:
-            raise Error("getsockname: The `address` argument points to memory not in a valid part of the process address space.")
+            raise Error(
+                "getsockname: The `address` argument points to memory not in a valid part of the process address space."
+            )
         elif errno == EINVAL:
             raise Error("getsockname: `address_len` is invalid (e.g., is negative).")
         elif errno == ENOBUFS:
@@ -781,11 +938,9 @@ fn getsockname[origin: Origin](
             raise Error("getsockname: An error occurred while getting the socket name. Error code: " + str(errno))
 
 
-fn _getpeername[origin: Origin](
-    sockfd: c_int,
-    addr: UnsafePointer[sockaddr],
-    address_len: Pointer[socklen_t, origin],
-) -> c_int:
+fn _getpeername[
+    origin: Origin
+](sockfd: c_int, addr: UnsafePointer[sockaddr], address_len: Pointer[socklen_t, origin],) -> c_int:
     """Libc POSIX `getpeername` function.
 
     Args:
@@ -813,17 +968,11 @@ fn _getpeername[origin: Origin](
     ](sockfd, addr, address_len)
 
 
-fn getpeername[origin: Origin](
-    sockfd: c_int,
-    addr: UnsafePointer[sockaddr],
-    address_len: Pointer[socklen_t, origin],
-) raises:
+fn getpeername(file_descriptor: c_int) raises -> sockaddr_in:
     """Libc POSIX `getpeername` function.
 
     Args:
-        sockfd: A File Descriptor.
-        addr: A UnsafePointer to a buffer to store the address of the peer.
-        address_len: A UnsafePointer to the size of the buffer.
+        file_descriptor: A File Descriptor.
 
     Raises:
         Error: If an error occurs while getting the socket name.
@@ -842,13 +991,16 @@ fn getpeername[origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man2/getpeername.2.html
     """
-    var result = _getpeername(sockfd, addr, address_len)
+    var remote_address = stack_allocation[1, sockaddr]()
+    var result = _getpeername(file_descriptor, remote_address, Pointer.address_of(socklen_t(sizeof[sockaddr]())))
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
             raise Error("getpeername: The argument `socket` is not a valid descriptor.")
         elif errno == EFAULT:
-            raise Error("getpeername: The `addr` argument points to memory not in a valid part of the process address space.")
+            raise Error(
+                "getpeername: The `addr` argument points to memory not in a valid part of the process address space."
+            )
         elif errno == EINVAL:
             raise Error("getpeername: `address_len` is invalid (e.g., is negative).")
         elif errno == ENOBUFS:
@@ -860,6 +1012,9 @@ fn getpeername[origin: Origin](
         else:
             raise Error("getpeername: An error occurred while getting the socket name. Error code: " + str(errno))
 
+    # Cast sockaddr struct to sockaddr_in
+    return remote_address.bitcast[sockaddr_in]().take_pointee()
+
 
 fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
     """Libc POSIX `bind` function.
@@ -868,7 +1023,7 @@ fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, ori
         socket: A File Descriptor.
         address: A UnsafePointer to the address to bind to.
         address_len: The size of the address.
-    
+
     Returns:
         0 on success, -1 on error.
 
@@ -883,14 +1038,13 @@ fn _bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, ori
     return external_call["bind", c_int, c_int, Pointer[sockaddr_in, origin], socklen_t](socket, address, address_len)
 
 
-fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) raises:
+fn bind(socket: c_int, mut address: sockaddr_in) raises:
     """Libc POSIX `bind` function.
 
     Args:
         socket: A File Descriptor.
         address: A UnsafePointer to the address to bind to.
-        address_len: The size of the address.
-    
+
     Raises:
         Error: If an error occurs while binding the socket.
         EACCES: The address, `address`, is protected, and the user is not the superuser.
@@ -919,7 +1073,7 @@ fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, orig
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
     """
-    var result = _bind(socket, address, address_len)
+    var result = _bind(socket, Pointer.address_of(address), sizeof[sockaddr_in]())
     if result == -1:
         var errno = get_errno()
         if errno == EACCES:
@@ -955,7 +1109,7 @@ fn bind[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, orig
         #         raise Error("bind: A component of the path prefix is not a directory.")
         #     elif errno == EROFS:
         #         raise Error("bind: The socket inode would reside on a read-only file system.")
-        
+
         raise Error("bind: An error occurred while binding the socket. Error code: " + str(errno))
 
 
@@ -1017,11 +1171,9 @@ fn listen(socket: c_int, backlog: c_int) raises:
             raise Error("listen: An error occurred while listening on the socket. Error code: " + str(errno))
 
 
-fn _accept[address_origin: MutableOrigin, len_origin: Origin](
-    socket: c_int,
-    address: Pointer[sockaddr, address_origin],
-    address_len: Pointer[socklen_t, len_origin],
-) -> c_int:
+fn _accept[
+    address_origin: MutableOrigin, len_origin: Origin
+](socket: c_int, address: Pointer[sockaddr, address_origin], address_len: Pointer[socklen_t, len_origin],) -> c_int:
     """Libc POSIX `accept` function.
 
     Args:
@@ -1041,25 +1193,15 @@ fn _accept[address_origin: MutableOrigin, len_origin: Origin](
     * Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     """
     return external_call[
-        "accept",
-        c_int,  # FnName, RetType
-        c_int,
-        Pointer[sockaddr, address_origin],
-        Pointer[socklen_t, len_origin]
+        "accept", c_int, c_int, Pointer[sockaddr, address_origin], Pointer[socklen_t, len_origin]  # FnName, RetType
     ](socket, address, address_len)
 
 
-fn accept[address_origin: MutableOrigin, len_origin: Origin](
-    socket: c_int,
-    address: Pointer[sockaddr, address_origin],
-    address_len: Pointer[socklen_t, len_origin],
-) raises -> c_int:
+fn accept(socket: c_int) raises -> c_int:
     """Libc POSIX `accept` function.
 
     Args:
         socket: A File Descriptor.
-        address: A UnsafePointer to a buffer to store the address of the peer.
-        address_len: A UnsafePointer to the size of the buffer.
 
     Raises:
         Error: If an error occurs while listening on the socket.
@@ -1087,11 +1229,16 @@ fn accept[address_origin: MutableOrigin, len_origin: Origin](
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     """
-    var result = _accept(socket, address, address_len)
+    var remote_address = sockaddr()
+    var result = _accept(socket, Pointer.address_of(remote_address), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
-            raise Error("accept: The socket is marked nonblocking and no connections are present to be accepted. POSIX.1-2001 allows either error to be returned for this case, and does not require these constants to have the same value, so a portable application should check for both possibilities..")
+            raise Error(
+                "accept: The socket is marked nonblocking and no connections are present to be accepted. POSIX.1-2001"
+                " allows either error to be returned for this case, and does not require these constants to have the"
+                " same value, so a portable application should check for both possibilities.."
+            )
         elif errno == EBADF:
             raise Error("accept: `socket` is not a valid descriptor.")
         elif errno == ECONNABORTED:
@@ -1099,22 +1246,30 @@ fn accept[address_origin: MutableOrigin, len_origin: Origin](
         elif errno == EFAULT:
             raise Error("accept: The `address` argument is not in a writable part of the user address space.")
         elif errno == EINTR:
-            raise Error("accept: The system call was interrupted by a signal that was caught before a valid connection arrived; see `signal(7)`.")
+            raise Error(
+                "accept: The system call was interrupted by a signal that was caught before a valid connection arrived;"
+                " see `signal(7)`."
+            )
         elif errno == EINVAL:
-            raise Error("accept: Socket is not listening for connections, or `addr_length` is invalid (e.g., is negative).")
+            raise Error(
+                "accept: Socket is not listening for connections, or `addr_length` is invalid (e.g., is negative)."
+            )
         elif errno == EMFILE:
             raise Error("accept: The per-process limit of open file descriptors has been reached.")
         elif errno == ENFILE:
             raise Error("accept: The system limit on the total number of open files has been reached.")
         elif int(errno) in [ENOBUFS, ENOMEM]:
-            raise Error("accept: Not enough free memory. This often means that the memory allocation is limited by the socket buffer limits, not by the system memory.")
+            raise Error(
+                "accept: Not enough free memory. This often means that the memory allocation is limited by the socket"
+                " buffer limits, not by the system memory."
+            )
         elif errno == ENOTSOCK:
             raise Error("accept: `socket` is a descriptor for a file, not a socket.")
         elif errno == EOPNOTSUPP:
             raise Error("accept: The referenced socket is not of type `SOCK_STREAM`.")
         elif errno == EPROTO:
             raise Error("accept: Protocol error.")
-        
+
         @parameter
         if os_is_linux():
             if errno == EPERM:
@@ -1123,7 +1278,8 @@ fn accept[address_origin: MutableOrigin, len_origin: Origin](
 
     return result
 
-fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
+
+fn _connect[origin: Origin](socket: c_int, address: Pointer[sockaddr_in, origin], address_len: socklen_t) -> c_int:
     """Libc POSIX `connect` function.
 
     Args: socket: A File Descriptor.
@@ -1142,14 +1298,13 @@ fn _connect[origin: MutableOrigin](socket: c_int, address: Pointer[sockaddr_in, 
     return external_call["connect", c_int](socket, address, address_len)
 
 
-fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) raises:
+fn connect(socket: c_int, address: sockaddr_in) raises:
     """Libc POSIX `connect` function.
 
     Args:
         socket: A File Descriptor.
-        address: A UnsafePointer to the address to connect to.
-        address_len: The size of the address.
-    
+        address: The address to connect to.
+
     Raises:
         Error: If an error occurs while connecting to the socket.
         EACCES: For UNIX domain sockets, which are identified by pathname: Write permission is denied on the socket file, or search permission is denied for one of the directories in the path prefix. (See also path_resolution(7)).
@@ -1175,17 +1330,23 @@ fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) rais
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/connect.3p.html
     """
-    var result = _connect(socket, Pointer.address_of(address), address_len)
+    var result = _connect(socket, Pointer.address_of(address), sizeof[sockaddr_in]())
     if result == -1:
         var errno = get_errno()
         if errno == EACCES:
-            raise Error("connect: For UNIX domain sockets, which are identified by pathname: Write permission is denied on the socket file, or search permission is denied for one of the directories in the path prefix. (See also path_resolution(7)).")
+            raise Error(
+                "connect: For UNIX domain sockets, which are identified by pathname: Write permission is denied on the"
+                " socket file, or search permission is denied for one of the directories in the path prefix. (See also"
+                " path_resolution(7))."
+            )
         elif errno == EADDRINUSE:
             raise Error("connect: Local address is already in use.")
         elif errno == EAGAIN:
             raise Error("connect: No more free local ports or insufficient entries in the routing cache.")
         elif errno == EALREADY:
-            raise Error("connect: The socket is nonblocking and a previous connection attempt has not yet been completed.")
+            raise Error(
+                "connect: The socket is nonblocking and a previous connection attempt has not yet been completed."
+            )
         elif errno == EBADF:
             raise Error("connect: The file descriptor is not a valid index in the descriptor table.")
         elif errno == ECONNREFUSED:
@@ -1193,7 +1354,13 @@ fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) rais
         elif errno == EFAULT:
             raise Error("connect: The socket structure address is outside the user's address space.")
         elif errno == EINPROGRESS:
-            raise Error("connect: The socket is nonblocking and the connection cannot be completed immediately. It is possible to select(2) or poll(2) for completion by selecting the socket for writing. After select(2) indicates writability, use getsockopt(2) to read the SO_ERROR option at level SOL_SOCKET to determine whether connect() completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one of the usual error codes listed here, explaining the reason for the failure).")
+            raise Error(
+                "connect: The socket is nonblocking and the connection cannot be completed immediately. It is possible"
+                " to select(2) or poll(2) for completion by selecting the socket for writing. After select(2) indicates"
+                " writability, use getsockopt(2) to read the SO_ERROR option at level SOL_SOCKET to determine whether"
+                " connect() completed successfully (SO_ERROR is zero) or unsuccessfully (SO_ERROR is one of the usual"
+                " error codes listed here, explaining the reason for the failure)."
+            )
         elif errno == EINTR:
             raise Error("connect: The system call was interrupted by a signal that was caught.")
         elif errno == EISCONN:
@@ -1205,7 +1372,9 @@ fn connect(socket: c_int, mut address: sockaddr_in, address_len: socklen_t) rais
         elif errno == EAFNOSUPPORT:
             raise Error("connect: The passed address didn't have the correct address family in its `sa_family` field.")
         elif errno == ETIMEDOUT:
-            raise Error("connect: Timeout while attempting connection. The server may be too busy to accept new connections.")
+            raise Error(
+                "connect: Timeout while attempting connection. The server may be too busy to accept new connections."
+            )
         else:
             raise Error("connect: An error occurred while connecting to the socket. Error code: " + str(errno))
 
@@ -1223,7 +1392,7 @@ fn _recv(
         buffer: A UnsafePointer to the buffer to store the received data.
         length: The size of the buffer.
         flags: Flags to control the behaviour of the function.
-    
+
     Returns:
         The number of bytes received or -1 in case of failure.
 
@@ -1258,7 +1427,7 @@ fn recv(
         buffer: A UnsafePointer to the buffer to store the received data.
         length: The size of the buffer.
         flags: Flags to control the behaviour of the function.
-    
+
     Returns:
         The number of bytes received.
 
@@ -1274,22 +1443,33 @@ fn recv(
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
-            raise Error("ReceiveError: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
+            raise Error(
+                "ReceiveError: The socket is marked nonblocking and the receive operation would block, or a receive"
+                " timeout had been set and the timeout expired before data was received."
+            )
         elif errno == EBADF:
             raise Error("ReceiveError: The argument `socket` is an invalid descriptor.")
         elif errno == ECONNREFUSED:
-            raise Error("ReceiveError: The remote host refused to allow the network connection (typically because it is not running the requested service).")
+            raise Error(
+                "ReceiveError: The remote host refused to allow the network connection (typically because it is not"
+                " running the requested service)."
+            )
         elif errno == EFAULT:
             raise Error("ReceiveError: `buffer` points outside the process's address space.")
         elif errno == EINTR:
-            raise Error("ReceiveError: The receive was interrupted by delivery of a signal before any data were available.")
+            raise Error(
+                "ReceiveError: The receive was interrupted by delivery of a signal before any data were available."
+            )
         elif errno == ENOTCONN:
             raise Error("ReceiveError: The socket is not connected.")
         elif errno == ENOTSOCK:
             raise Error("ReceiveError: The file descriptor is not associated with a socket.")
         else:
-            raise Error("ReceiveError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
-    
+            raise Error(
+                "ReceiveError: An error occurred while attempting to receive data from the socket. Error code: "
+                + str(errno)
+            )
+
     return result
 
 
@@ -1327,7 +1507,7 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
 
     Returns:
         The number of bytes sent.
-    
+
     Raises:
         Error: If an error occurs while attempting to receive data from the socket.
         EAGAIN or EWOULDBLOCK: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.
@@ -1359,7 +1539,10 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
     if result == -1:
         var errno = get_errno()
         if int(errno) in [EAGAIN, EWOULDBLOCK]:
-            raise Error("SendError: The socket is marked nonblocking and the receive operation would block, or a receive timeout had been set and the timeout expired before data was received.")
+            raise Error(
+                "SendError: The socket is marked nonblocking and the receive operation would block, or a receive"
+                " timeout had been set and the timeout expired before data was received."
+            )
         elif errno == EBADF:
             raise Error("SendError: The argument `socket` is an invalid descriptor.")
         elif errno == EAGAIN:
@@ -1369,19 +1552,30 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
         elif errno == EDESTADDRREQ:
             raise Error("SendError: The socket is not connection-mode, and no peer address is set.")
         elif errno == ECONNREFUSED:
-            raise Error("SendError: The remote host refused to allow the network connection (typically because it is not running the requested service).")
+            raise Error(
+                "SendError: The remote host refused to allow the network connection (typically because it is not"
+                " running the requested service)."
+            )
         elif errno == EFAULT:
             raise Error("SendError: `buffer` points outside the process's address space.")
         elif errno == EINTR:
-            raise Error("SendError: The receive was interrupted by delivery of a signal before any data were available.")
+            raise Error(
+                "SendError: The receive was interrupted by delivery of a signal before any data were available."
+            )
         elif errno == EINVAL:
             raise Error("SendError: Invalid argument passed.")
         elif errno == EISCONN:
             raise Error("SendError: The connection-mode socket was connected already but a recipient was specified.")
         elif errno == EMSGSIZE:
-            raise Error("SendError: The socket type requires that message be sent atomically, and the size of the message to be sent made this impossible..")
+            raise Error(
+                "SendError: The socket type requires that message be sent atomically, and the size of the message to be"
+                " sent made this impossible.."
+            )
         elif errno == ENOBUFS:
-            raise Error("SendError: The output queue for a network interface was full. This generally indicates that the interface has stopped sending, but may be caused by transient congestion.")
+            raise Error(
+                "SendError: The output queue for a network interface was full. This generally indicates that the"
+                " interface has stopped sending, but may be caused by transient congestion."
+            )
         elif errno == ENOMEM:
             raise Error("SendError: No memory available.")
         elif errno == ENOTCONN:
@@ -1391,10 +1585,16 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
         elif errno == EOPNOTSUPP:
             raise Error("SendError: Some bit in the flags argument is inappropriate for the socket type.")
         elif errno == EPIPE:
-            raise Error("SendError: The local end has been shut down on a connection oriented socket. In this case the process will also receive a SIGPIPE unless MSG_NOSIGNAL is set.")
+            raise Error(
+                "SendError: The local end has been shut down on a connection oriented socket. In this case the process"
+                " will also receive a SIGPIPE unless MSG_NOSIGNAL is set."
+            )
         else:
-            raise Error("SendError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
-    
+            raise Error(
+                "SendError: An error occurred while attempting to receive data from the socket. Error code: "
+                + str(errno)
+            )
+
     return result
 
 
@@ -1404,7 +1604,7 @@ fn _shutdown(socket: c_int, how: c_int) -> c_int:
     Args:
         socket: A File Descriptor.
         how: How to shutdown the socket.
-    
+
     Returns:
         0 on success, -1 on error.
 
@@ -1419,13 +1619,19 @@ fn _shutdown(socket: c_int, how: c_int) -> c_int:
     return external_call["shutdown", c_int, c_int, c_int](socket, how)
 
 
+alias ShutdownInvalidDescriptorError = "ShutdownError (EBADF): The argument `socket` is an invalid descriptor."
+alias ShutdownInvalidArgumentError = "ShutdownError (EINVAL): Invalid argument passed."
+alias ShutdownNotConnectedError = "ShutdownError (ENOTCONN): The socket is not connected."
+alias ShutdownNotSocketError = "ShutdownError (ENOTSOCK): The file descriptor is not associated with a socket."
+
+
 fn shutdown(socket: c_int, how: c_int) raises:
     """Libc POSIX `shutdown` function.
 
     Args:
         socket: A File Descriptor.
         how: How to shutdown the socket.
-    
+
     Raises:
         Error: If an error occurs while attempting to receive data from the socket.
         EBADF: The argument `socket` is an invalid descriptor.
@@ -1445,15 +1651,18 @@ fn shutdown(socket: c_int, how: c_int) raises:
     if result == -1:
         var errno = get_errno()
         if errno == EBADF:
-            raise Error("ShutdownError: The argument `socket` is an invalid descriptor.")
+            raise ShutdownInvalidDescriptorError
         elif errno == EINVAL:
-            raise Error("ShutdownError: Invalid argument passed.")
+            raise ShutdownInvalidArgumentError
         elif errno == ENOTCONN:
-            raise Error("ShutdownError: The socket is not connected.")
+            raise ShutdownNotConnectedError
         elif errno == ENOTSOCK:
-            raise Error("ShutdownError: The file descriptor is not associated with a socket.")
+            raise ShutdownNotSocketError
         else:
-            raise Error("ShutdownError: An error occurred while attempting to receive data from the socket. Error code: " + str(errno))
+            raise Error(
+                "ShutdownError: An error occurred while attempting to receive data from the socket. Error code: "
+                + str(errno)
+            )
 
 
 fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
@@ -1476,27 +1685,6 @@ fn gai_strerror(ecode: c_int) -> UnsafePointer[c_char]:
     return external_call["gai_strerror", UnsafePointer[c_char], c_int](ecode)
 
 
-fn inet_pton(address_family: Int, address: String) raises -> Int:
-    """Converts an IP address from text to binary form.
-
-    Args:
-        address_family: The address family (AF_INET or AF_INET6).
-        address: The IP address in text form.
-    
-    Returns:
-        The IP address in binary form.
-    """
-    var ip_buf_size = 4
-    if address_family == AF_INET6:
-        ip_buf_size = 16
-
-    var ip_buf = UnsafePointer[c_void].alloc(ip_buf_size)
-    inet_pton(rebind[c_int](address_family), address.unsafe_ptr(), ip_buf)
-    var result = int(ip_buf.bitcast[c_uint]())
-    ip_buf.free()
-    return result
-
-
 # --- ( File Related Syscalls & Structs )---------------------------------------
 alias O_NONBLOCK = 16384
 alias O_ACCMODE = 3
@@ -1512,7 +1700,7 @@ fn _close(fildes: c_int) -> c_int:
     Returns:
         Upon successful completion, 0 shall be returned; otherwise, -1
         shall be returned and errno set to indicate the error.
-    
+
     #### C Function
     ```c
     int close(int fildes).
@@ -1524,12 +1712,18 @@ fn _close(fildes: c_int) -> c_int:
     return external_call["close", c_int, c_int](fildes)
 
 
-fn close(fildes: c_int) raises:
+alias CloseInvalidDescriptorError = "CloseError (EBADF): The file_descriptor argument is not a valid open file descriptor."
+alias CloseInterruptedError = "CloseError (EINTR): The close() function was interrupted by a signal."
+alias CloseRWError = "CloseError (EIO): An I/O error occurred while reading from or writing to the file system."
+alias CloseOutOfSpaceError = "CloseError (ENOSPC or EDQUOT): On NFS, these errors are not normally reported against the first write which exceeds the available storage space, but instead against a subsequent write(2), fsync(2), or close()."
+
+
+fn close(file_descriptor: c_int) raises:
     """Libc POSIX `close` function.
 
     Args:
-        fildes: A File Descriptor to close.
-    
+        file_descriptor: A File Descriptor to close.
+
     Raises:
         SocketError: If an error occurs while creating the socket.
         EACCES: Permission to create a socket of the specified type and/or protocol is denied.
@@ -1539,7 +1733,7 @@ fn close(fildes: c_int) raises:
         ENFILE: The system-wide limit on the total number of open files has been reached.
         ENOBUFS or ENOMEM: Insufficient memory is available. The socket cannot be created until sufficient resources are freed.
         EPROTONOSUPPORT: The protocol type or the specified protocol is not supported within this domain.
-    
+
     #### C Function
     ```c
     int close(int fildes)
@@ -1548,16 +1742,16 @@ fn close(fildes: c_int) raises:
     #### Notes:
     * Reference: https://man7.org/linux/man-pages/man3/close.3p.html
     """
-    if _close(fildes) == -1:
+    if _close(file_descriptor) == -1:
         var errno = get_errno()
         if errno == EBADF:
-            raise Error("CloseError (EBADF): The fildes argument is not a valid open file descriptor.")
+            raise CloseInvalidDescriptorError
         elif errno == EINTR:
-            raise Error("CloseError (EINTR): The close() function was interrupted by a signal.")
+            raise CloseInterruptedError
         elif errno == EIO:
-            raise Error("CloseError (EIO): An I/O error occurred while reading from or writing to the file system.")
+            raise CloseRWError
         elif int(errno) in [ENOSPC, EDQUOT]:
-            raise Error("CloseError (ENOSPC or EDQUOT): On NFS, these errors are not normally reported against the first write which exceeds the available storage space, but instead against a subsequent write(2), fsync(2), or close().")
+            raise CloseOutOfSpaceError
         else:
             raise Error("SocketError: An error occurred while creating the socket. Error code: " + str(errno))
 

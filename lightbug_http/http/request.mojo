@@ -34,27 +34,28 @@ struct HTTPRequest(Writable, Stringable):
     fn from_bytes(addr: String, max_body_size: Int, b: Span[Byte]) raises -> HTTPRequest:
         var reader = ByteReader(b)
         var headers = Headers()
-        var cookies = RequestCookieJar()
         var method: String
         var protocol: String
-        var uri_str: String
+        var uri: String
         try:
             var rest = headers.parse_raw(reader)
-            method, uri_str, protocol = rest[0], rest[1], rest[2]
+            method, uri, protocol = rest[0], rest[1], rest[2]
         except e:
             raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + str(e))
-        
+
+        var cookies = RequestCookieJar()
         try:
             cookies.parse_cookies(headers)
         except e:
             raise Error("HTTPRequest.from_bytes: Failed to parse cookies: " + str(e))
-        var uri = URI.parse_raises(addr + uri_str)
 
         var content_length = headers.content_length()
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
             raise Error("HTTPRequest.from_bytes: Request body too large.")
 
-        var request = HTTPRequest(uri, headers=headers, method=method, protocol=protocol, cookies=cookies)
+        var request = HTTPRequest(
+            URI.parse(addr + uri), headers=headers, method=method, protocol=protocol, cookies=cookies
+        )
         try:
             request.read_body(reader, content_length, max_body_size)
         except e:
@@ -87,6 +88,9 @@ struct HTTPRequest(Writable, Stringable):
         if HeaderKey.HOST not in self.headers:
             self.headers[HeaderKey.HOST] = uri.host
 
+    fn get_body(self) -> StringSlice[__origin_of(self.body_raw)]:
+        return StringSlice(unsafe_from_utf8=Span(self.body_raw))
+
     fn set_connection_close(mut self):
         self.headers[HeaderKey.CONNECTION] = "close"
 
@@ -104,55 +108,51 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        self.body_raw = r.bytes(content_length)
+        self.body_raw = r.read_bytes(content_length)
         self.set_content_length(content_length)
 
-    fn write_to[T: Writer](self, mut writer: T):
-        writer.write(self.method, whitespace)
+    fn write_to[T: Writer, //](self, mut writer: T):
         path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
-            path += "?" + self.uri.query_string
-
-        writer.write(path)
+            path.write("?", self.uri.query_string)
 
         writer.write(
+            self.method,
+            whitespace,
+            path,
             whitespace,
             self.protocol,
             lineBreak,
+            self.headers,
+            self.cookies,
+            lineBreak,
+            to_string(self.body_raw),
         )
 
-        self.headers.write_to(writer)
-        self.cookies.write_to(writer)
-        writer.write(lineBreak)
-        writer.write(to_string(self.body_raw))
-
-    # TODO: If we want to consume the args for speed, then this should be owned and not mut. self is being consumed and is invalid after this call.
-    fn _encoded(owned self) -> Bytes:
+    fn encode(owned self) -> Bytes:
         """Encodes request as bytes.
 
         This method consumes the data in this request and it should
         no longer be considered valid.
         """
-        var writer = ByteWriter()
-        writer.write(self.method)
-        writer.write(whitespace)
         var path = self.uri.path if len(self.uri.path) > 1 else strSlash
         if len(self.uri.query_string) > 0:
-            path += "?" + self.uri.query_string
-        writer.write(path)
-        writer.write(whitespace)
-        writer.write(self.protocol)
-        writer.write(lineBreak)
+            path.write("?", self.uri.query_string)
 
-        writer.write(self.headers)
-        writer.write(self.cookies)
-        # self.headers.encode_to(writer)
-        # self.cookies.encode_to(writer)
-        writer.write(lineBreak)
-
-        writer.consuming_write(self.body_raw)
-
+        var writer = ByteWriter()
+        writer.write(
+            self.method,
+            whitespace,
+            path,
+            whitespace,
+            self.protocol,
+            lineBreak,
+            self.headers,
+            self.cookies,
+            lineBreak,
+        )
+        writer.consuming_write(self^.body_raw)
         return writer.consume()
 
     fn __str__(self) -> String:
-        return to_string(self)
+        return String.write(self)

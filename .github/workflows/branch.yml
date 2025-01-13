@@ -2,10 +2,10 @@ name: Branch workflow
 
 on:
   push:
-    branches: 
+    branches:
       - '*'
   pull_request:
-    branches: 
+    branches:
       - '*'
 
 permissions:
@@ -14,6 +14,9 @@ permissions:
 jobs:
   test:
     uses: ./.github/workflows/test.yml
-  
+
+  bench:
+    uses: ./.github/workflows/bench.yml
+
   package:
     uses: ./.github/workflows/package.yml

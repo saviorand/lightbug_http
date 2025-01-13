@@ -3,7 +3,8 @@ from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import NetworkType
 from lightbug_http.utils import ByteReader, logger
-from lightbug_http.net import NoTLSListener, default_buffer_size, NoTLSListener, SysConnection, SysNet
+from lightbug_http.net import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig, TCPAddr
+from lightbug_http.socket import Socket
 from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.http.common_response import InternalError
 from lightbug_http.uri import URI
@@ -16,66 +17,69 @@ alias DefaultConcurrency: Int = 256 * 1024
 alias default_max_request_body_size = 4 * 1024 * 1024  # 4MB
 
 
-@value
-struct Server:
-    """
-    A Mojo-based server that accept incoming requests and delivers HTTP services.
-    """
+struct Server(Movable):
+    """A Mojo-based server that accept incoming requests and delivers HTTP services."""
 
     var error_handler: ErrorHandler
 
     var name: String
-    var __address: String
-    var max_concurrent_connections: Int
-    var max_requests_per_connection: Int
+    var _address: String
+    var max_concurrent_connections: UInt
+    var max_requests_per_connection: UInt
 
-    var __max_request_body_size: Int
+    var _max_request_body_size: UInt
     var tcp_keep_alive: Bool
-
-    var ln: NoTLSListener
 
     fn __init__(
         out self,
         error_handler: ErrorHandler = ErrorHandler(),
         name: String = "lightbug_http",
         address: String = "127.0.0.1",
-        max_concurrent_connections: Int = 1000,
-        max_requests_per_connection: Int = 0,
-        max_request_body_size: Int = default_max_request_body_size,
+        max_concurrent_connections: UInt = 1000,
+        max_requests_per_connection: UInt = 0,
+        max_request_body_size: UInt = default_max_request_body_size,
         tcp_keep_alive: Bool = False,
     ) raises:
         self.error_handler = error_handler
         self.name = name
-        self.__address = address
-        self.max_concurrent_connections = max_concurrent_connections
+        self._address = address
         self.max_requests_per_connection = max_requests_per_connection
-        self.__max_request_body_size = default_max_request_body_size
+        self._max_request_body_size = default_max_request_body_size
         self.tcp_keep_alive = tcp_keep_alive
-        self.ln = NoTLSListener()
+        if max_concurrent_connections == 0:
+            self.max_concurrent_connections = DefaultConcurrency
+        else:
+            self.max_concurrent_connections = max_concurrent_connections
 
-    fn address(self) -> String:
-        return self.__address
+    fn __moveinit__(mut self, owned other: Server) -> None:
+        self.error_handler = other.error_handler^
+        self.name = other.name^
+        self._address = other._address^
+        self.max_concurrent_connections = other.max_concurrent_connections
+        self.max_requests_per_connection = other.max_requests_per_connection
+        self._max_request_body_size = other._max_request_body_size
+        self.tcp_keep_alive = other.tcp_keep_alive
+
+    fn address(self) -> ref [self._address] String:
+        return self._address
 
     fn set_address(mut self, own_address: String) -> None:
-        self.__address = own_address
+        self._address = own_address
 
-    fn max_request_body_size(self) -> Int:
-        return self.__max_request_body_size
+    fn max_request_body_size(self) -> UInt:
+        return self._max_request_body_size
 
-    fn set_max_request_body_size(mut self, size: Int) -> None:
-        self.__max_request_body_size = size
+    fn set_max_request_body_size(mut self, size: UInt) -> None:
+        self._max_request_body_size = size
 
-    fn get_concurrency(self) -> Int:
+    fn get_concurrency(self) -> UInt:
         """Retrieve the concurrency level which is either
         the configured `max_concurrent_connections` or the `DefaultConcurrency`.
 
         Returns:
             Concurrency level for the server.
         """
-        var concurrency = self.max_concurrent_connections
-        if concurrency <= 0:
-            concurrency = DefaultConcurrency
-        return concurrency
+        return self.max_concurrent_connections
 
     fn listen_and_serve[T: HTTPService](mut self, address: String, mut handler: T) raises:
         """Listen for incoming connections and serve HTTP requests.
@@ -87,12 +91,12 @@ struct Server:
             address: The address (host:port) to listen on.
             handler: An object that handles incoming HTTP requests.
         """
-        var net = SysNet()
-        var listener = net.listen(NetworkType.tcp4.value, address)
+        var net = ListenConfig()
+        var listener = net.listen[NetworkType.tcp4](address)
         self.set_address(address)
-        self.serve(listener, handler)
+        self.serve(listener^, handler)
 
-    fn serve[T: HTTPService](mut self, ln: NoTLSListener, mut handler: T) raises:
+    fn serve[T: HTTPService](mut self, owned ln: NoTLSListener, mut handler: T) raises:
         """Serve HTTP requests.
 
         Parameters:
@@ -105,12 +109,11 @@ struct Server:
         Raises:
             If there is an error while serving requests.
         """
-        self.ln = ln
         while True:
-            var conn = self.ln.accept()
+            var conn = ln.accept()
             self.serve_connection(conn, handler)
 
-    fn serve_connection[T: HTTPService](mut self, mut conn: SysConnection, mut handler: T) raises -> None:
+    fn serve_connection[T: HTTPService](mut self, mut conn: TCPConnection, mut handler: T) raises -> None:
         """Serve a single connection.
 
         Parameters:
@@ -123,6 +126,9 @@ struct Server:
         Raises:
             If there is an error while serving the connection.
         """
+        logger.debug(
+            "Connection accepted! IP:", conn.socket._remote_address.ip, "Port:", conn.socket._remote_address.port
+        )
         var max_request_body_size = self.max_request_body_size()
         if max_request_body_size <= 0:
             max_request_body_size = default_max_request_body_size
@@ -131,14 +137,19 @@ struct Server:
         while True:
             req_number += 1
 
-            # TODO: We should read until 0 bytes are received. 
+            # TODO: We should read until 0 bytes are received. (@thatstoasty)
             # If we completely fill the buffer haven't read the full request, we end up processing a partial request.
             var b = Bytes(capacity=default_buffer_size)
-            var bytes_recv = conn.read(b)
-            # TODO: Should the connection be closed here? The client should close it for 1.1 http.
-            if bytes_recv == 0:
-                conn.close()
-                break
+            try:
+                _ = conn.read(b)
+            except e:
+                conn.teardown()
+                # 0 bytes were read from the peer, which indicates their side of the connection was closed.
+                if str(e) == "EOF":
+                    break
+                else:
+                    logger.error(e)
+                    raise Error("Server.serve_connection: Failed to read request")
 
             var request: HTTPRequest
             try:
@@ -146,31 +157,41 @@ struct Server:
             except e:
                 logger.error(e)
                 raise Error("Server.serve_connection: Failed to parse request")
-            
-            var res: HTTPResponse
+
+            var response: HTTPResponse
             try:
-                res = handler.func(request)
+                response = handler.func(request)
             except:
-                if not conn._closed:
+                if not conn.is_closed():
+                    # Try to send back an internal server error, but always attempt to teardown the connection.
                     try:
+                        # TODO: Move InternalError response to an alias when Mojo can support Dict operations at compile time. (@thatstoasty)
                         _ = conn.write(encode(InternalError()))
-                        conn.close()
                     except e:
                         logger.error(e)
                         raise Error("Failed to send InternalError response")
+                    finally:
+                        conn.teardown()
                 return
 
+            # If the server is set to not support keep-alive connections, or the client requests a connection close, we mark the connection to be closed.
             var close_connection = (not self.tcp_keep_alive) or request.connection_close()
             if close_connection:
-                res.set_connection_close()
+                response.set_connection_close()
 
+            logger.debug(
+                conn.socket._remote_address.ip,
+                str(conn.socket._remote_address.port),
+                request.method,
+                request.uri.path,
+                response.status_code,
+            )
             try:
-                _ = conn.write(encode(res^))
+                _ = conn.write(encode(response^))
             except e:
-                conn.close()
-                break
-            
-            if close_connection:
-                conn.close()
+                conn.teardown()
                 break
 
+            if close_connection:
+                conn.teardown()
+                break

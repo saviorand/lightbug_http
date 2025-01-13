@@ -74,9 +74,8 @@ fn lightbug_benchmark_response_parse(mut b: Bencher):
     @always_inline
     @parameter
     fn response_parse():
-        var res = Response
         try:
-            _ = HTTPResponse.from_bytes(res.as_bytes())
+            _ = HTTPResponse.from_bytes(Response.as_bytes())
         except:
             pass
 
@@ -88,9 +87,8 @@ fn lightbug_benchmark_request_parse(mut b: Bencher):
     @always_inline
     @parameter
     fn request_parse():
-        var r = Request
         try:
-            _ = HTTPRequest.from_bytes("127.0.0.1/path", 4096, r.as_bytes())
+            _ = HTTPRequest.from_bytes("127.0.0.1/path", 4096, Request.as_bytes())
         except:
             pass
 
@@ -103,7 +101,7 @@ fn lightbug_benchmark_request_encode(mut b: Bencher):
     @parameter
     fn request_encode():
         var req = HTTPRequest(
-            URI.parse("http://127.0.0.1:8080/some-path")[URI],
+            URI.parse("http://127.0.0.1:8080/some-path"),
             headers=headers_struct,
             body=body_bytes,
         )
@@ -118,8 +116,7 @@ fn lightbug_benchmark_header_encode(mut b: Bencher):
     @parameter
     fn header_encode():
         var b = ByteWriter()
-        var h = headers_struct
-        b.write(h)
+        b.write(headers_struct)
 
     b.iter[header_encode]()
 
@@ -130,9 +127,8 @@ fn lightbug_benchmark_header_parse(mut b: Bencher):
     @parameter
     fn header_parse():
         try:
-            var b = headers
             var header = Headers()
-            var reader = ByteReader(b.as_bytes())
+            var reader = ByteReader(headers.as_bytes())
             _ = header.parse_raw(reader)
         except:
             print("failed")

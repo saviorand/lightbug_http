@@ -4,11 +4,11 @@ from .request import *
 from .http_version import HttpVersion
 
 
-@always_inline
-fn encode(owned req: HTTPRequest) -> Bytes:
-    return req._encoded()
+trait Encodable:
+    fn encode(owned self) -> Bytes:
+        ...
 
 
 @always_inline
-fn encode(owned res: HTTPResponse) -> Bytes:
-    return res._encoded()
+fn encode[T: Encodable](owned data: T) -> Bytes:
+    return data^.encode()

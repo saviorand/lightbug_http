@@ -1,25 +1,11 @@
-fn OK(body: String) -> HTTPResponse:
-    return HTTPResponse(
-        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
-        body_bytes=bytes(body),
-    )
-
-
-fn OK(body: String, content_type: String) -> HTTPResponse:
+fn OK(body: String, content_type: String = "text/plain") -> HTTPResponse:
     return HTTPResponse(
         headers=Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
         body_bytes=bytes(body),
     )
 
 
-fn OK(body: Bytes) -> HTTPResponse:
-    return HTTPResponse(
-        headers=Headers(Header(HeaderKey.CONTENT_TYPE, "text/plain")),
-        body_bytes=body,
-    )
-
-
-fn OK(body: Bytes, content_type: String) -> HTTPResponse:
+fn OK(body: Bytes, content_type: String = "text/plain") -> HTTPResponse:
     return HTTPResponse(
         headers=Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),
         body_bytes=body,

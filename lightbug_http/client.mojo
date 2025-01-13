@@ -1,4 +1,6 @@
-from .libc import (
+from collections import Dict
+from memory import UnsafePointer
+from lightbug_http.libc import (
     c_int,
     AF_INET,
     SOCK_STREAM,
@@ -12,32 +14,32 @@ from lightbug_http.strings import to_string
 from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
-from lightbug_http.net import create_connection, SysConnection
+from lightbug_http.net import create_connection, TCPConnection
 from lightbug_http.io.bytes import Bytes
 from lightbug_http.utils import ByteReader, logger
-from collections import Dict
+from lightbug_http.pool_manager import PoolManager
 
 
 struct Client:
     var host: String
     var port: Int
     var name: String
+    var allow_redirects: Bool
 
-    var _connections: Dict[String, SysConnection]
+    var _connections: PoolManager[TCPConnection]
 
-    fn __init__(out self, host: String = "127.0.0.1", port: Int = 8888):
+    fn __init__(
+        out self,
+        host: String = "127.0.0.1",
+        port: Int = 8888,
+        cached_connections: Int = 10,
+        allow_redirects: Bool = False,
+    ):
         self.host = host
         self.port = port
         self.name = "lightbug_http_client"
-        self._connections = Dict[String, SysConnection]()
-
-    fn __del__(owned self):
-        for conn in self._connections.values():
-            try:
-                conn[].close()
-            except:
-                # TODO: Add an optional debug log entry here
-                pass
+        self.allow_redirects = allow_redirects
+        self._connections = PoolManager[TCPConnection](cached_connections)
 
     fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
@@ -84,17 +86,15 @@ struct Client:
             else:
                 port = 80
 
-        var conn: SysConnection
         var cached_connection = False
+        var conn: TCPConnection
         try:
-            conn = self._connections[host_str]
+            conn = self._connections.take(host_str)
             cached_connection = True
-        except:
-            # If connection is not cached, create a new one.
-            try:
-                conn = create_connection(socket(AF_INET, SOCK_STREAM, 0), host_str, port)
-                self._connections[host_str] = conn
-            except e:
+        except e:
+            if str(e) == "PoolManager.take: Key not found.":
+                conn = create_connection(host_str, port)
+            else:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
 
@@ -105,35 +105,49 @@ struct Client:
             # Maybe peer reset ungracefully, so try a fresh connection
             if str(e) == "SendError: Connection reset by peer.":
                 logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
-                self._close_conn(host_str)
+                conn.teardown()
                 if cached_connection:
                     return self.do(req^)
             logger.error("Client.do: Failed to send message.")
             raise e
 
-        # TODO: What if the response is too large for the buffer? We should read until the end of the response.
+        # TODO: What if the response is too large for the buffer? We should read until the end of the response. (@thatstoasty)
         var new_buf = Bytes(capacity=default_buffer_size)
-        var bytes_recv = conn.read(new_buf)
-
-        if bytes_recv == 0:
-            self._close_conn(host_str)
-            if cached_connection:
-                return self.do(req^)
-            raise Error("Client.do: No response received from the server.")
 
         try:
-            var res = HTTPResponse.from_bytes(new_buf, conn)
-            if res.is_redirect():
-                self._close_conn(host_str)
-                return self._handle_redirect(req^, res^)
-            if res.connection_close():
-                self._close_conn(host_str)
-            return res
+            _ = conn.read(new_buf)
         except e:
-            self._close_conn(host_str)
+            if str(e) == "EOF":
+                conn.teardown()
+                if cached_connection:
+                    return self.do(req^)
+                raise Error("Client.do: No response received from the server.")
+            else:
+                logger.error(e)
+                raise Error("Client.do: Failed to read response from peer.")
+
+        var res: HTTPResponse
+        try:
+            res = HTTPResponse.from_bytes(new_buf, conn)
+        except e:
+            logger.error("Failed to parse a response...")
+            try:
+                conn.teardown()
+            except:
+                logger.error("Failed to teardown connection...")
             raise e
 
-        return HTTPResponse(Bytes())
+        # Redirects should not keep the connection alive, as redirects can send the client to a different server.
+        if self.allow_redirects and res.is_redirect():
+            conn.teardown()
+            return self._handle_redirect(req^, res^)
+        # Server told the client to close the connection, we can assume the server closed their side after sending the response.
+        elif res.connection_close():
+            conn.teardown()
+        # Otherwise, persist the connection by giving it back to the pool manager.
+        else:
+            self._connections.give(host_str, conn^)
+        return res
 
     fn _handle_redirect(
         mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
@@ -144,20 +158,12 @@ struct Client:
             new_location = original_response.headers[HeaderKey.LOCATION]
         except e:
             raise Error("Client._handle_redirect: `Location` header was not received in the response.")
-        
+
         if new_location and new_location.startswith("http"):
-            try:
-                new_uri = URI.parse_raises(new_location)
-            except e:
-                raise Error("Client._handle_redirect: Failed to parse the new URI - " + str(e))
+            new_uri = URI.parse(new_location)
             original_req.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_req.uri
             new_uri.path = new_location
         original_req.uri = new_uri
         return self.do(original_req^)
-
-    fn _close_conn(mut self, host: String) raises:
-        if host in self._connections:
-            self._connections[host].close()
-            _ = self._connections.pop(host)
