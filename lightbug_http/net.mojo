@@ -20,6 +20,7 @@ from lightbug_http.libc import (
     AF_INET,
     AF_INET6,
     SOCK_STREAM,
+    SOCK_DGRAM,
     SOL_SOCKET,
     SO_REUSEADDR,
     SO_REUSEPORT,
@@ -196,7 +197,7 @@ struct ListenConfig:
         return listener^
 
 
-struct TCPConnection(Connection):
+struct TCPConnection:
     var socket: Socket[TCPAddr]
 
     fn __init__(inout self, owned socket: Socket[TCPAddr]):
@@ -241,6 +242,93 @@ struct TCPConnection(Connection):
         return self.socket.local_address()
 
     fn remote_addr(self) -> TCPAddr:
+        return self.socket.remote_address()
+
+
+struct UDPConnection:
+    var socket: Socket[UDPAddr]
+
+    fn __init__(inout self, owned socket: Socket[UDPAddr]):
+        self.socket = socket^
+
+    fn __moveinit__(inout self, owned existing: Self):
+        self.socket = existing.socket^
+
+    fn read_from(mut self, size: Int = default_buffer_size) raises -> (Bytes, String, UInt16):
+        """Reads data from the underlying file descriptor.
+
+        Args:
+            size: The size of the buffer to read data into.
+
+        Returns:
+            The number of bytes read, or an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while reading data.
+        """
+        return self.socket.receive_from(size)
+
+    fn read_from(mut self, mut dest: Bytes) raises -> (UInt, String, UInt16):
+        """Reads data from the underlying file descriptor.
+
+        Args:
+            dest: The buffer to read data into.
+
+        Returns:
+            The number of bytes read, or an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while reading data.
+        """
+        return self.socket.receive_from_into(dest)
+
+    fn write_to(mut self, src: Span[Byte], address: UDPAddr) raises -> Int:
+        """Writes data to the underlying file descriptor.
+
+        Args:
+            src: The buffer to read data into.
+            address: The remote peer address.
+
+        Returns:
+            The number of bytes written, or an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while writing data.
+        """
+        return self.socket.send_to(src, address.ip, address.port)
+
+    fn write_to(mut self, src: Span[Byte], host: String, port: UInt16) raises -> Int:
+        """Writes data to the underlying file descriptor.
+
+        Args:
+            src: The buffer to read data into.
+            host: The remote peer address in IPv4 format.
+            port: The remote peer port.
+
+        Returns:
+            The number of bytes written, or an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while writing data.
+        """
+        return self.socket.send_to(src, host, port)
+
+    fn close(mut self) raises:
+        self.socket.close()
+
+    fn shutdown(mut self) raises:
+        self.socket.shutdown()
+
+    fn teardown(mut self) raises:
+        self.socket.teardown()
+
+    fn is_closed(self) -> Bool:
+        return self.socket._closed
+
+    fn local_addr(mut self) -> UDPAddr:
+        return self.socket.local_address()
+
+    fn remote_addr(self) -> UDPAddr:
         return self.socket.remote_address()
 
 
@@ -395,10 +483,10 @@ struct TCPAddr(Addr):
     fn network(self) -> String:
         return NetworkType.tcp.value
 
-    fn __eq__(self, other: TCPAddr) -> Bool:
+    fn __eq__(self, other: Self) -> Bool:
         return self.ip == other.ip and self.port == other.port and self.zone == other.zone
 
-    fn __ne__(self, other: TCPAddr) -> Bool:
+    fn __ne__(self, other: Self) -> Bool:
         return not self == other
 
     fn __str__(self) -> String:
@@ -411,6 +499,162 @@ struct TCPAddr(Addr):
 
     fn write_to[W: Writer, //](self, mut writer: W):
         writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
+
+
+@value
+struct UDPAddr(Addr):
+    alias _type = "UDPAddr"
+    var ip: String
+    var port: UInt16
+    var zone: String  # IPv6 addressing zone
+
+    fn __init__(out self):
+        self.ip = "127.0.0.1"
+        self.port = 8000
+        self.zone = ""
+
+    fn __init__(out self, ip: String = "127.0.0.1", port: UInt16 = 8000):
+        self.ip = ip
+        self.port = port
+        self.zone = ""
+
+    fn network(self) -> String:
+        return NetworkType.udp.value
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.ip == other.ip and self.port == other.port and self.zone == other.zone
+
+    fn __ne__(self, other: Self) -> Bool:
+        return not self == other
+
+    fn __str__(self) -> String:
+        if self.zone != "":
+            return join_host_port(self.ip + "%" + self.zone, str(self.port))
+        return join_host_port(self.ip, str(self.port))
+
+    fn __repr__(self) -> String:
+        return String.write(self)
+
+    fn write_to[W: Writer, //](self, mut writer: W):
+        writer.write("UDPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
+
+
+fn listen_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) raises -> UDPConnection:
+    """Creates a new UDP listener.
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        local_address: The local address to listen on.
+
+    Returns:
+        A UDP connection.
+
+    Raises:
+        Error: If the address is invalid or failed to bind the socket.
+    """
+    socket = Socket[UDPAddr](socket_type=SOCK_DGRAM)
+    socket.bind(local_address.ip, local_address.port)
+    return UDPConnection(socket^)
+
+
+fn listen_udp[network: NetworkType = NetworkType.udp](local_address: String) raises -> UDPConnection:
+    """Creates a new UDP listener.
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        local_address: The address to listen on. The format is "host:port".
+
+    Returns:
+        A UDP connection.
+
+    Raises:
+        Error: If the address is invalid or failed to bind the socket.
+    """
+    var address = parse_address(local_address)
+    return listen_udp[network](UDPAddr(address[0], address[1]))
+
+
+fn listen_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16) raises -> UDPConnection:
+    """Creates a new UDP listener.
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        host: The address to listen on in ipv4 format.
+        port: The port number.
+
+    Returns:
+        A UDP connection.
+
+    Raises:
+        Error: If the address is invalid or failed to bind the socket.
+    """
+    return listen_udp[network](UDPAddr(host, port))
+
+
+fn dial_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) raises -> UDPConnection:
+    """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        local_address: The local address.
+
+    Returns:
+        The UDP connection.
+
+    Raises:
+        Error: If the network type is not supported or failed to connect to the address.
+    """
+    constrained[
+        network in NetworkType.UDP_TYPES,
+        "Unsupported network type for UDP.",
+    ]()
+    return UDPConnection(Socket(local_address=local_address, socket_type=SOCK_DGRAM))
+
+
+fn dial_udp[network: NetworkType = NetworkType.udp](local_address: String) raises -> UDPConnection:
+    """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        local_address: The local address.
+
+    Returns:
+        The UDP connection.
+
+    Raises:
+        Error: If the network type is not supported or failed to connect to the address.
+    """
+    var address = parse_address(local_address)
+    return dial_udp[network](UDPAddr(address[0], address[1]))
+
+
+fn dial_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16) raises -> UDPConnection:
+    """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
+
+    Parameters:
+        network: The network type.
+
+    Args:
+        host: The host to connect to.
+        port: The port to connect on.
+
+    Returns:
+        The UDP connection.
+
+    Raises:
+        Error: If the network type is not supported or failed to connect to the address.
+    """
+    return dial_udp[network](UDPAddr(host, port))
 
 
 # TODO: Support IPv6 long form.

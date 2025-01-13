@@ -85,6 +85,7 @@ alias ENOPROTOOPT = 42 if os_is_macos() else 92
 alias EAFNOSUPPORT = 47 if os_is_macos() else 97
 alias EADDRINUSE = 48 if os_is_macos() else 98
 alias EADDRNOTAVAIL = 49 if os_is_macos() else 99
+alias ENETDOWN = 50 if os_is_macos() else 100
 alias ENETUNREACH = 51 if os_is_macos() else 101
 alias ECONNABORTED = 53 if os_is_macos() else 103
 alias ECONNRESET = 54 if os_is_macos() else 104
@@ -95,6 +96,7 @@ alias ETIMEDOUT = 60 if os_is_macos() else 110
 alias ECONNREFUSED = 61 if os_is_macos() else 111
 alias ELOOP = 62 if os_is_macos() else 40
 alias ENAMETOOLONG = 63 if os_is_macos() else 36
+alias EHOSTUNREACH = 65 if os_is_macos() else 113
 alias EDQUOT = 69 if os_is_macos() else 122
 alias ENOMSG = 91 if os_is_macos() else 42
 alias EPROTO = 100 if os_is_macos() else 71
@@ -1473,6 +1475,125 @@ fn recv(
     return result
 
 
+fn _recvfrom[
+    origin: Origin
+](
+    socket: c_int,
+    buffer: UnsafePointer[c_void],
+    length: c_size_t,
+    flags: c_int,
+    address: UnsafePointer[sockaddr],
+    address_len: Pointer[socklen_t, origin],
+) -> c_ssize_t:
+    """Libc POSIX `recvfrom` function.
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        buffer: Points to the buffer where the message should be stored.
+        length: Specifies the length in bytes of the buffer pointed to by the buffer argument.
+        flags: Specifies the type of message reception.
+        address: A null pointer, or points to a sockaddr structure in which the sending address is to be stored.
+        address_len: Either a null pointer, if address is a null pointer, or a pointer to a socklen_t object which on input specifies the length of the supplied sockaddr structure, and on output specifies the length of the stored address.
+
+    Returns:
+        The number of bytes received or -1 in case of failure.
+
+    #### C Function
+    ```c
+    ssize_t recvfrom(int socket, void *restrict buffer, size_t length,
+        int flags, struct sockaddr *restrict address,
+        socklen_t *restrict address_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/recvfrom.3p.html
+    * Valid Flags:
+        * `MSG_PEEK`: Peeks at an incoming message. The data is treated as unread and the next recvfrom() or similar function shall still return this data.
+        * `MSG_OOB`: Requests out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        * `MSG_WAITALL`: On SOCK_STREAM sockets this requests that the function block until the full amount of data can be returned. The function may return the smaller amount of data if the socket is a message-based socket, if a signal is caught, if the connection is terminated, if MSG_PEEK was specified, or if an error is pending for the socket.
+
+    """
+    return external_call[
+        "recvfrom",
+        c_ssize_t,
+        c_int,
+        UnsafePointer[c_void],
+        c_size_t,
+        c_int,
+        UnsafePointer[sockaddr],
+        Pointer[socklen_t, origin],
+    ](socket, buffer, length, flags, address, address_len)
+
+
+fn recvfrom(
+    socket: c_int,
+    buffer: UnsafePointer[c_void],
+    length: c_size_t,
+    flags: c_int,
+    address: UnsafePointer[sockaddr],
+) raises -> c_size_t:
+    """Libc POSIX `recvfrom` function.
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        buffer: Points to the buffer where the message should be stored.
+        length: Specifies the length in bytes of the buffer pointed to by the buffer argument.
+        flags: Specifies the type of message reception.
+        address: A null pointer, or points to a sockaddr structure in which the sending address is to be stored.
+
+    Returns:
+        The number of bytes received.
+
+    #### C Function
+    ```c
+    ssize_t recvfrom(int socket, void *restrict buffer, size_t length,
+        int flags, struct sockaddr *restrict address,
+        socklen_t *restrict address_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/recvfrom.3p.html
+    * Valid Flags:
+        * `MSG_PEEK`: Peeks at an incoming message. The data is treated as unread and the next recvfrom() or similar function shall still return this data.
+        * `MSG_OOB`: Requests out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        * `MSG_WAITALL`: On SOCK_STREAM sockets this requests that the function block until the full amount of data can be returned. The function may return the smaller amount of data if the socket is a message-based socket, if a signal is caught, if the connection is terminated, if MSG_PEEK was specified, or if an error is pending for the socket.
+
+    """
+    var result = _recvfrom(socket, buffer, length, flags, address, Pointer[socklen_t].address_of(sizeof[sockaddr]()))
+    if result == -1:
+        var errno = get_errno()
+        if int(errno) in [EAGAIN, EWOULDBLOCK]:
+            raise "ReceiveError: The socket's file descriptor is marked `O_NONBLOCK` and no data is waiting to be received; or MSG_OOB is set and no out-of-band data is available and either the socket's file descriptor is marked `O_NONBLOCK` or the socket does not support blocking to await out-of-band data."
+        elif errno == EBADF:
+            raise "ReceiveError: The socket argument is not a valid file descriptor."
+        elif errno == ECONNRESET:
+            raise "ReceiveError: A connection was forcibly closed by a peer."
+        elif errno == EINTR:
+            raise "ReceiveError: A signal interrupted `recvfrom()` before any data was available."
+        elif errno == EINVAL:
+            raise "ReceiveError: The `MSG_OOB` flag is set and no out-of-band data is available."
+        elif errno == ENOTCONN:
+            raise "ReceiveError: A receive is attempted on a connection-mode socket that is not connected."
+        elif errno == ENOTSOCK:
+            raise "ReceiveError: The socket argument does not refer to a socket."
+        elif errno == EOPNOTSUPP:
+            raise "ReceiveError: The specified flags are not supported for this socket type."
+        elif errno == ETIMEDOUT:
+            raise "ReceiveError: The connection timed out during connection establishment, or due to a transmission timeout on active connection."
+        elif errno == EIO:
+            raise "ReceiveError: An I/O error occurred while reading from or writing to the file system."
+        elif errno == ENOBUFS:
+            raise "ReceiveError: Insufficient resources were available in the system to perform the operation."
+        elif errno == ENOMEM:
+            raise "ReceiveError: Insufficient memory was available to fulfill the request."
+        else:
+            raise "ReceiveError: An error occurred while attempting to receive data from the socket. Error code: " + str(
+                errno
+            )
+
+    return result
+
+
 fn _send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int) -> c_ssize_t:
     """Libc POSIX `send` function.
 
@@ -1496,7 +1617,7 @@ fn _send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: 
     return external_call["send", c_ssize_t](socket, buffer, length, flags)
 
 
-fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int) raises -> c_ssize_t:
+fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c_int) raises -> c_size_t:
     """Libc POSIX `send` function.
 
     Args:
@@ -1593,6 +1714,153 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
             raise Error(
                 "SendError: An error occurred while attempting to receive data from the socket. Error code: "
                 + str(errno)
+            )
+
+    return result
+
+
+fn _sendto(
+    socket: c_int,
+    message: UnsafePointer[c_void],
+    length: c_size_t,
+    flags: c_int,
+    dest_addr: UnsafePointer[sockaddr],
+    dest_len: socklen_t,
+) -> c_ssize_t:
+    """Libc POSIX `sendto` function
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        message: Points to a buffer containing the message to be sent.
+        length: Specifies the size of the message in bytes.
+        flags: Specifies the type of message transmission.
+        dest_addr: Points to a sockaddr structure containing the destination address.
+        dest_len: Specifies the length of the sockaddr.
+
+    Returns:
+        The number of bytes sent or -1 in case of failure.
+
+    #### C Function
+    ```c
+    ssize_t sendto(int socket, const void *message, size_t length,
+    int flags, const struct sockaddr *dest_addr,
+    socklen_t dest_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/sendto.3p.html
+    * Valid Flags:
+        * `MSG_EOR`: Terminates a record (if supported by the protocol).
+        * `MSG_OOB`: Sends out-of-band data on sockets that support out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        * `MSG_NOSIGNAL`: Requests not to send the SIGPIPE signal if an attempt to send is made on a stream-oriented socket that is no longer connected. The [EPIPE] error shall still be returned.
+    """
+    return external_call[
+        "sendto", c_ssize_t, c_int, UnsafePointer[c_char], c_size_t, c_int, UnsafePointer[sockaddr], socklen_t
+    ](socket, message, length, flags, dest_addr, dest_len)
+
+
+fn sendto(
+    socket: c_int,
+    message: UnsafePointer[c_void],
+    length: c_size_t,
+    flags: c_int,
+    dest_addr: UnsafePointer[sockaddr],
+) raises -> c_size_t:
+    """Libc POSIX `sendto` function.
+
+    Args:
+        socket: Specifies the socket file descriptor.
+        message: Points to a buffer containing the message to be sent.
+        length: Specifies the size of the message in bytes.
+        flags: Specifies the type of message transmission.
+        dest_addr: Points to a sockaddr structure containing the destination address.
+
+    Raises:
+        Error: If an error occurs while attempting to send data to the socket.
+        EAFNOSUPPORT: Addresses in the specified address family cannot be used with this socket.
+        EAGAIN or EWOULDBLOCK: The socket's file descriptor is marked `O_NONBLOCK` and the requested operation would block.
+        EBADF: The socket argument is not a valid file descriptor.
+        ECONNRESET: A connection was forcibly closed by a peer.
+        EINTR: A signal interrupted `sendto()` before any data was transmitted.
+        EMSGSIZE: The message is too large to be sent all at once, as the socket requires.
+        ENOTCONN: The socket is connection-mode but is not connected.
+        ENOTSOCK: The socket argument does not refer to a socket.
+        EPIPE: The socket is shut down for writing, or the socket is connection-mode and is no longer connected.
+        EACCES: Search permission is denied for a component of the path prefix; or write access to the named socket is denied.
+        EDESTADDRREQ: The socket is not connection-mode and does not have its peer address set, and no destination address was specified.
+        EHOSTUNREACH: The destination host cannot be reached (probably because the host is down or a remote router cannot reach it).
+        EINVAL: The `dest_len` argument is not a valid length for the address family.
+        EIO: An I/O error occurred while reading from or writing to the file system.
+        ENETDOWN: The local network interface used to reach the destination is down.
+        ENETUNREACH: No route to the network is present.
+        ENOBUFS: Insufficient resources were available in the system to perform the operation.
+        ENOMEM: Insufficient memory was available to fulfill the request.
+        ELOOP: More than `SYMLOOP_MAX` symbolic links were encountered during resolution of the pathname in the socket address.
+        ENAMETOOLONG: The length of a pathname exceeds `PATH_MAX`, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds `PATH_MAX`.
+
+    #### C Function
+    ```c
+    ssize_t sendto(int socket, const void *message, size_t length,
+    int flags, const struct sockaddr *dest_addr,
+    socklen_t dest_len)
+    ```
+
+    #### Notes:
+    * Reference: https://man7.org/linux/man-pages/man3/sendto.3p.html
+    * Valid Flags:
+        * `MSG_EOR`: Terminates a record (if supported by the protocol).
+        * `MSG_OOB`: Sends out-of-band data on sockets that support out-of-band data. The significance and semantics of out-of-band data are protocol-specific.
+        * `MSG_NOSIGNAL`: Requests not to send the SIGPIPE signal if an attempt to send is made on a stream-oriented socket that is no longer connected. The [EPIPE] error shall still be returned.
+
+    """
+    var result = _sendto(socket, message, length, flags, dest_addr, sizeof[sockaddr]())
+    if result == -1:
+        var errno = get_errno()
+        if errno == EAFNOSUPPORT:
+            raise "SendToError (EAFNOSUPPORT): Addresses in the specified address family cannot be used with this socket."
+        elif int(errno) in [EAGAIN, EWOULDBLOCK]:
+            raise "SendToError (EAGAIN/EWOULDBLOCK): The socket's file descriptor is marked `O_NONBLOCK` and the requested operation would block."
+        elif errno == EBADF:
+            raise "SendToError (EBADF): The socket argument is not a valid file descriptor."
+        elif errno == ECONNRESET:
+            raise "SendToError (ECONNRESET): A connection was forcibly closed by a peer."
+        elif errno == EINTR:
+            raise "SendToError (EINTR): A signal interrupted `sendto()` before any data was transmitted."
+        elif errno == EMSGSIZE:
+            raise "SendToError (EMSGSIZE): The message is too large to be sent all at once, as the socket requires."
+        elif errno == ENOTCONN:
+            raise "SendToError (ENOTCONN): The socket is connection-mode but is not connected."
+        elif errno == ENOTSOCK:
+            raise "SendToError (ENOTSOCK): The socket argument does not refer to a socket."
+        elif errno == EPIPE:
+            raise "SendToError (EPIPE): The socket is shut down for writing, or the socket is connection-mode and is no longer connected."
+        elif errno == EACCES:
+            raise "SendToError (EACCES): Search permission is denied for a component of the path prefix; or write access to the named socket is denied."
+        elif errno == EDESTADDRREQ:
+            raise "SendToError (EDESTADDRREQ): The socket is not connection-mode and does not have its peer address set, and no destination address was specified."
+        elif errno == EHOSTUNREACH:
+            raise "SendToError (EHOSTUNREACH): The destination host cannot be reached (probably because the host is down or a remote router cannot reach it)."
+        elif errno == EINVAL:
+            raise "SendToError (EINVAL): The dest_len argument is not a valid length for the address family."
+        elif errno == EIO:
+            raise "SendToError (EIO): An I/O error occurred while reading from or writing to the file system."
+        elif errno == EISCONN:
+            raise "SendToError (EISCONN): A destination address was specified and the socket is already connected."
+        elif errno == ENETDOWN:
+            raise "SendToError (ENETDOWN): The local network interface used to reach the destination is down."
+        elif errno == ENETUNREACH:
+            raise "SendToError (ENETUNREACH): No route to the network is present."
+        elif errno == ENOBUFS:
+            raise "SendToError (ENOBUFS): Insufficient resources were available in the system to perform the operation."
+        elif errno == ENOMEM:
+            raise "SendToError (ENOMEM): Insufficient memory was available to fulfill the request."
+        elif errno == ELOOP:
+            raise "SendToError (ELOOP): More than `SYMLOOP_MAX` symbolic links were encountered during resolution of the pathname in the socket address."
+        elif errno == ENAMETOOLONG:
+            raise "SendToError (ENAMETOOLONG): The length of a pathname exceeds `PATH_MAX`, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds `PATH_MAX`."
+        else:
+            raise "SendToError: An error occurred while attempting to send data to the socket. Error code: " + str(
+                errno
             )
 
     return result

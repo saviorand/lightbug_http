@@ -7,9 +7,9 @@ from lightbug_http.libc import (
     socket,
     connect,
     recv,
-    # recvfrom,
+    recvfrom,
     send,
-    # sendto,
+    sendto,
     shutdown,
     inet_pton,
     inet_ntop,
@@ -48,7 +48,6 @@ from lightbug_http.io.bytes import Bytes
 from lightbug_http.strings import NetworkType
 from lightbug_http.net import (
     Addr,
-    TCPAddr,
     default_buffer_size,
     binary_port_to_int,
     binary_ip_to_string,
@@ -293,7 +292,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             logger.error(e)
             raise Error("Socket.listen: Failed to listen for connections.")
 
-    fn bind[network: String = NetworkType.tcp4.value](mut self, address: String, port: UInt16) raises:
+    fn bind(mut self, address: String, port: UInt16) raises:
         """Bind the socket to address. The socket must not already be bound. (The format of address depends on the address family).
 
         When a socket is created with Socket(), it exists in a name
@@ -488,7 +487,34 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             total_bytes_sent += sent
             attempts += 1
 
-    fn _receive(self, mut buffer: Bytes) raises -> Int:
+    fn send_to(mut self, src: Span[Byte], address: String, port: UInt16) raises -> UInt:
+        """Send data to the a remote address by connecting to the remote socket before sending.
+        The socket must be not already be connected to a remote socket.
+
+        Args:
+            src: The data to send.
+            address: The IP address to connect to.
+            port: The port number to connect to.
+
+        Returns:
+            The number of bytes sent.
+
+        Raises:
+            Error: If sending the data fails.
+        """
+
+        @parameter
+        if os_is_macos():
+            ip = addrinfo_macos().get_ip_address(address)
+        else:
+            ip = addrinfo_unix().get_ip_address(address)
+
+        var addr = sockaddr_in(address_family=address_family, port=port, binary_ip=ip.s_addr)
+        bytes_sent = sendto(self.fd, src.unsafe_ptr(), len(src), 0, UnsafePointer.address_of(addr).bitcast[sockaddr]())
+
+        return bytes_sent
+
+    fn _receive(self, mut buffer: Bytes) raises -> UInt:
         """Receive data from the socket into the buffer.
 
         Args:
@@ -532,7 +558,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         _ = self._receive(buffer)
         return buffer
 
-    fn receive_into(self, mut buffer: Bytes) raises -> Int:
+    fn receive_into(self, mut buffer: Bytes) raises -> UInt:
         """Receive data from the socket into the buffer.
 
         Args:
@@ -546,6 +572,70 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             EOF: If 0 bytes are received, return EOF.
         """
         return self._receive(buffer)
+
+    fn _receive_from(self, mut buffer: Bytes) raises -> (UInt, String, UInt16):
+        """Receive data from the socket into the buffer.
+
+        Args:
+            buffer: The buffer to read data into.
+
+        Returns:
+            The buffer with the received data, and an error if one occurred.
+
+        Raises:
+            Error: If reading data from the socket fails.
+            EOF: If 0 bytes are received, return EOF.
+        """
+        var remote_address = stack_allocation[1, sockaddr]()
+        var bytes_received: UInt
+        try:
+            bytes_received = recvfrom(
+                self.fd, buffer.unsafe_ptr().offset(buffer.size), buffer.capacity - buffer.size, 0, remote_address
+            )
+            buffer.size += bytes_received
+        except e:
+            logger.error(e)
+            raise Error("Socket._receive_from: Failed to read data from connection.")
+
+        if bytes_received == 0:
+            raise Error("EOF")
+
+        var addr_in = remote_address.bitcast[sockaddr_in]().take_pointee()
+        return (
+            bytes_received,
+            binary_ip_to_string[address_family](addr_in.sin_addr.s_addr),
+            UInt16(binary_port_to_int(addr_in.sin_port)),
+        )
+
+    fn receive_from(mut self, size: Int = default_buffer_size) raises -> (List[Byte, True], String, UInt16):
+        """Receive data from the socket into the buffer dest.
+
+        Args:
+            size: The size of the buffer to receive data into.
+
+        Returns:
+            The number of bytes read, the remote address, and an error if one occurred.
+
+        Raises:
+            Error: If reading data from the socket fails.
+        """
+        var buffer = Bytes(capacity=size)
+        _, host, port = self._receive_from(buffer)
+        return buffer, host, port
+
+    fn receive_from_into(mut self, mut dest: List[Byte, True]) raises -> (UInt, String, UInt16):
+        """Receive data from the socket into the buffer dest.
+
+        Args:
+            dest: The buffer to read data into.
+
+        Returns:
+            The number of bytes read, the remote address, and an error if one occurred.
+
+        Raises:
+            Error: If reading data from the socket fails.
+        """
+        return self._receive_from(dest)
 
     fn shutdown(mut self) raises -> None:
         """Shut down the socket. The remote end will receive no more data (after queued data is flushed)."""
