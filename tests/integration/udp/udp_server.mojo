@@ -8,7 +8,7 @@ fn main() raises:
     while True:
         # Accept incoming messages
         response, host, port = listener.read_from(16)
-        var message = String(StringSlice(unsafe_from_utf8=response))
+        var message = StringSlice(unsafe_from_utf8=response)
         print("Message received:", message)
 
         # Response with the same message in uppercase
