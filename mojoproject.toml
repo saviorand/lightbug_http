@@ -12,6 +12,7 @@ publish = { cmd = "bash scripts/publish.sh", env = { PREFIX_API_KEY = "$PREFIX_A
 test = { cmd = "magic run mojo test -I . tests/lightbug_http" }
 integration_tests_py = { cmd = "bash scripts/integration_test.sh" }
 integration_tests_external = { cmd = "magic run mojo test -I . tests/integration" }
+integration_tests_udp = { cmd = "bash scripts/udp_test.sh" }
 bench = { cmd = "magic run mojo -I . benchmark/bench.mojo" }
 bench_server = { cmd = "bash scripts/bench_server.sh" }
 format = { cmd = "magic run mojo format -l 120 lightbug_http" }
