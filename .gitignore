@@ -14,7 +14,10 @@ install_id
 # Rattler
 output
 
+# integration tests
+udp_client.DSYM
+udp_server.DSYM
+__pycache__
+
 # misc
 .vscode
-
-__pycache__
