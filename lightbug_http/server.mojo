@@ -92,7 +92,7 @@ struct Server(Movable):
             handler: An object that handles incoming HTTP requests.
         """
         var net = ListenConfig()
-        var listener = net.listen[NetworkType.tcp4](address)
+        var listener = net.listen(address)
         self.set_address(address)
         self.serve(listener^, handler)
 

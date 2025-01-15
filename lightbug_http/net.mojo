@@ -72,7 +72,7 @@ trait Connection(Movable):
     fn teardown(mut self) raises:
         ...
 
-    fn local_addr(mut self) -> TCPAddr:
+    fn local_addr(self) -> TCPAddr:
         ...
 
     fn remote_addr(self) -> TCPAddr:
@@ -136,12 +136,8 @@ struct ListenConfig:
     fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self._keep_alive = keep_alive
 
-    fn listen[network: NetworkType, address_family: Int = AF_INET](mut self, address: String) raises -> NoTLSListener:
+    fn listen[address_family: Int = AF_INET](mut self, address: String) raises -> NoTLSListener:
         constrained[address_family in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
-        constrained[
-            network in NetworkType.SUPPORTED_TYPES,
-            "Unsupported network type for internet address resolution. Unix addresses are not supported yet.",
-        ]()
         var local = parse_address(address)
         var addr = TCPAddr(local[0], local[1])
         var socket: Socket[TCPAddr]
@@ -200,15 +196,15 @@ struct ListenConfig:
 struct TCPConnection:
     var socket: Socket[TCPAddr]
 
-    fn __init__(inout self, owned socket: Socket[TCPAddr]):
+    fn __init__(out self, owned socket: Socket[TCPAddr]):
         self.socket = socket^
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:
-            return self.socket.receive_into(buf)
+            return self.socket.receive(buf)
         except e:
             if str(e) == "EOF":
                 raise e
@@ -238,7 +234,8 @@ struct TCPConnection:
     fn is_closed(self) -> Bool:
         return self.socket._closed
 
-    fn local_addr(mut self) -> TCPAddr:
+    # TODO: Switch to property or return ref when trait supports attributes.
+    fn local_addr(self) -> TCPAddr:
         return self.socket.local_address()
 
     fn remote_addr(self) -> TCPAddr:
@@ -248,10 +245,10 @@ struct TCPConnection:
 struct UDPConnection:
     var socket: Socket[UDPAddr]
 
-    fn __init__(inout self, owned socket: Socket[UDPAddr]):
+    fn __init__(out self, owned socket: Socket[UDPAddr]):
         self.socket = socket^
 
-    fn __moveinit__(inout self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
 
     fn read_from(mut self, size: Int = default_buffer_size) raises -> (Bytes, String, UInt16):
@@ -280,7 +277,7 @@ struct UDPConnection:
         Raises:
             Error: If an error occurred while reading data.
         """
-        return self.socket.receive_from_into(dest)
+        return self.socket.receive_from(dest)
 
     fn write_to(mut self, src: Span[Byte], address: UDPAddr) raises -> Int:
         """Writes data to the underlying file descriptor.
@@ -325,10 +322,10 @@ struct UDPConnection:
     fn is_closed(self) -> Bool:
         return self.socket._closed
 
-    fn local_addr(mut self) -> UDPAddr:
+    fn local_addr(self) -> ref [self.socket._local_address] UDPAddr:
         return self.socket.local_address()
 
-    fn remote_addr(self) -> UDPAddr:
+    fn remote_addr(self) -> ref [self.socket._remote_address] UDPAddr:
         return self.socket.remote_address()
 
 
@@ -349,12 +346,19 @@ struct addrinfo_macos(AnAddrInfo):
     var ai_addr: UnsafePointer[sockaddr]
     var ai_next: OpaquePointer
 
-    fn __init__(out self, ai_flags: c_int = 0, ai_family: c_int = 0, ai_socktype: c_int = 0, ai_protocol: c_int = 0):
-        self.ai_flags = 0
-        self.ai_family = 0
-        self.ai_socktype = 0
-        self.ai_protocol = 0
-        self.ai_addrlen = 0
+    fn __init__(
+        out self,
+        ai_flags: c_int = 0,
+        ai_family: c_int = 0,
+        ai_socktype: c_int = 0,
+        ai_protocol: c_int = 0,
+        ai_addrlen: socklen_t = 0,
+    ):
+        self.ai_flags = ai_flags
+        self.ai_family = ai_family
+        self.ai_socktype = ai_socktype
+        self.ai_protocol = ai_protocol
+        self.ai_addrlen = ai_addrlen
         self.ai_canonname = UnsafePointer[c_char]()
         self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_next = OpaquePointer()
@@ -402,12 +406,19 @@ struct addrinfo_unix(AnAddrInfo):
     var ai_canonname: UnsafePointer[c_char]
     var ai_next: OpaquePointer
 
-    fn __init__(out self, ai_flags: c_int = 0, ai_family: c_int = 0, ai_socktype: c_int = 0, ai_protocol: c_int = 0):
+    fn __init__(
+        out self,
+        ai_flags: c_int = 0,
+        ai_family: c_int = 0,
+        ai_socktype: c_int = 0,
+        ai_protocol: c_int = 0,
+        ai_addrlen: socklen_t = 0,
+    ):
         self.ai_flags = ai_flags
         self.ai_family = ai_family
         self.ai_socktype = ai_socktype
         self.ai_protocol = ai_protocol
-        self.ai_addrlen = 0
+        self.ai_addrlen = ai_addrlen
         self.ai_addr = UnsafePointer[sockaddr]()
         self.ai_canonname = UnsafePointer[c_char]()
         self.ai_next = OpaquePointer()
@@ -539,11 +550,8 @@ struct UDPAddr(Addr):
         writer.write("UDPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
 
 
-fn listen_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) raises -> UDPConnection:
+fn listen_udp(local_address: UDPAddr) raises -> UDPConnection:
     """Creates a new UDP listener.
-
-    Parameters:
-        network: The network type.
 
     Args:
         local_address: The local address to listen on.
@@ -559,11 +567,8 @@ fn listen_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) ra
     return UDPConnection(socket^)
 
 
-fn listen_udp[network: NetworkType = NetworkType.udp](local_address: String) raises -> UDPConnection:
+fn listen_udp(local_address: String) raises -> UDPConnection:
     """Creates a new UDP listener.
-
-    Parameters:
-        network: The network type.
 
     Args:
         local_address: The address to listen on. The format is "host:port".
@@ -575,14 +580,11 @@ fn listen_udp[network: NetworkType = NetworkType.udp](local_address: String) rai
         Error: If the address is invalid or failed to bind the socket.
     """
     var address = parse_address(local_address)
-    return listen_udp[network](UDPAddr(address[0], address[1]))
+    return listen_udp(UDPAddr(address[0], address[1]))
 
 
-fn listen_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16) raises -> UDPConnection:
+fn listen_udp(host: String, port: UInt16) raises -> UDPConnection:
     """Creates a new UDP listener.
-
-    Parameters:
-        network: The network type.
 
     Args:
         host: The address to listen on in ipv4 format.
@@ -594,14 +596,11 @@ fn listen_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16
     Raises:
         Error: If the address is invalid or failed to bind the socket.
     """
-    return listen_udp[network](UDPAddr(host, port))
+    return listen_udp(UDPAddr(host, port))
 
 
-fn dial_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) raises -> UDPConnection:
+fn dial_udp(local_address: UDPAddr) raises -> UDPConnection:
     """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
-
-    Parameters:
-        network: The network type.
 
     Args:
         local_address: The local address.
@@ -612,18 +611,11 @@ fn dial_udp[network: NetworkType = NetworkType.udp](local_address: UDPAddr) rais
     Raises:
         Error: If the network type is not supported or failed to connect to the address.
     """
-    constrained[
-        network in NetworkType.UDP_TYPES,
-        "Unsupported network type for UDP.",
-    ]()
     return UDPConnection(Socket(local_address=local_address, socket_type=SOCK_DGRAM))
 
 
-fn dial_udp[network: NetworkType = NetworkType.udp](local_address: String) raises -> UDPConnection:
+fn dial_udp(local_address: String) raises -> UDPConnection:
     """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
-
-    Parameters:
-        network: The network type.
 
     Args:
         local_address: The local address.
@@ -635,14 +627,11 @@ fn dial_udp[network: NetworkType = NetworkType.udp](local_address: String) raise
         Error: If the network type is not supported or failed to connect to the address.
     """
     var address = parse_address(local_address)
-    return dial_udp[network](UDPAddr(address[0], address[1]))
+    return dial_udp(UDPAddr(address[0], address[1]))
 
 
-fn dial_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16) raises -> UDPConnection:
+fn dial_udp(host: String, port: UInt16) raises -> UDPConnection:
     """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
-
-    Parameters:
-        network: The network type.
 
     Args:
         host: The host to connect to.
@@ -654,7 +643,7 @@ fn dial_udp[network: NetworkType = NetworkType.udp](host: String, port: UInt16) 
     Raises:
         Error: If the network type is not supported or failed to connect to the address.
     """
-    return dial_udp[network](UDPAddr(host, port))
+    return dial_udp(UDPAddr(host, port))
 
 
 # TODO: Support IPv6 long form.

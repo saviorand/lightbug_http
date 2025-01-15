@@ -558,7 +558,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         _ = self._receive(buffer)
         return buffer
 
-    fn receive_into(self, mut buffer: Bytes) raises -> UInt:
+    fn receive(self, mut buffer: Bytes) raises -> UInt:
         """Receive data from the socket into the buffer.
 
         Args:
@@ -623,7 +623,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         _, host, port = self._receive_from(buffer)
         return buffer, host, port
 
-    fn receive_from_into(mut self, mut dest: List[Byte, True]) raises -> (UInt, String, UInt16):
+    fn receive_from(mut self, mut dest: List[Byte, True]) raises -> (UInt, String, UInt16):
         """Receive data from the socket into the buffer dest.
 
         Args:
