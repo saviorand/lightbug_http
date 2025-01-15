@@ -19,4 +19,4 @@ echo "[INFO] Testing server with UDP client"
 
 rm ./udp_server
 rm ./udp_client
-kill_server "udp_server"
+kill_server "udp_server" || echo "Failed to kill udp server"
