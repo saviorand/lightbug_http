@@ -3,7 +3,7 @@ from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import NetworkType
 from lightbug_http.utils import ByteReader, logger
-from lightbug_http.net import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig, TCPAddr
+from lightbug_http.net import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig
 from lightbug_http.socket import Socket
 from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.http.common_response import InternalError
@@ -92,7 +92,7 @@ struct Server(Movable):
             handler: An object that handles incoming HTTP requests.
         """
         var net = ListenConfig()
-        var listener = net.listen[NetworkType.tcp4](address)
+        var listener = net.listen(address)
         self.set_address(address)
         self.serve(listener^, handler)
 
