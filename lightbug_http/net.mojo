@@ -150,14 +150,11 @@ struct ListenConfig:
         try:
 
             @parameter
-            # REUSEADDR doesn't work on ubuntu.
+            # TODO: do we want to reuse port on linux? currently doesn't work
             if os_is_macos():
                 socket.set_socket_option(SO_REUSEADDR, 1)
-            else:
-                socket.set_socket_option(SO_REUSEPORT, 1)
         except e:
             logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
-            # TODO: Maybe raise here if we want to make this a hard failure.
 
         var bind_success = False
         var bind_fail_logged = False
