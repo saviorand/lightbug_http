@@ -36,7 +36,7 @@ jobs:
           # Temporary method to fetch the rattler binary.
           RATTLER_BINARY="rattler-build-aarch64-apple-darwin"
           if [[ $TARGET_PLATFORM == "linux-64" ]]; then RATTLER_BINARY="rattler-build-x86_64-unknown-linux-musl"; fi
-          curl -SL --progress-bar https://github.com/prefix-dev/rattler-build/releases/latest/download/${RATTLER_BINARY} -o rattler-build
+          curl -SL --progress-bar https://github.com/prefix-dev/rattler-build/releases/download/v0.33.2/${RATTLER_BINARY} -o rattler-build
           chmod +x rattler-build
 
           # Build and push
