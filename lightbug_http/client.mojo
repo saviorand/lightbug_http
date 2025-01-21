@@ -1,16 +1,5 @@
 from collections import Dict
 from memory import UnsafePointer
-from lightbug_http.libc import (
-    c_int,
-    AF_INET,
-    SOCK_STREAM,
-    socket,
-    connect,
-    send,
-    recv,
-    close,
-)
-from lightbug_http.strings import to_string
 from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey

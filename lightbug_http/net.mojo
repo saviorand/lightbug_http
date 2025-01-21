@@ -114,6 +114,15 @@ struct NoTLSListener:
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
 
+    fn __enter__(owned self) -> Self:
+        return self^
+
+    fn __del__(owned self):
+        try:
+            self.socket.teardown()
+        except e:
+            logger.debug("NoTLSListener.__del__: Failed to close socket on deletion:", e)
+
     fn accept(self) raises -> TCPConnection:
         return TCPConnection(self.socket.accept())
 
@@ -198,6 +207,12 @@ struct TCPConnection:
 
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
+
+    fn __del__(owned self):
+        try:
+            self.socket.teardown()
+        except e:
+            logger.debug("TCPConnection.__del__: Failed to close socket on deletion:", e)
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:

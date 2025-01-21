@@ -168,11 +168,9 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
                 logger.error("Socket.teardown: Failed to close socket.")
                 raise e
 
-    fn __enter__(owned self) -> Self:
-        return self^
-
-    fn __exit__(mut self) raises:
-        self.teardown()
+    # TODO: Removed until we can determine why __del__ bugs out in the client flow, but not server flow?
+    # fn __enter__(owned self) -> Self:
+    #     return self^
 
     # TODO: Seems to be bugged if this is included. Mojo tries to delete a mystical 0 fd socket that was never initialized?
     # fn __del__(owned self):
@@ -181,7 +179,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
     #     try:
     #         self.teardown()
     #     except e:
-    #         logger.debug("Socket.__del__: Failed to close socket during deletion:", str(e))
+    #         logger.debug("Socket.__del__: Failed to close socket during deletion:", e)
 
     fn __str__(self) -> String:
         return String.write(self)
