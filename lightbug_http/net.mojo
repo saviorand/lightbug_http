@@ -114,15 +114,6 @@ struct NoTLSListener:
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
 
-    fn __enter__(owned self) -> Self:
-        return self^
-
-    fn __del__(owned self):
-        try:
-            self.socket.teardown()
-        except e:
-            logger.debug("NoTLSListener.__del__: Failed to close socket on deletion:", e)
-
     fn accept(self) raises -> TCPConnection:
         return TCPConnection(self.socket.accept())
 
@@ -156,14 +147,13 @@ struct ListenConfig:
             logger.error(e)
             raise Error("ListenConfig.listen: Failed to create listener due to socket creation failure.")
 
-        try:
-
-            @parameter
-            # TODO: do we want to reuse port on linux? currently doesn't work
-            if os_is_macos():
+        @parameter
+        # TODO: do we want to reuse port on linux? currently doesn't work
+        if os_is_macos():
+            try:
                 socket.set_socket_option(SO_REUSEADDR, 1)
-        except e:
-            logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
+            except e:
+                logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
 
         var bind_success = False
         var bind_fail_logged = False
@@ -207,12 +197,6 @@ struct TCPConnection:
 
     fn __moveinit__(out self, owned existing: Self):
         self.socket = existing.socket^
-
-    fn __del__(owned self):
-        try:
-            self.socket.teardown()
-        except e:
-            logger.debug("TCPConnection.__del__: Failed to close socket on deletion:", e)
 
     fn read(self, mut buf: Bytes) raises -> Int:
         try:
