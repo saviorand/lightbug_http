@@ -20,16 +20,12 @@ fn parse_host_and_port(source: String, is_tls: Bool) raises -> (String, UInt16):
     Returns:
         A tuple containing the host and port.
     """
-    var port: UInt16
     if source.count(":") != 1:
-        port = 443 if is_tls else 80
+        var port: UInt16 = 443 if is_tls else 80
         return source, port
 
-    var host: String
-    var reader = ByteReader(source.as_bytes())
-    host = StringSlice(unsafe_from_utf8=reader.read_until(ord(":")))
-    port = atol(StringSlice(unsafe_from_utf8=reader.read_bytes()[1:]))
-    return host^, port
+    var result = source.split(":")
+    return result[0], UInt16(atol(result[1]))
 
 
 struct Client:
