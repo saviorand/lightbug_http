@@ -148,10 +148,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         self.fd = existing.fd
         self.socket_type = existing.socket_type
         self.protocol = existing.protocol
+
         self._local_address = existing._local_address^
+        existing._local_address = AddrType()
         self._remote_address = existing._remote_address^
+        existing._remote_address = AddrType()
+
         self._closed = existing._closed
+        existing._closed = True
         self._connected = existing._connected
+        existing._connected = False
 
     fn teardown(mut self) raises:
         """Close the socket and free the file descriptor."""
@@ -169,17 +175,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
                 raise e
 
     # TODO: Removed until we can determine why __del__ bugs out in the client flow, but not server flow?
-    # fn __enter__(owned self) -> Self:
-    #     return self^
+    fn __enter__(owned self) -> Self:
+        return self^
 
     # TODO: Seems to be bugged if this is included. Mojo tries to delete a mystical 0 fd socket that was never initialized?
-    # fn __del__(owned self):
-    #     """Close the socket when the object is deleted."""
-    #     logger.info("In socket del", self)
-    #     try:
-    #         self.teardown()
-    #     except e:
-    #         logger.debug("Socket.__del__: Failed to close socket during deletion:", e)
+    fn __del__(owned self):
+        """Close the socket when the object is deleted."""
+        try:
+            self.teardown()
+        except e:
+            logger.debug("Socket.__del__: Failed to close socket during deletion:", e)
 
     fn __str__(self) -> String:
         return String.write(self)
