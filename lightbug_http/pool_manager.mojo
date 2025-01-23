@@ -48,7 +48,7 @@ struct PoolKey(Hashable, KeyElement):
     fn __hash__(self) -> UInt:
         # TODO: Very rudimentary hash. We probably need to actually have an actual hash function here.
         # Since Tuple doesn't have one.
-        return hash(self.host) + hash(self.port) + hash(self.scheme)
+        return hash(hash(self.host) + hash(self.port) + hash(self.scheme))
 
     fn __eq__(self, other: Self) -> Bool:
         return self.host == other.host and self.port == other.port and self.scheme == other.scheme
