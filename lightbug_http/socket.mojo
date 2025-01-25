@@ -3,7 +3,7 @@ from utils import StaticTuple
 from sys import sizeof, external_call
 from sys.info import os_is_macos
 from memory import Pointer, UnsafePointer
-from lightbug_http.libc import (
+from lightbug_http._libc import (
     socket,
     connect,
     recv,
@@ -54,7 +54,7 @@ from lightbug_http.net import (
     addrinfo_macos,
     addrinfo_unix,
 )
-from lightbug_http.utils import logger
+from lightbug_http._logger import logger
 
 
 alias SocketClosedError = "Socket: Socket is already closed"

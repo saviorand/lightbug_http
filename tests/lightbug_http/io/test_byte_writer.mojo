@@ -1,6 +1,5 @@
 import testing
-from lightbug_http.utils import ByteWriter
-from lightbug_http.io.bytes import Bytes
+from lightbug_http.io.bytes import Bytes, ByteWriter
 
 
 def test_write_byte():

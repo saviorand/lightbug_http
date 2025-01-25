@@ -5,33 +5,9 @@ from memory import UnsafePointer, bitcast, memcpy
 from collections import Dict, Optional
 from collections.dict import RepresentableKeyElement
 from lightbug_http.net import create_connection, TCPConnection, Connection
-from lightbug_http.utils import logger
-from lightbug_http.owning_list import OwningList
-
-
-@value
-struct Scheme(Hashable, EqualityComparable, Representable, Stringable, Writable):
-    var value: String
-    alias HTTP = Self("http")
-    alias HTTPS = Self("https")
-
-    fn __hash__(self) -> UInt:
-        return hash(self.value)
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.value == other.value
-
-    fn __ne__(self, other: Self) -> Bool:
-        return self.value != other.value
-
-    fn write_to[W: Writer, //](self, mut writer: W) -> None:
-        writer.write("Scheme(value=", repr(self.value), ")")
-
-    fn __repr__(self) -> String:
-        return String.write(self)
-
-    fn __str__(self) -> String:
-        return self.value.upper()
+from lightbug_http._logger import logger
+from lightbug_http._owning_list import OwningList
+from lightbug_http.uri import Scheme
 
 
 @value

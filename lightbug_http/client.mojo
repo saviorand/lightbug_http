@@ -5,27 +5,10 @@ from lightbug_http.net import default_buffer_size
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
 from lightbug_http.net import create_connection, TCPConnection
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.utils import ByteReader, logger
-from lightbug_http.pool_manager import PoolManager, Scheme, PoolKey
-
-
-fn parse_host_and_port(source: String, is_tls: Bool) raises -> (String, UInt16):
-    """Parses the host and port from a given string.
-
-    Args:
-        source: The host uri to parse.
-        is_tls: A boolean indicating whether the connection is secure.
-
-    Returns:
-        A tuple containing the host and port.
-    """
-    if source.count(":") != 1:
-        var port: UInt16 = 443 if is_tls else 80
-        return source, port
-
-    var result = source.split(":")
-    return result[0], UInt16(atol(result[1]))
+from lightbug_http.io.bytes import Bytes, ByteReader
+from lightbug_http._logger import logger
+from lightbug_http.pool_manager import PoolManager, PoolKey
+from lightbug_http.uri import URI, Scheme
 
 
 struct Client:
@@ -71,7 +54,9 @@ struct Client:
             Error: If there is a failure in sending or receiving the message.
         """
         if request.uri.host == "":
-            raise Error("Client.do: Request failed because the host field is empty.")
+            raise Error("Client.do: Host must not be empty.")
+        if not request.uri.port:
+            raise Error("Client.do: You must specify the port to connect on.")
 
         var is_tls = False
         var scheme = Scheme.HTTP
@@ -79,8 +64,8 @@ struct Client:
             is_tls = True
             scheme = Scheme.HTTPS
 
-        host, port = parse_host_and_port(request.uri.host, is_tls)
-        var pool_key = PoolKey(host, port, scheme)
+        var uri = URI.parse(request.uri.host)
+        var pool_key = PoolKey(uri.host, uri.port.value(), scheme)
         var cached_connection = False
         var conn: TCPConnection
         try:
@@ -88,7 +73,7 @@ struct Client:
             cached_connection = True
         except e:
             if str(e) == "PoolManager.take: Key not found.":
-                conn = create_connection(host, port)
+                conn = create_connection(uri.host, uri.port.value())
             else:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")

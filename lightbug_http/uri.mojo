@@ -1,5 +1,7 @@
-from utils import Variant
-from lightbug_http.io.bytes import Bytes, bytes
+from utils import Variant, StringSlice
+from memory import Span
+from collections import Optional
+from lightbug_http.io.bytes import Bytes, bytes, ByteReader, Constant
 from lightbug_http.strings import (
     strSlash,
     strHttp11,
@@ -12,6 +14,49 @@ from lightbug_http.strings import (
 
 
 @value
+struct Scheme(Hashable, EqualityComparable, Representable, Stringable, Writable):
+    var value: String
+    alias HTTP = Self("http")
+    alias HTTPS = Self("https")
+
+    fn __hash__(self) -> UInt:
+        return hash(self.value)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
+
+    fn write_to[W: Writer, //](self, mut writer: W) -> None:
+        writer.write("Scheme(value=", repr(self.value), ")")
+
+    fn __repr__(self) -> String:
+        return String.write(self)
+
+    fn __str__(self) -> String:
+        return self.value.upper()
+
+
+fn parse_host_and_port(source: String, is_tls: Bool) raises -> (String, UInt16):
+    """Parses the host and port from a given string.
+
+    Args:
+        source: The host uri to parse.
+        is_tls: A boolean indicating whether the connection is secure.
+
+    Returns:
+        A tuple containing the host and port.
+    """
+    if source.count(":") != 1:
+        var port: UInt16 = 443 if is_tls else 80
+        return source, port
+
+    var result = source.split(":")
+    return result[0], UInt16(atol(result[1]))
+
+
+@value
 struct URI(Writable, Stringable, Representable):
     var _original_path: String
     var scheme: String
@@ -19,6 +64,7 @@ struct URI(Writable, Stringable, Representable):
     var query_string: String
     var _hash: String
     var host: String
+    var port: Optional[UInt16]
 
     var full_uri: String
     var request_uri: String
@@ -27,58 +73,70 @@ struct URI(Writable, Stringable, Representable):
     var password: String
 
     @staticmethod
-    fn parse(uri: String) -> URI:
-        var proto_str = String(strHttp11)
-        var is_https = False
+    fn parse(owned uri: String) raises -> URI:
+        """Parses a URI which is defined using the following format.
 
-        var proto_end = uri.find("://")
-        var remainder_uri: String
-        if proto_end >= 0:
-            proto_str = uri[:proto_end]
-            if proto_str == https:
-                is_https = True
-            remainder_uri = uri[proto_end + 3 :]
-        else:
-            remainder_uri = uri
+        `[scheme:][//[user_info@]host][/]path[?query][#fragment]`
+        """
+        var reader = ByteReader(uri.as_bytes())
 
-        var path_start = remainder_uri.find("/")
-        var host_and_port: String
-        var request_uri: String
+        # Parse the scheme, if exists.
+        # Assume http if no scheme is provided, fairly safe given the context of lightbug.
+        var scheme: String = "http"
+        if Constant.COLON in reader:
+            scheme = str(reader.read_until(Constant.COLON))
+            if reader.read_bytes(3) != "://".as_bytes():
+                raise Error("URI.parse: Invalid URI format, scheme should be followed by `://`. Received: " + uri)
+
+        # Parse the user info, if exists.
+        var user_info: String = ""
+        if Constant.AT in reader:
+            user_info = str(reader.read_until(Constant.AT))
+            reader.increment(1)
+
+        # TODOs (@thatstoasty)
+        # Handle ipv4 and ipv6 literal
+        # Handle string host
+        # A query right after the domain is a valid uri, but it's equivalent to example.com/?query
+        # so we should add the normalization of paths
+        var host_and_port = reader.read_until(Constant.SLASH)
+        colon = host_and_port.find(Constant.COLON)
         var host: String
-        if path_start >= 0:
-            host_and_port = remainder_uri[:path_start]
-            request_uri = remainder_uri[path_start:]
-            host = host_and_port[:path_start]
+        var port: Optional[UInt16] = None
+        if colon != -1:
+            host = str(host_and_port[:colon])
+            var port_end = colon + 1
+            # loop through the post colon chunk until we find a non-digit character
+            for b in host_and_port[colon + 1 :]:
+                if b[] < Constant.ZERO or b[] > Constant.NINE:
+                    break
+                port_end += 1
+            port = UInt16(atol(str(host_and_port[colon + 1 : port_end])))
         else:
-            host_and_port = remainder_uri
-            request_uri = strSlash
-            host = host_and_port
+            host = str(host_and_port)
 
-        var scheme: String
-        if is_https:
-            scheme = https
-        else:
-            scheme = http
+        # Parse the path
+        var path: String = "/"
+        if reader.available() and reader.peek() == Constant.SLASH:
+            # Read until the query string, or the end if there is none.
+            path = str(reader.read_until(Constant.QUESTION))
 
-        var n = request_uri.find("?")
-        var original_path: String
-        var query_string: String
-        if n >= 0:
-            original_path = request_uri[:n]
-            query_string = request_uri[n + 1 :]
-        else:
-            original_path = request_uri
-            query_string = ""
+        # Parse query
+        var query: String = ""
+        if reader.available() and reader.peek() == Constant.QUESTION:
+            # TODO: Handle fragments for anchors
+            query = str(reader.read_bytes()[1:])
 
         return URI(
-            _original_path=original_path,
+            _original_path=path,
             scheme=scheme,
-            path=original_path,
-            query_string=query_string,
+            path=path,
+            query_string=query,
             _hash="",
             host=host,
+            port=port,
             full_uri=uri,
-            request_uri=request_uri,
+            request_uri=uri,
             username="",
             password="",
         )
