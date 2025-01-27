@@ -160,7 +160,10 @@ struct Client:
             raise Error("Client._handle_redirect: `Location` header was not received in the response.")
 
         if new_location and new_location.startswith("http"):
-            new_uri = URI.parse(new_location)
+            try:
+                new_uri = URI.parse(new_location)
+            except e:
+                raise Error("Client._handle_redirect: Failed to parse the new URI: " + str(e))
             original_req.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_req.uri

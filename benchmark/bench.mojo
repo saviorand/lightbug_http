@@ -100,8 +100,13 @@ fn lightbug_benchmark_request_encode(mut b: Bencher):
     @always_inline
     @parameter
     fn request_encode():
+        var uri = URI()
+        try:
+            uri = URI.parse("http://127.0.0.1:8080/some-path")
+        except e:
+            print("Could not parse URI, error: ", e)
         var req = HTTPRequest(
-            URI.parse("http://127.0.0.1:8080/some-path"),
+            
             headers=headers_struct,
             body=body_bytes,
         )
