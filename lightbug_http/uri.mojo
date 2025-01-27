@@ -96,6 +96,8 @@ struct URI(Writable, Stringable, Representable):
                 if key_val[0]:
                     queries[key_val[0]] = ""
                     if len(key_val) == 2:
+                        # TODO: Query values are going to be URI encoded strings and should be decoded as part of the
+                        # query processing
                         queries[key_val[0]] = key_val[1]
 
         return URI(

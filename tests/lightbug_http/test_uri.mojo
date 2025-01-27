@@ -132,7 +132,7 @@ def test_uri_parse_complex_query():
 def test_uri_parse_query_with_unicode():
     var uri = URI.parse("http://example.com/search?q=%E2%82%AC&lang=%F0%9F%87%A9%F0%9F%87%AA")
     testing.assert_equal(uri.query_string, "q=%E2%82%AC&lang=%F0%9F%87%A9%F0%9F%87%AA")
-#     testing.assert_equal(uri.queries["q"], "€") - fails, contains %E2%82%AC
+    # testing.assert_equal(uri.queries["q"], "€") - fails, contains %E2%82%AC
     # testing.assert_equal(uri.queries["lang"], "🇩🇪") - fails, contains %F0%9F%87%A9%F0%9F%87%AA
 
 # def test_uri_parse_query_with_fragments():
