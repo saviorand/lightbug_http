@@ -106,7 +106,7 @@ fn lightbug_benchmark_request_encode(mut b: Bencher):
         except e:
             print("Could not parse URI, error: ", e)
         var req = HTTPRequest(
-            
+            uri=uri,
             headers=headers_struct,
             body=body_bytes,
         )
