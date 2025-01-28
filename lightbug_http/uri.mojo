@@ -2,6 +2,7 @@ from collections import Dict
 from utils import Variant
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import (
+    find_all,
     strSlash,
     strHttp11,
     strHttp10,
@@ -12,16 +13,11 @@ from lightbug_http.strings import (
 )
 
 
-fn find_all(s: String, sub_str: String) -> List[Int]:
-    match_idxs = List[Int]()
-    var current_idx: Int = s.find(sub_str)
-    while current_idx > -1:
-        match_idxs.append(current_idx)
-        current_idx = s.find(sub_str, start=current_idx + 1)
-    return match_idxs^
-
-
-fn unquote[expand_plus: Bool = False](input_str: String) -> String:
+fn unquote[
+    expand_plus: Bool = False
+](
+    input_str: String, disallowed_escapes: List[String] = List[String]()
+) -> String:
     var encoded_str = input_str.replace(
         QueryDelimiters.PLUS_ESCAPED_SPACE, " "
     ) if expand_plus else input_str
@@ -70,7 +66,12 @@ fn unquote[expand_plus: Bool = False](input_str: String) -> String:
 
         if len(str_bytes) > 0:
             str_bytes.append(0x00)
-            sub_strings.append(String(str_bytes))
+            var sub_str_from_bytes = String(str_bytes)
+            for disallowed in disallowed_escapes:
+                sub_str_from_bytes = sub_str_from_bytes.replace(
+                    disallowed[], ""
+                )
+            sub_strings.append(sub_str_from_bytes)
             str_bytes.clear()
 
         slice_start = current_offset
@@ -152,10 +153,14 @@ struct URI(Writable, Stringable, Representable):
         var original_path: String
         var query_string: String
         if n >= 0:
-            original_path = unquote(request_uri[:n])
+            original_path = unquote(
+                request_uri[:n], disallowed_escapes=List(str("/"))
+            )
             query_string = request_uri[n + 1 :]
         else:
-            original_path = unquote(request_uri)
+            original_path = unquote(
+                request_uri, disallowed_escapes=List(str("/"))
+            )
             query_string = ""
 
         var queries = QueryMap()
@@ -164,13 +169,12 @@ struct URI(Writable, Stringable, Representable):
 
             for item in query_items:
                 var key_val = item[].split(QueryDelimiters.ITEM_ASSIGN, 1)
+                var key = unquote[expand_plus=True](key_val[0])
 
-                if key_val[0]:
-                    queries[key_val[0]] = ""
+                if key:
+                    queries[key] = ""
                     if len(key_val) == 2:
-                        queries[key_val[0]] = unquote[expand_plus=True](
-                            key_val[1]
-                        )
+                        queries[key] = unquote[expand_plus=True](key_val[1])
 
         return URI(
             _original_path=original_path,
