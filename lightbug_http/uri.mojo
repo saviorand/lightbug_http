@@ -1,6 +1,6 @@
 from utils import Variant, StringSlice
 from memory import Span
-from collections import Optional
+from collections import Optional, Dict
 from lightbug_http.io.bytes import Bytes, bytes, ByteReader, Constant
 from lightbug_http.strings import (
     strSlash,
@@ -11,6 +11,20 @@ from lightbug_http.strings import (
     strHttps,
     https,
 )
+
+alias QueryMap = Dict[String, String]
+
+
+struct QueryDelimiters:
+    alias STRING_START = "?"
+    alias ITEM = "&"
+    alias ITEM_ASSIGN = "="
+
+
+struct URIDelimiters:
+    alias SCHEMA = "://"
+    alias PATH = strSlash
+    alias ROOT_PATH = strSlash
 
 
 @value
@@ -62,6 +76,7 @@ struct URI(Writable, Stringable, Representable):
     var scheme: String
     var path: String
     var query_string: String
+    var queries: QueryMap
     var _hash: String
     var host: String
     var port: Optional[UInt16]
@@ -131,11 +146,26 @@ struct URI(Writable, Stringable, Representable):
             # TODO: Handle fragments for anchors
             query = str(reader.read_bytes()[1:])
 
+        var queries = QueryMap()
+        if query:
+            var query_items = query.split(QueryDelimiters.ITEM)
+
+            for item in query_items:
+                var key_val = item[].split(QueryDelimiters.ITEM_ASSIGN, 1)
+
+                if key_val[0]:
+                    queries[key_val[0]] = ""
+                    if len(key_val) == 2:
+                        # TODO: Query values are going to be URI encoded strings and should be decoded as part of the
+                        # query processing
+                        queries[key_val[0]] = key_val[1]
+
         return URI(
             _original_path=path,
             scheme=scheme,
             path=path,
             query_string=query,
+            queries=queries,
             _hash="",
             host=host,
             port=port,
@@ -146,9 +176,9 @@ struct URI(Writable, Stringable, Representable):
         )
 
     fn __str__(self) -> String:
-        var result = String.write(self.scheme, "://", self.host, self.path)
+        var result = String.write(self.scheme, URIDelimiters.SCHEMA, self.host, self.path)
         if len(self.query_string) > 0:
-            result.write("?", self.query_string)
+            result.write(QueryDelimiters.STRING_START, self.query_string)
         return result^
 
     fn __repr__(self) -> String:
