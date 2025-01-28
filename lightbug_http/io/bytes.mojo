@@ -182,6 +182,9 @@ struct ByteReader[origin: Origin]:
         self._inner = b
         self.read_pos = 0
 
+    fn copy(self) -> Self:
+        return ByteReader(self._inner[self.read_pos :])
+
     fn __contains__(self, b: Byte) -> Bool:
         for i in range(self.read_pos, len(self._inner)):
             if self._inner[i] == b:

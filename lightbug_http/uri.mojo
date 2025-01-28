@@ -117,7 +117,11 @@ struct URI(Writable, Stringable, Representable):
 
         # Parse the path
         var path: String = "/"
+        var request_uri: String = "/"
         if reader.available() and reader.peek() == Constant.SLASH:
+            # Copy the remaining bytes to read the request uri.
+            var request_uri_reader = reader.copy()
+            request_uri = str(request_uri_reader.read_bytes())
             # Read until the query string, or the end if there is none.
             path = str(reader.read_until(Constant.QUESTION))
 
@@ -136,7 +140,7 @@ struct URI(Writable, Stringable, Representable):
             host=host,
             port=port,
             full_uri=uri,
-            request_uri=uri,
+            request_uri=request_uri,
             username="",
             password="",
         )
