@@ -2,6 +2,7 @@ from collections import Dict
 from utils import Variant
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import (
+    find_all,
     strSlash,
     strHttp11,
     strHttp10,
@@ -11,6 +12,76 @@ from lightbug_http.strings import (
     https,
 )
 
+
+fn unquote[
+    expand_plus: Bool = False
+](
+    input_str: String, disallowed_escapes: List[String] = List[String]()
+) -> String:
+    var encoded_str = input_str.replace(
+        QueryDelimiters.PLUS_ESCAPED_SPACE, " "
+    ) if expand_plus else input_str
+
+    var percent_idxs: List[Int] = find_all(
+        encoded_str, URIDelimiters.CHAR_ESCAPE
+    )
+
+    if len(percent_idxs) < 1:
+        return encoded_str
+
+    var sub_strings = List[String]()
+
+    var current_idx = 0
+    var slice_start = 0
+    var slice_end = 0
+
+    var str_bytes = List[UInt8]()
+    while current_idx < len(percent_idxs):
+        slice_end = percent_idxs[current_idx]
+        sub_strings.append(encoded_str[slice_start:slice_end])
+
+        var current_offset = slice_end
+        while current_idx < len(percent_idxs):
+            var char_byte = -1
+            if (current_offset + 3) <= len(encoded_str):
+                try:
+                    char_byte = atol(
+                        encoded_str[current_offset + 1 : current_offset + 3],
+                        base=16,
+                    )
+                except:
+                    pass
+
+            if char_byte < 0:
+                break
+
+            str_bytes.append(char_byte)
+
+            if percent_idxs[current_idx + 1] != (current_offset + 3):
+                current_offset += 3
+                break
+
+            current_idx += 1
+            current_offset = percent_idxs[current_idx]
+
+        if len(str_bytes) > 0:
+            str_bytes.append(0x00)
+            var sub_str_from_bytes = String(str_bytes)
+            for disallowed in disallowed_escapes:
+                sub_str_from_bytes = sub_str_from_bytes.replace(
+                    disallowed[], ""
+                )
+            sub_strings.append(sub_str_from_bytes)
+            str_bytes.clear()
+
+        slice_start = current_offset
+        current_idx += 1
+
+    sub_strings.append(encoded_str[slice_start:])
+
+    return str("").join(sub_strings)
+
+
 alias QueryMap = Dict[String, String]
 
 
@@ -18,12 +89,14 @@ struct QueryDelimiters:
     alias STRING_START = "?"
     alias ITEM = "&"
     alias ITEM_ASSIGN = "="
+    alias PLUS_ESCAPED_SPACE = "+"
 
 
 struct URIDelimiters:
     alias SCHEMA = "://"
     alias PATH = strSlash
     alias ROOT_PATH = strSlash
+    alias CHAR_ESCAPE = "%"
 
 
 @value
@@ -80,10 +153,14 @@ struct URI(Writable, Stringable, Representable):
         var original_path: String
         var query_string: String
         if n >= 0:
-            original_path = request_uri[:n]
+            original_path = unquote(
+                request_uri[:n], disallowed_escapes=List(str("/"))
+            )
             query_string = request_uri[n + 1 :]
         else:
-            original_path = request_uri
+            original_path = unquote(
+                request_uri, disallowed_escapes=List(str("/"))
+            )
             query_string = ""
 
         var queries = QueryMap()
@@ -92,13 +169,12 @@ struct URI(Writable, Stringable, Representable):
 
             for item in query_items:
                 var key_val = item[].split(QueryDelimiters.ITEM_ASSIGN, 1)
+                var key = unquote[expand_plus=True](key_val[0])
 
-                if key_val[0]:
-                    queries[key_val[0]] = ""
+                if key:
+                    queries[key] = ""
                     if len(key_val) == 2:
-                        # TODO: Query values are going to be URI encoded strings and should be decoded as part of the
-                        # query processing
-                        queries[key_val[0]] = key_val[1]
+                        queries[key] = unquote[expand_plus=True](key_val[1])
 
         return URI(
             _original_path=original_path,
@@ -115,7 +191,9 @@ struct URI(Writable, Stringable, Representable):
         )
 
     fn __str__(self) -> String:
-        var result = String.write(self.scheme, URIDelimiters.SCHEMA, self.host, self.path)
+        var result = String.write(
+            self.scheme, URIDelimiters.SCHEMA, self.host, self.path
+        )
         if len(self.query_string) > 0:
             result.write(QueryDelimiters.STRING_START, self.query_string)
         return result^

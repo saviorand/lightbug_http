@@ -150,3 +150,12 @@ fn to_string(owned bytes: Bytes) -> String:
     if bytes[-1] != 0:
         bytes.append(0)
     return String(bytes^)
+
+
+fn find_all(s: String, sub_str: String) -> List[Int]:
+    match_idxs = List[Int]()
+    var current_idx: Int = s.find(sub_str)
+    while current_idx > -1:
+        match_idxs.append(current_idx)
+        current_idx = s.find(sub_str, start=current_idx + 1)
+    return match_idxs^
