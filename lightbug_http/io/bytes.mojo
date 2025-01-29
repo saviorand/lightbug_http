@@ -107,6 +107,9 @@ struct ByteView[origin: Origin]():
     fn __len__(self) -> Int:
         return len(self._inner)
 
+    fn __bool__(self) -> Bool:
+        return self._inner.__bool__()
+
     fn __contains__(self, b: Byte) -> Bool:
         for i in range(len(self._inner)):
             if self._inner[i] == b:

@@ -115,24 +115,6 @@ struct Scheme(Hashable, EqualityComparable, Representable, Stringable, Writable)
         return self.value.upper()
 
 
-fn parse_host_and_port(source: String, is_tls: Bool) raises -> (String, UInt16):
-    """Parses the host and port from a given string.
-
-    Args:
-        source: The host uri to parse.
-        is_tls: A boolean indicating whether the connection is secure.
-
-    Returns:
-        A tuple containing the host and port.
-    """
-    if source.count(":") != 1:
-        var port: UInt16 = 443 if is_tls else 80
-        return source, port
-
-    var result = source.split(":")
-    return result[0], UInt16(atol(result[1]))
-
-
 @value
 struct URI(Writable, Stringable, Representable):
     var _original_path: String
@@ -193,6 +175,15 @@ struct URI(Writable, Stringable, Representable):
         else:
             host = str(host_and_port)
 
+        # Reads until either the start of the query string, or the end of the uri.
+        var unquote_reader = reader.copy()
+        var original_path_bytes = unquote_reader.read_until(Constant.QUESTION)
+        var original_path: String
+        if not original_path_bytes:
+            original_path = "/"
+        else:
+            original_path = unquote(str(original_path_bytes), disallowed_escapes=List(str("/")))
+
         # Parse the path
         var path: String = "/"
         var request_uri: String = "/"
@@ -201,7 +192,7 @@ struct URI(Writable, Stringable, Representable):
             var request_uri_reader = reader.copy()
             request_uri = str(request_uri_reader.read_bytes())
             # Read until the query string, or the end if there is none.
-            path = str(reader.read_until(Constant.QUESTION))
+            path = unquote(str(reader.read_until(Constant.QUESTION)), disallowed_escapes=List(str("/")))
 
         # Parse query
         var query: String = ""
@@ -223,7 +214,7 @@ struct URI(Writable, Stringable, Representable):
                         queries[key] = unquote[expand_plus=True](key_val[1])
 
         return URI(
-            _original_path=path,
+            _original_path=original_path,
             scheme=scheme,
             path=path,
             query_string=query,
