@@ -62,6 +62,16 @@ def test_uri_parse_https_with_path():
     testing.assert_equal(uri.query_string, empty_string)
 
 
+def test_uri_parse_path_with_encoding():
+    var uri = URI.parse("https://example.com/test%20test/index.html")
+    testing.assert_equal(uri.path, "/test test/index.html")
+
+
+def test_uri_parse_path_with_encoding_ignore_slashes():
+    var uri = URI.parse("https://example.com/trying_to%2F_be_clever/42.html")
+    testing.assert_equal(uri.path, "/trying_to_be_clever/42.html")
+
+
 def test_uri_parse_http_basic():
     var uri = URI.parse("http://example.com")
     testing.assert_equal(uri.scheme, "http")
@@ -106,13 +116,14 @@ def test_uri_parse_multiple_query_parameters():
 
 
 def test_uri_parse_query_with_special_characters():
-    var uri = URI.parse("https://example.com/path?name=John+Doe&email=john%40example.com")
+    var uri = URI.parse("https://example.com/path?name=John+Doe&email=john%40example.com&escaped%40%20name=42")
     testing.assert_equal(uri.scheme, "https")
     testing.assert_equal(uri.host, "example.com")
     testing.assert_equal(uri.path, "/path")
-    testing.assert_equal(uri.query_string, "name=John+Doe&email=john%40example.com")
-    # testing.assert_equal(uri.queries["name"], "John Doe") - fails, contains John+Doe
-    # testing.assert_equal(uri.queries["email"], "john@example.com") - fails, contains john%40example.com
+    testing.assert_equal(uri.query_string, "name=John+Doe&email=john%40example.com&escaped%40%20name=42")
+    testing.assert_equal(uri.queries["name"], "John Doe")
+    testing.assert_equal(uri.queries["email"], "john@example.com")
+    testing.assert_equal(uri.queries["escaped@ name"], "42")
 
 
 def test_uri_parse_empty_query_values():
@@ -139,8 +150,8 @@ def test_uri_parse_complex_query():
 def test_uri_parse_query_with_unicode():
     var uri = URI.parse("http://example.com/search?q=%E2%82%AC&lang=%F0%9F%87%A9%F0%9F%87%AA")
     testing.assert_equal(uri.query_string, "q=%E2%82%AC&lang=%F0%9F%87%A9%F0%9F%87%AA")
-    # testing.assert_equal(uri.queries["q"], "€") - fails, contains %E2%82%AC
-    # testing.assert_equal(uri.queries["lang"], "🇩🇪") - fails, contains %F0%9F%87%A9%F0%9F%87%AA
+    testing.assert_equal(uri.queries["q"], "€")
+    testing.assert_equal(uri.queries["lang"], "🇩🇪")
 
 
 # def test_uri_parse_query_with_fragments():
