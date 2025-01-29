@@ -1,7 +1,7 @@
 from utils import Variant, StringSlice
 from memory import Span
 from collections import Optional, Dict
-from lightbug_http.io.bytes import Bytes, bytes, ByteReader, Constant
+from lightbug_http.io.bytes import Bytes, bytes, ByteReader
 from lightbug_http.strings import (
     find_all,
     strSlash,
@@ -88,6 +88,15 @@ struct URIDelimiters:
     alias PATH = strSlash
     alias ROOT_PATH = strSlash
     alias CHAR_ESCAPE = "%"
+    alias AUTHORITY = "@"
+    alias QUERY = "?"
+    alias SCHEME = ":"
+
+
+struct PortBounds:
+    # For port parsing
+    alias NINE: UInt8 = ord("9")
+    alias ZERO: UInt8 = ord("0")
 
 
 @value
@@ -143,15 +152,15 @@ struct URI(Writable, Stringable, Representable):
         # Parse the scheme, if exists.
         # Assume http if no scheme is provided, fairly safe given the context of lightbug.
         var scheme: String = "http"
-        if Constant.COLON in reader:
-            scheme = str(reader.read_until(Constant.COLON))
+        if ord(URIDelimiters.SCHEME) in reader:
+            scheme = str(reader.read_until(ord(URIDelimiters.SCHEME)))
             if reader.read_bytes(3) != "://".as_bytes():
                 raise Error("URI.parse: Invalid URI format, scheme should be followed by `://`. Received: " + uri)
 
         # Parse the user info, if exists.
         var user_info: String = ""
-        if Constant.AT in reader:
-            user_info = str(reader.read_until(Constant.AT))
+        if ord(URIDelimiters.AUTHORITY) in reader:
+            user_info = str(reader.read_until(ord(URIDelimiters.AUTHORITY)))
             reader.increment(1)
 
         # TODOs (@thatstoasty)
@@ -159,8 +168,8 @@ struct URI(Writable, Stringable, Representable):
         # Handle string host
         # A query right after the domain is a valid uri, but it's equivalent to example.com/?query
         # so we should add the normalization of paths
-        var host_and_port = reader.read_until(Constant.SLASH)
-        colon = host_and_port.find(Constant.COLON)
+        var host_and_port = reader.read_until(ord(URIDelimiters.PATH))
+        colon = host_and_port.find(ord(URIDelimiters.SCHEME))
         var host: String
         var port: Optional[UInt16] = None
         if colon != -1:
@@ -168,7 +177,7 @@ struct URI(Writable, Stringable, Representable):
             var port_end = colon + 1
             # loop through the post colon chunk until we find a non-digit character
             for b in host_and_port[colon + 1 :]:
-                if b[] < Constant.ZERO or b[] > Constant.NINE:
+                if b[] < PortBounds.ZERO or b[] > PortBounds.NINE:
                     break
                 port_end += 1
             port = UInt16(atol(str(host_and_port[colon + 1 : port_end])))
@@ -177,7 +186,7 @@ struct URI(Writable, Stringable, Representable):
 
         # Reads until either the start of the query string, or the end of the uri.
         var unquote_reader = reader.copy()
-        var original_path_bytes = unquote_reader.read_until(Constant.QUESTION)
+        var original_path_bytes = unquote_reader.read_until(ord(URIDelimiters.QUERY))
         var original_path: String
         if not original_path_bytes:
             original_path = "/"
@@ -187,16 +196,16 @@ struct URI(Writable, Stringable, Representable):
         # Parse the path
         var path: String = "/"
         var request_uri: String = "/"
-        if reader.available() and reader.peek() == Constant.SLASH:
+        if reader.available() and reader.peek() == ord(URIDelimiters.PATH):
             # Copy the remaining bytes to read the request uri.
             var request_uri_reader = reader.copy()
             request_uri = str(request_uri_reader.read_bytes())
             # Read until the query string, or the end if there is none.
-            path = unquote(str(reader.read_until(Constant.QUESTION)), disallowed_escapes=List(str("/")))
+            path = unquote(str(reader.read_until(ord(URIDelimiters.QUERY))), disallowed_escapes=List(str("/")))
 
         # Parse query
         var query: String = ""
-        if reader.available() and reader.peek() == Constant.QUESTION:
+        if reader.available() and reader.peek() == ord(URIDelimiters.QUERY):
             # TODO: Handle fragments for anchors
             query = str(reader.read_bytes()[1:])
 

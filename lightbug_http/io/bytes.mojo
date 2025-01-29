@@ -8,14 +8,8 @@ alias Bytes = List[Byte, True]
 
 struct Constant:
     alias WHITESPACE: UInt8 = ord(" ")
-    alias COLON: UInt8 = ord(":")
-    alias AT: UInt8 = ord("@")
     alias CR: UInt8 = ord("\r")
     alias LF: UInt8 = ord("\n")
-    alias SLASH: UInt8 = ord("/")
-    alias QUESTION: UInt8 = ord("?")
-    alias ZERO: UInt8 = ord("0")
-    alias NINE: UInt8 = ord("9")
 
 
 @always_inline
