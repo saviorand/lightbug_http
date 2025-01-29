@@ -62,7 +62,17 @@ struct Client:
             is_tls = True
             scheme = Scheme.HTTPS
 
-        port = request.uri.port.value() if request.uri.port else 80
+        var port: UInt16
+        if request.uri.port:
+            port = request.uri.port.value()
+        else:
+            if request.uri.scheme == Scheme.HTTP.value:
+                port = 80
+            elif request.uri.scheme == Scheme.HTTPS.value:
+                port = 443
+            else:
+                raise Error("Client.do: Invalid scheme received in the URI.")
+
         var pool_key = PoolKey(request.uri.host, port, scheme)
         var cached_connection = False
         var conn: TCPConnection
