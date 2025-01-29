@@ -152,7 +152,7 @@ struct URI(Writable, Stringable, Representable):
         # Parse the scheme, if exists.
         # Assume http if no scheme is provided, fairly safe given the context of lightbug.
         var scheme: String = "http"
-        if ord(URIDelimiters.SCHEME) in reader:
+        if "://" in uri:
             scheme = str(reader.read_until(ord(URIDelimiters.SCHEME)))
             if reader.read_bytes(3) != "://".as_bytes():
                 raise Error("URI.parse: Invalid URI format, scheme should be followed by `://`. Received: " + uri)

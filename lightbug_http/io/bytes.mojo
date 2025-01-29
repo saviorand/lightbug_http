@@ -1,15 +1,10 @@
 from utils import StringSlice
 from memory.span import Span, _SpanIter
+from lightbug_http.strings import BytesConstant
 from lightbug_http.net import default_buffer_size
 
 
 alias Bytes = List[Byte, True]
-
-
-struct Constant:
-    alias WHITESPACE: UInt8 = ord(" ")
-    alias CR: UInt8 = ord("\r")
-    alias LF: UInt8 = ord("\n")
 
 
 @always_inline
@@ -24,12 +19,12 @@ fn bytes(s: String) -> Bytes:
 
 @always_inline
 fn is_newline(b: Byte) -> Bool:
-    return b == Constant.LF or b == Constant.CR
+    return b == BytesConstant.nChar or b == BytesConstant.rChar
 
 
 @always_inline
 fn is_space(b: Byte) -> Bool:
-    return b == Constant.WHITESPACE
+    return b == BytesConstant.whitespace
 
 
 struct ByteWriter(Writer):
@@ -223,7 +218,7 @@ struct ByteReader[origin: Origin]:
 
     @always_inline
     fn read_word(mut self) -> ByteView[origin]:
-        return self.read_until(Constant.WHITESPACE)
+        return self.read_until(BytesConstant.whitespace)
 
     fn read_line(mut self) -> ByteView[origin]:
         var start = self.read_pos
@@ -237,7 +232,7 @@ struct ByteReader[origin: Origin]:
         if not self.available():
             return ret
 
-        if self._inner[self.read_pos] == Constant.CR:
+        if self._inner[self.read_pos] == BytesConstant.rChar:
             self.increment(2)
         else:
             self.increment()
@@ -254,7 +249,7 @@ struct ByteReader[origin: Origin]:
     @always_inline
     fn skip_carriage_return(mut self):
         for i in range(self.read_pos, len(self._inner)):
-            if self._inner[i] == Constant.CR:
+            if self._inner[i] == BytesConstant.rChar:
                 self.increment(2)
             else:
                 break

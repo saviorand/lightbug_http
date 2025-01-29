@@ -55,8 +55,6 @@ struct Client:
         """
         if request.uri.host == "":
             raise Error("Client.do: Host must not be empty.")
-        if not request.uri.port:
-            raise Error("Client.do: You must specify the port to connect on.")
 
         var is_tls = False
         var scheme = Scheme.HTTP
@@ -64,8 +62,8 @@ struct Client:
             is_tls = True
             scheme = Scheme.HTTPS
 
-        var uri = URI.parse(request.uri.host)
-        var pool_key = PoolKey(uri.host, uri.port.value(), scheme)
+        port = request.uri.port.value() if request.uri.port else 80
+        var pool_key = PoolKey(request.uri.host, port, scheme)
         var cached_connection = False
         var conn: TCPConnection
         try:
@@ -73,7 +71,7 @@ struct Client:
             cached_connection = True
         except e:
             if str(e) == "PoolManager.take: Key not found.":
-                conn = create_connection(uri.host, uri.port.value())
+                conn = create_connection(request.uri.host, port)
             else:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
