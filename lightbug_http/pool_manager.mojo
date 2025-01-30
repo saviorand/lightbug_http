@@ -5,19 +5,56 @@ from memory import UnsafePointer, bitcast, memcpy
 from collections import Dict, Optional
 from collections.dict import RepresentableKeyElement
 from lightbug_http.net import create_connection, TCPConnection, Connection
-from lightbug_http.utils import logger
-from lightbug_http.owning_list import OwningList
+from lightbug_http._logger import logger
+from lightbug_http._owning_list import OwningList
+from lightbug_http.uri import Scheme
+
+
+@value
+struct PoolKey(Hashable, KeyElement):
+    var host: String
+    var port: UInt16
+    var scheme: Scheme
+
+    fn __init__(out self, host: String, port: UInt16, scheme: Scheme):
+        self.host = host
+        self.port = port
+        self.scheme = scheme
+
+    fn __hash__(self) -> UInt:
+        # TODO: Very rudimentary hash. We probably need to actually have an actual hash function here.
+        # Since Tuple doesn't have one.
+        return hash(hash(self.host) + hash(self.port) + hash(self.scheme))
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.host == other.host and self.port == other.port and self.scheme == other.scheme
+
+    fn __ne__(self, other: Self) -> Bool:
+        return self.host != other.host or self.port != other.port or self.scheme != other.scheme
+
+    fn __str__(self) -> String:
+        var result = String()
+        result.write(self.scheme.value, "://", self.host, ":", str(self.port))
+        return result
+
+    fn __repr__(self) -> String:
+        return String.write(self)
+
+    fn write_to[W: Writer, //](self, mut writer: W) -> None:
+        writer.write(
+            "PoolKey(", "scheme=", repr(self.scheme.value), ", host=", repr(self.host), ", port=", str(self.port), ")"
+        )
 
 
 struct PoolManager[ConnectionType: Connection]():
     var _connections: OwningList[ConnectionType]
     var _capacity: Int
-    var mapping: Dict[String, Int]
+    var mapping: Dict[PoolKey, Int]
 
     fn __init__(out self, capacity: Int = 10):
         self._connections = OwningList[ConnectionType](capacity=capacity)
         self._capacity = capacity
-        self.mapping = Dict[String, Int]()
+        self.mapping = Dict[PoolKey, Int]()
 
     fn __del__(owned self):
         logger.debug(
@@ -25,24 +62,23 @@ struct PoolManager[ConnectionType: Connection]():
         )
         self.clear()
 
-    fn give(mut self, host: String, owned value: ConnectionType) raises:
-        if host in self.mapping:
-            self._connections[self.mapping[host]] = value^
+    fn give(mut self, key: PoolKey, owned value: ConnectionType) raises:
+        if key in self.mapping:
+            self._connections[self.mapping[key]] = value^
             return
 
         if self._connections.size == self._capacity:
             raise Error("PoolManager.give: Cache is full.")
 
-        self._connections[self._connections.size] = value^
-        self.mapping[host] = self._connections.size
-        self._connections.size += 1
-        logger.debug("Checked in connection for peer:", host + ", at index:", self._connections.size)
+        self._connections.append(value^)
+        self.mapping[key] = self._connections.size - 1
+        logger.debug("Checked in connection for peer:", str(key) + ", at index:", self._connections.size)
 
-    fn take(mut self, host: String) raises -> ConnectionType:
+    fn take(mut self, key: PoolKey) raises -> ConnectionType:
         var index: Int
         try:
-            index = self.mapping[host]
-            _ = self.mapping.pop(host)
+            index = self.mapping[key]
+            _ = self.mapping.pop(key)
         except:
             raise Error("PoolManager.take: Key not found.")
 
@@ -52,7 +88,7 @@ struct PoolManager[ConnectionType: Connection]():
             if kv[].value > index:
                 self.mapping[kv[].key] -= 1
 
-        logger.debug("Checked out connection for peer:", host + ", from index:", self._connections.size + 1)
+        logger.debug("Checked out connection for peer:", str(key) + ", from index:", self._connections.size + 1)
         return connection^
 
     fn clear(mut self):
@@ -65,14 +101,14 @@ struct PoolManager[ConnectionType: Connection]():
                 logger.error("Failed to tear down connection. Error:", e)
         self.mapping.clear()
 
-    fn __contains__(self, host: String) -> Bool:
-        return host in self.mapping
+    fn __contains__(self, key: PoolKey) -> Bool:
+        return key in self.mapping
 
-    fn __setitem__(mut self, host: String, owned value: ConnectionType) raises -> None:
-        if host in self.mapping:
-            self._connections[self.mapping[host]] = value^
+    fn __setitem__(mut self, key: PoolKey, owned value: ConnectionType) raises -> None:
+        if key in self.mapping:
+            self._connections[self.mapping[key]] = value^
         else:
-            self.give(host, value^)
+            self.give(key, value^)
 
-    fn __getitem__(self, host: String) raises -> ref [self._connections] ConnectionType:
-        return self._connections[self.mapping[host]]
+    fn __getitem__(self, key: PoolKey) raises -> ref [self._connections] ConnectionType:
+        return self._connections[self.mapping[key]]

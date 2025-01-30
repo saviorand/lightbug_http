@@ -1,7 +1,7 @@
 from collections import Optional, List, Dict, KeyElement
 from lightbug_http.strings import to_string
 from lightbug_http.header import HeaderKey, write_header
-from lightbug_http.utils import ByteWriter
+from lightbug_http.io.bytes import ByteWriter
 
 
 @value

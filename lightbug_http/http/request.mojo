@@ -1,9 +1,9 @@
 from memory import Span
-from lightbug_http.io.bytes import Bytes, bytes, Byte
+from lightbug_http.io.bytes import Bytes, bytes, ByteReader, ByteWriter
 from lightbug_http.header import Headers, HeaderKey, Header, write_header
 from lightbug_http.cookie import RequestCookieJar
 from lightbug_http.uri import URI
-from lightbug_http.utils import ByteReader, ByteWriter, logger
+from lightbug_http._logger import logger
 from lightbug_http.io.sync import Duration
 from lightbug_http.strings import (
     strHttp11,
@@ -86,7 +86,11 @@ struct HTTPRequest(Writable, Stringable):
         if HeaderKey.CONNECTION not in self.headers:
             self.headers[HeaderKey.CONNECTION] = "keep-alive"
         if HeaderKey.HOST not in self.headers:
-            self.headers[HeaderKey.HOST] = uri.host
+            if uri.port:
+                var host = String.write(uri.host, ":", str(uri.port.value()))
+                self.headers[HeaderKey.HOST] = host
+            else:
+                self.headers[HeaderKey.HOST] = uri.host
 
     fn get_body(self) -> StringSlice[__origin_of(self.body_raw)]:
         return StringSlice(unsafe_from_utf8=Span(self.body_raw))
@@ -108,7 +112,7 @@ struct HTTPRequest(Writable, Stringable):
         if content_length > max_body_size:
             raise Error("Request body too large")
 
-        self.body_raw = r.read_bytes(content_length)
+        self.body_raw = r.read_bytes(content_length).to_bytes()
         self.set_content_length(content_length)
 
     fn write_to[T: Writer, //](self, mut writer: T):
@@ -152,7 +156,7 @@ struct HTTPRequest(Writable, Stringable):
             lineBreak,
         )
         writer.consuming_write(self^.body_raw)
-        return writer.consume()
+        return writer^.consume()
 
     fn __str__(self) -> String:
         return String.write(self)

@@ -6,7 +6,7 @@ from sys.ffi import external_call, OpaquePointer
 from lightbug_http.strings import NetworkType, to_string
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
-from lightbug_http.libc import (
+from lightbug_http._libc import (
     c_void,
     c_int,
     c_uint,
@@ -46,7 +46,7 @@ from lightbug_http.libc import (
     INET_ADDRSTRLEN,
     INET6_ADDRSTRLEN,
 )
-from lightbug_http.utils import logger
+from lightbug_http._logger import logger
 from lightbug_http.socket import Socket
 
 
@@ -147,14 +147,13 @@ struct ListenConfig:
             logger.error(e)
             raise Error("ListenConfig.listen: Failed to create listener due to socket creation failure.")
 
-        try:
-
-            @parameter
-            # TODO: do we want to reuse port on linux? currently doesn't work
-            if os_is_macos():
+        @parameter
+        # TODO: do we want to reuse port on linux? currently doesn't work
+        if os_is_macos():
+            try:
                 socket.set_socket_option(SO_REUSEADDR, 1)
-        except e:
-            logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
+            except e:
+                logger.warn("ListenConfig.listen: Failed to set socket as reusable", e)
 
         var bind_success = False
         var bind_fail_logged = False
@@ -559,7 +558,7 @@ fn listen_udp(local_address: UDPAddr) raises -> UDPConnection:
     Raises:
         Error: If the address is invalid or failed to bind the socket.
     """
-    socket = Socket[UDPAddr](socket_type=SOCK_DGRAM)
+    var socket = Socket[UDPAddr](socket_type=SOCK_DGRAM)
     socket.bind(local_address.ip, local_address.port)
     return UDPConnection(socket^)
 
