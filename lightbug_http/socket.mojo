@@ -168,11 +168,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
                 logger.debug("Socket.teardown: Failed to shutdown socket: " + str(e))
 
         if not self._closed:
-            try:
-                self.close()
-            except e:
-                logger.error("Socket.teardown: Failed to close socket.")
-                raise e
+            self.close()
 
     fn __enter__(owned self) -> Self:
         return self^
