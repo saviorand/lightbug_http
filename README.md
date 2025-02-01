@@ -29,11 +29,10 @@ Lightbug is a simple and sweet HTTP framework for Mojo that builds on best pract
 This is not production ready yet. We're aiming to keep up with new developments in Mojo, but it might take some time to get to a point when this is safe to use in real-world applications.
 
 Lightbug currently has the following features:
- - [x] Pure Mojo networking! No dependencies on Python by default
- - [x] TCP-based server and client implementation
- - [x] Assign your own custom handler to a route
- - [x] Craft HTTP requests and responses with built-in primitives
- - [x] Everything is fully typed, with no `def` functions used
+ - [x] Pure Mojo! No Python dependencies. Everything is fully typed, with no `def` functions used
+ - [x] HTTP Server and Client implementations
+ - [x] TCP and UDP support
+ - [x] Cookie support
 
  ### Check Out These Mojo Libraries:
 
@@ -200,19 +199,15 @@ from lightbug_http import *
 from lightbug_http.client import Client
 
 fn test_request(mut client: Client) raises -> None:
-    var uri = URI.parse_raises("http://httpbin.org/status/404")
-    var headers = Header("Host", "httpbin.org")
-
+    var uri = URI.parse("google.com")
+    var headers = Headers(Header("Host", "google.com"))
     var request = HTTPRequest(uri, headers)
     var response = client.do(request^)
 
     # print status code
     print("Response:", response.status_code)
 
-    # print parsed headers (only some are parsed for now)
-    print("Content-Type:", response.headers["Content-Type"])
-    print("Content-Length", response.headers["Content-Length"])
-    print("Server:", to_string(response.headers["Server"]))
+    print(response.headers)
 
     print(
         "Is connection set to connection-close? ", response.connection_close()
@@ -252,19 +247,17 @@ Note: as of September, 2024, `PythonServer` and `PythonClient` throw a compilati
 
 We're working on support for the following (contributors welcome!):
 
--  [ ] [WebSocket Support](https://github.com/saviorand/lightbug_http/pull/57)
+ - [ ] [JSON support](https://github.com/saviorand/lightbug_http/issues/4)
+ - [ ] Complete HTTP/1.x support compliant with RFC 9110/9112 specs (see issues)
  - [ ] [SSL/HTTPS support](https://github.com/saviorand/lightbug_http/issues/20)
- - [ ] UDP support
- - [ ] [Better error handling](https://github.com/saviorand/lightbug_http/issues/3), [improved form/multipart and JSON support](https://github.com/saviorand/lightbug_http/issues/4)
  - [ ] [Multiple simultaneous connections](https://github.com/saviorand/lightbug_http/issues/5), [parallelization and performance optimizations](https://github.com/saviorand/lightbug_http/issues/6)
  - [ ] [HTTP 2.0/3.0 support](https://github.com/saviorand/lightbug_http/issues/8)
- - [ ] [ASGI spec conformance](https://github.com/saviorand/lightbug_http/issues/17)
 
 The plan is to get to a feature set similar to Python frameworks like [Starlette](https://github.com/encode/starlette), but with better performance.
 
 Our vision is to develop three libraries, with `lightbug_http` (this repo) as a starting point: 
- - `lightbug_http` - HTTP infrastructure and basic API development
- - `lightbug_api` - (coming later in 2024!) Tools to make great APIs fast, with support for OpenAPI spec and domain driven design
+ - `lightbug_http` - Lightweight and simple HTTP framework, basic networking primitives
+ - [`lightbug_api`](https://github.com/saviorand/lightbug_api) - Tools to make great APIs fast, with OpenAPI support and automated docs
  - `lightbug_web` - (release date TBD) Full-stack web framework for Mojo, similar to NextJS or SvelteKit
 
 The idea is to get to a point where the entire codebase of a simple modern web application can be written in Mojo. 
