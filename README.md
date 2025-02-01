@@ -227,16 +227,50 @@ fn main() -> None:
 
 Pure Mojo-based client is available by default. This client is also used internally for testing the server.
 
-## Switching between pure Mojo and Python implementations
+### UDP Support
+To get started with UDP, just use the `listen_udp` and `dial_udp` functions, along with `write_to` and `read_from` methods, like below.
 
-By default, Lightbug uses the pure Mojo implementation for networking. To use Python's `socket` library instead, just import the `PythonServer` instead of the `Server` with the following line:
-
+On the client:
 ```mojo
-from lightbug_http.python.server import PythonServer
+from lightbug_http.connection import dial_udp
+from lightbug_http.address import UDPAddr
+from utils import StringSlice
+
+alias test_string = "Hello, lightbug!"
+
+fn main() raises:
+    print("Dialing UDP server...")
+    alias host = "127.0.0.1"
+    alias port = 12000
+    var udp = dial_udp(host, port)
+
+    print("Sending " + str(len(test_string)) + " messages to the server...")
+    for i in range(len(test_string)):
+        _ = udp.write_to(str(test_string[i]).as_bytes(), host, port)
+
+        try:
+            response, _, _ = udp.read_from(16)
+            print("Response received:", StringSlice(unsafe_from_utf8=response))
+        except e:
+            if str(e) != str("EOF"):
+                raise e
+
 ```
 
-You can then use all the regular server commands in the same way as with the default server.
-Note: as of September, 2024, `PythonServer` and `PythonClient` throw a compilation error when starting. There's an open [issue](https://github.com/saviorand/lightbug_http/issues/41) to fix this - contributions welcome!
+On the server:
+```mojo
+fn main() raises:
+    var listener = listen_udp("127.0.0.1", 12000)
+
+    while True:
+        response, host, port = listener.read_from(16)
+        var message = StringSlice(unsafe_from_utf8=response)
+        print("Message received:", message)
+
+        # Response with the same message in uppercase
+        _ = listener.write_to(String.upper(message).as_bytes(), host, port)
+
+```
 
 <!-- ROADMAP -->
 ## Roadmap
