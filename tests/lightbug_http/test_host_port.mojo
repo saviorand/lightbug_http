@@ -1,5 +1,5 @@
 import testing
-from lightbug_http.net import join_host_port, parse_address, TCPAddr
+from lightbug_http.address import join_host_port, parse_address, TCPAddr
 from lightbug_http.strings import NetworkType
 
 
