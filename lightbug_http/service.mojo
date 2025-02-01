@@ -2,6 +2,7 @@ from lightbug_http.http import HTTPRequest, HTTPResponse, OK, NotFound
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.strings import to_string
 from lightbug_http.header import HeaderKey
+from utils import StringSlice
 
 
 trait HTTPService:

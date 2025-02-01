@@ -205,6 +205,7 @@ struct ByteReader[origin: Origin]:
             raise OutOfBoundsError
 
         self.read_pos += count
+        print(start, start + count)
         return self._inner[start : start + count]
 
     fn read_until(mut self, char: Byte) -> ByteView[origin]:
