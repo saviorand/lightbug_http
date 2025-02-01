@@ -126,12 +126,12 @@ Once you have a Mojo project set up locally,
     fn main() raises:
         var server = Server()
         var handler = Welcome()
-        server.listen_and_serve("0.0.0.0:8080", handler)
+        server.listen_and_serve("localhost:8080", handler)
     ```
 
 Feel free to change the settings in `listen_and_serve()` to serve on a particular host and port.
 
-Now send a request `0.0.0.0:8080`. You should see some details about the request printed out to the console.
+Now send a request `localhost:8080`. You should see some details about the request printed out to the console.
 
 Congrats 🥳 You're using Lightbug!
 

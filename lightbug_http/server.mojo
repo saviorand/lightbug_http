@@ -91,8 +91,8 @@ struct Server(Movable):
             address: The address (host:port) to listen on.
             handler: An object that handles incoming HTTP requests.
         """
-        var net = ListenConfig()
-        var listener = net.listen(address)
+        var config = ListenConfig()
+        var listener = config.listen(address)
         self.set_address(address)
         self.serve(listener^, handler)
 

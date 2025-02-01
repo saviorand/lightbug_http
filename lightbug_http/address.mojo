@@ -313,11 +313,11 @@ fn is_ip_protocol(network: NetworkType) -> Bool:
 
 fn is_ipv4(network: NetworkType) -> Bool:
     """Check if the network type is IPv4."""
-    return network in (NetworkType.tcp4, NetworkType.udp4)
+    return network in (NetworkType.tcp4, NetworkType.udp4, NetworkType.ip4)
 
 fn is_ipv6(network: NetworkType) -> Bool:
     """Check if the network type is IPv6."""
-    return network in (NetworkType.tcp6, NetworkType.udp6)
+    return network in (NetworkType.tcp6, NetworkType.udp6, NetworkType.ip6)
 
 fn resolve_localhost(host: String, network: NetworkType) -> String:
     """Resolve localhost to the appropriate IP address based on network type."""
@@ -383,43 +383,49 @@ fn parse_address(network: NetworkType, address: String) raises -> (String, UInt1
     Returns:
         Tuple containing the host and port
     """
-    # Handle IP protocols separately
     if is_ip_protocol(network):
-        if address.find(":") != -1:
-            raise Error("IP protocol addresses should not include ports")
-        
         var host = resolve_localhost(address, network)
         if host == AddressConstants.EMPTY:
             raise Error("missing host")
+            
+        # For IPv6 addresses in IP protocol mode, we need to handle the address as-is
+        if network == NetworkType.ip6 and host.find(":") != -1:
+            return host, DEFAULT_IP_PORT
+            
+        # For other IP protocols, no colons allowed
+        if host.find(":") != -1:
+            raise Error("IP protocol addresses should not include ports")
+            
         return host, DEFAULT_IP_PORT
 
-    # Parse regular addresses
     var colon_index = address.rfind(":")
     if colon_index == -1:
         raise MissingPortError
 
     var host: String
-    var bracket_offset: Int
+    var bracket_offset: Int = 0
 
     # Handle IPv6 addresses
-    try:
-        (host, bracket_offset) = parse_ipv6_bracketed_address(address)
-    except e:
-        raise e
+    if address[0] == "[":
+        try:
+            (host, bracket_offset) = parse_ipv6_bracketed_address(address)
+        except e:
+            raise e
+        
+        validate_no_brackets(address, bracket_offset)
+    else:
+        # For IPv4, simply split at the last colon
+        host = address[:colon_index]
+        if host.find(":") != -1:
+            raise TooManyColonsError
 
-    # Validate no unexpected brackets
-    validate_no_brackets(address, bracket_offset)
-
-    # Parse and validate port
     var port = parse_port(address[colon_index + 1:])
 
-    # Resolve localhost if needed
     host = resolve_localhost(host, network)
     if host == AddressConstants.EMPTY:
         raise Error("missing host")
 
     return host, port
-
 
 
 # TODO: Support IPv6 long form.
