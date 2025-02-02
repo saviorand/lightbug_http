@@ -161,14 +161,15 @@ struct Server(Movable):
             var response: HTTPResponse
             try:
                 response = handler.func(request)
-            except:
+            except e:
+                logger.error("Unexpected error in the handler:", e)
+
                 if not conn.is_closed():
                     # Try to send back an internal server error, but always attempt to teardown the connection.
                     try:
                         # TODO: Move InternalError response to an alias when Mojo can support Dict operations at compile time. (@thatstoasty)
                         _ = conn.write(encode(InternalError()))
                     except e:
-                        logger.error(e)
                         raise Error("Failed to send InternalError response")
                     finally:
                         conn.teardown()
