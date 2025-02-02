@@ -1,7 +1,10 @@
-from memory import UnsafePointer
+from memory import UnsafePointer, Span
 from collections import Optional
 from sys.ffi import external_call, OpaquePointer
 from lightbug_http.strings import to_string
+from lightbug_http.io.bytes import ByteView
+from lightbug_http._logger import logger
+from lightbug_http.socket import Socket
 from lightbug_http._libc import (
     c_int,
     c_char,
@@ -20,8 +23,6 @@ from lightbug_http._libc import (
     INET_ADDRSTRLEN,
     INET6_ADDRSTRLEN,
 )
-from lightbug_http._logger import logger
-from lightbug_http.socket import Socket
 
 alias MAX_PORT = 65535
 alias MIN_PORT = 0
@@ -394,16 +395,16 @@ fn resolve_localhost(host: String, network: NetworkType) -> String:
 
     return host
 
-fn parse_ipv6_bracketed_address(address: String) raises -> (String, UInt16):
+fn parse_ipv6_bracketed_address(address: ByteView[ImmutableAnyOrigin]) raises -> (ByteView[ImmutableAnyOrigin], UInt16):
     """Parse an IPv6 address enclosed in brackets.
     
     Returns:
         Tuple of (host, colon_index_offset)
     """
-    if address[0] != "[":
+    if address[0] != Byte(ord("[")):
         return address, UInt16(0)
         
-    var end_bracket_index = address.find("]")
+    var end_bracket_index = address.find(Byte(ord("]")))
     if end_bracket_index == -1:
         raise Error("missing ']' in address")
         
@@ -411,7 +412,7 @@ fn parse_ipv6_bracketed_address(address: String) raises -> (String, UInt16):
         raise MissingPortError
         
     var colon_index = end_bracket_index + 1
-    if address[colon_index] != ":":
+    if address[colon_index] != Byte(ord(":")):
         raise MissingPortError
         
     return (
