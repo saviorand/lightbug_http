@@ -123,7 +123,6 @@ struct NetworkType(EqualityComparableCollectionElement):
 
     fn is_ipv4(self) -> Bool:
         """Check if the network type is IPv4."""
-        print("self.value:", self.value)
         return self in (NetworkType.tcp4, NetworkType.udp4, NetworkType.ip4)
 
     fn is_ipv6(self) -> Bool:
