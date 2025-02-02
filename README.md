@@ -96,25 +96,22 @@ Once you have a Mojo project set up locally,
    For example, to make a `Printer` service that prints some details about the request to console:
 
    ```mojo
-    from lightbug_http import *
+    from lightbug_http.http import HTTPRequest, HTTPResponse, OK
+    from lightbug_http.strings import to_string
+    from lightbug_http.header import HeaderKey
 
     @value
     struct Printer(HTTPService):
         fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
-            var uri = req.uri
-            print("Request URI: ", to_string(uri.request_uri))
+            print("Request URI:", req.uri.request_uri)
+            print("Request protocol:", req.protocol)
+            print("Request method:", req.method)
+            if HeaderKey.CONTENT_TYPE in req.headers:
+                print("Request Content-Type:", req.headers[HeaderKey.CONTENT_TYPE])
+            if req.body_raw:
+                print("Request Body:", to_string(req.body_raw))
 
-            var header = req.headers
-            print("Request protocol: ", req.protocol)
-            print("Request method: ", req.method)
-            print(
-                "Request Content-Type: ", to_string(header[HeaderKey.CONTENT_TYPE])
-            )
-
-            var body = req.body_raw
-            print("Request Body: ", to_string(body))
-
-            return OK(body)
+            return OK(req.body_raw)
    ```
 
 6. Start a server listening on a port with your service like so.

@@ -56,10 +56,13 @@ struct HTTPRequest(Writable, Stringable):
         var request = HTTPRequest(
             URI.parse(addr + uri), headers=headers, method=method, protocol=protocol, cookies=cookies
         )
-        try:
-            request.read_body(reader, content_length, max_body_size)
-        except e:
-            raise Error("HTTPRequest.from_bytes: Failed to read request body: " + str(e))
+
+        if content_length > 0:
+            try:
+                reader.skip_carriage_return()
+                request.read_body(reader, content_length, max_body_size)
+            except e:
+                raise Error("HTTPRequest.from_bytes: Failed to read request body: " + str(e))
 
         return request
 
