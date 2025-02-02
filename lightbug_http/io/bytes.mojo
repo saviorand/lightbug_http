@@ -146,7 +146,7 @@ struct ByteView[origin: Origin]():
 
     fn __iter__(self) -> _SpanIter[Byte, origin]:
         return self._inner.__iter__()
-
+    
     fn find(self, target: Byte) -> Int:
         """Finds the index of a byte in a byte span.
 
@@ -160,6 +160,24 @@ struct ByteView[origin: Origin]():
             if self[i] == target:
                 return i
 
+        return -1
+
+    fn rfind(self, target: Byte) -> Int:
+        """Finds the index of the last occurrence of a byte in a byte span.
+
+        Args:
+            target: The byte to find.
+
+        Returns:
+            The index of the last occurrence of the byte in the span, or -1 if not found.
+        """
+        # Start from the end and work backwards
+        var i = len(self) - 1
+        while i >= 0:
+            if self[i] == target:
+                return i
+            i -= 1
+        
         return -1
 
     fn to_bytes(self) -> Bytes:
