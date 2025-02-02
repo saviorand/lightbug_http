@@ -45,8 +45,8 @@ from lightbug_http._libc import (
     ShutdownInvalidArgumentError,
 )
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.strings import NetworkType
 from lightbug_http.address import (
+    NetworkType,
     Addr,
     binary_port_to_int,
     binary_ip_to_string,

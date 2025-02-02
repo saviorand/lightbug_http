@@ -1,7 +1,7 @@
 from time import sleep
 from memory import Span
 from sys.info import os_is_macos
-from lightbug_http.strings import NetworkType
+from lightbug_http.address import NetworkType
 from lightbug_http.io.bytes import Bytes, bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.address import parse_address, TCPAddr, UDPAddr
@@ -50,7 +50,6 @@ trait Connection(Movable):
 
     fn remote_addr(self) -> TCPAddr:
         ...
-
 
 struct NoTLSListener:
     """A TCP listener that listens for incoming connections and can accept them."""

@@ -1,6 +1,7 @@
 from memory import UnsafePointer
+from collections import Optional
 from sys.ffi import external_call, OpaquePointer
-from lightbug_http.strings import NetworkType, to_string
+from lightbug_http.strings import to_string
 from lightbug_http._libc import (
     c_int,
     c_char,
@@ -65,6 +66,68 @@ trait AnAddrInfo:
         implemented in the `addrinfo_macos` and `addrinfo_unix` structs.
         """
         ...
+
+@value
+struct NetworkType(EqualityComparableCollectionElement):
+    var value: String
+
+    alias empty = NetworkType("")
+    alias tcp = NetworkType("tcp")
+    alias tcp4 = NetworkType("tcp4")
+    alias tcp6 = NetworkType("tcp6")
+    alias udp = NetworkType("udp")
+    alias udp4 = NetworkType("udp4")
+    alias udp6 = NetworkType("udp6")
+    alias ip = NetworkType("ip")
+    alias ip4 = NetworkType("ip4")
+    alias ip6 = NetworkType("ip6")
+    alias unix = NetworkType("unix")
+
+    alias SUPPORTED_TYPES = [
+        Self.tcp,
+        Self.tcp4,
+        Self.tcp6,
+        Self.udp,
+        Self.udp4,
+        Self.udp6,
+        Self.ip,
+        Self.ip4,
+        Self.ip6,
+    ]
+    alias TCP_TYPES = [
+        Self.tcp,
+        Self.tcp4,
+        Self.tcp6,
+    ]
+    alias UDP_TYPES = [
+        Self.udp,
+        Self.udp4,
+        Self.udp6,
+    ]
+    alias IP_TYPES = [
+        Self.ip,
+        Self.ip4,
+        Self.ip6,
+    ]
+
+    fn __eq__(self, other: NetworkType) -> Bool:
+        return self.value == other.value
+
+    fn __ne__(self, other: NetworkType) -> Bool:
+        return self.value != other.value
+    
+    fn is_ip_protocol(self) -> Bool:
+        """Check if the network type is an IP protocol."""
+        return self in (NetworkType.ip, NetworkType.ip4, NetworkType.ip6)
+
+    fn is_ipv4(self) -> Bool:
+        """Check if the network type is IPv4."""
+        print("self.value:", self.value)
+        return self in (NetworkType.tcp4, NetworkType.udp4, NetworkType.ip4)
+
+    fn is_ipv6(self) -> Bool:
+        """Check if the network type is IPv6."""
+        return self in (NetworkType.tcp6, NetworkType.udp6, NetworkType.ip6)
 
 @value
 struct TCPAddr[network: NetworkType = NetworkType.tcp4](Addr):
@@ -324,10 +387,11 @@ fn resolve_localhost(host: String, network: NetworkType) -> String:
     if host != AddressConstants.LOCALHOST:
         return host
         
-    if is_ipv4(network):
+    if network.is_ipv4():
         return AddressConstants.IPV4_LOCALHOST
-    elif is_ipv6(network):
+    elif network.is_ipv6():
         return AddressConstants.IPV6_LOCALHOST
+
     return host
 
 fn parse_ipv6_bracketed_address(address: String) raises -> (String, UInt16):
@@ -355,11 +419,18 @@ fn parse_ipv6_bracketed_address(address: String) raises -> (String, UInt16):
         UInt16(end_bracket_index + 1)
     )
 
-fn validate_no_brackets(address: String, start_idx: Int, end_idx: Int = -1) raises:
+fn validate_no_brackets(address: String, start_idx: UInt16, end_idx: Optional[UInt16] = None) raises:
     """Validate that the address segment contains no brackets."""
-    if address[start_idx:end_idx].find("[") != -1:
+    var segment: String
+    
+    if end_idx is None:
+        segment = address[int(start_idx):]
+    else:
+        segment = address[int(start_idx):int(end_idx.value())]
+    
+    if segment.find("[") != -1:
         raise Error("unexpected '[' in address")
-    if address[start_idx:end_idx].find("]") != -1:
+    if segment.find("]") != -1:
         raise Error("unexpected ']' in address")
 
 fn parse_port(port_str: String) raises -> UInt16:
@@ -383,7 +454,7 @@ fn parse_address(network: NetworkType, address: String) raises -> (String, UInt1
     Returns:
         Tuple containing the host and port
     """
-    if is_ip_protocol(network):
+    if network.is_ip_protocol():
         var host = resolve_localhost(address, network)
         if host == AddressConstants.EMPTY:
             raise Error("missing host")
@@ -403,7 +474,7 @@ fn parse_address(network: NetworkType, address: String) raises -> (String, UInt1
         raise MissingPortError
 
     var host: String
-    var bracket_offset: Int = 0
+    var bracket_offset: UInt16 = 0
 
     # Handle IPv6 addresses
     if address[0] == "[":

@@ -1,7 +1,7 @@
 from memory import Span
 from lightbug_http.io.sync import Duration
 from lightbug_http.io.bytes import Bytes, bytes, ByteReader
-from lightbug_http.strings import NetworkType
+from lightbug_http.address import NetworkType
 from lightbug_http._logger import logger
 from lightbug_http.connection import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig
 from lightbug_http.socket import Socket
