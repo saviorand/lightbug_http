@@ -330,14 +330,14 @@ fn resolve_localhost(host: String, network: NetworkType) -> String:
         return AddressConstants.IPV6_LOCALHOST
     return host
 
-fn parse_ipv6_bracketed_address(address: String) raises -> (String, Int):
+fn parse_ipv6_bracketed_address(address: String) raises -> (String, UInt16):
     """Parse an IPv6 address enclosed in brackets.
     
     Returns:
         Tuple of (host, colon_index_offset)
     """
     if address[0] != "[":
-        return address, 0
+        return address, UInt16(0)
         
     var end_bracket_index = address.find("]")
     if end_bracket_index == -1:
@@ -352,7 +352,7 @@ fn parse_ipv6_bracketed_address(address: String) raises -> (String, Int):
         
     return (
         address[1:end_bracket_index],
-        end_bracket_index + 1
+        UInt16(end_bracket_index + 1)
     )
 
 fn validate_no_brackets(address: String, start_idx: Int, end_idx: Int = -1) raises:
