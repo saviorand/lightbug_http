@@ -4,8 +4,11 @@ services:
     build:
       context: .
       args:
+        - DEFAULT_SERVER_HOST=${DEFAULT_SERVER_HOST}
         - DEFAULT_SERVER_PORT=${DEFAULT_SERVER_PORT}
     ports:
       - "${DEFAULT_SERVER_PORT}:${DEFAULT_SERVER_PORT}"
     environment:
+      - DEFAULT_SERVER_HOST=${DEFAULT_SERVER_HOST}
+      - DEFAULT_SERVER_PORT=${DEFAULT_SERVER_PORT}
       - APP_ENTRYPOINT=${APP_ENTRYPOINT}
