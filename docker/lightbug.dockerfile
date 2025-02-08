@@ -6,8 +6,8 @@ RUN git clone https://github.com/Lightbug-HQ/lightbug_http
 
 WORKDIR /lightbug_http
 
-ARG SERVER_PORT=8080
-EXPOSE ${SERVER_PORT}
+ARG DEFAULT_SERVER_PORT=8080
+EXPOSE ${DEFAULT_SERVER_PORT}
 
 ENV APP_ENTRYPOINT=lightbug.🔥
 CMD magic run mojo ${APP_ENTRYPOINT}

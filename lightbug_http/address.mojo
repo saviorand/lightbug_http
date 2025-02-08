@@ -382,23 +382,11 @@ fn is_ipv6(network: NetworkType) -> Bool:
     """Check if the network type is IPv6."""
     return network in (NetworkType.tcp6, NetworkType.udp6, NetworkType.ip6)
 
-fn resolve_localhost(host: ByteView[StaticConstantOrigin], network: NetworkType) -> ByteView[StaticConstantOrigin]:
-    """Resolve localhost to the appropriate IP address based on network type."""
-    if host != AddressConstants.LOCALHOST.as_bytes():
-        return host
-        
-    if network.is_ipv4():
-        return AddressConstants.IPV4_LOCALHOST.as_bytes()
-    elif network.is_ipv6():
-        return AddressConstants.IPV6_LOCALHOST.as_bytes()
-
-    return host
-
-fn parse_ipv6_bracketed_address(address: ByteView[StaticConstantOrigin]) raises -> (ByteView[StaticConstantOrigin], UInt16):
+fn parse_ipv6_bracketed_address[origin: ImmutableOrigin](address: ByteView[origin]) raises -> (ByteView[origin], UInt16):
     """Parse an IPv6 address enclosed in brackets.
     
     Returns:
-        Tuple of (host, colon_index_offset)
+        Tuple of (host, colon_index_offset).
     """
     if address[0] != Byte(ord("[")):
         return address, UInt16(0)
@@ -419,9 +407,9 @@ fn parse_ipv6_bracketed_address(address: ByteView[StaticConstantOrigin]) raises 
         UInt16(end_bracket_index + 1)
     )
 
-fn validate_no_brackets(address: ByteView[StaticConstantOrigin], start_idx: UInt16, end_idx: Optional[UInt16] = None) raises:
+fn validate_no_brackets[origin: ImmutableOrigin](address: ByteView[origin], start_idx: UInt16, end_idx: Optional[UInt16] = None) raises:
     """Validate that the address segment contains no brackets."""
-    var segment: ByteView[StaticConstantOrigin]
+    var segment: ByteView[origin]
     
     if end_idx is None:
         segment = address[int(start_idx):]
@@ -433,7 +421,7 @@ fn validate_no_brackets(address: ByteView[StaticConstantOrigin], start_idx: UInt
     if segment.find(Byte(ord("]"))) != -1:
         raise Error("unexpected ']' in address")
 
-fn parse_port(port_str: ByteView[StaticConstantOrigin]) raises -> UInt16:
+fn parse_port[origin: ImmutableOrigin](port_str: ByteView[origin]) raises -> UInt16:
     """Parse and validate port number."""
     if port_str == AddressConstants.EMPTY.as_bytes():
         raise MissingPortError
@@ -444,39 +432,36 @@ fn parse_port(port_str: ByteView[StaticConstantOrigin]) raises -> UInt16:
         
     return UInt16(port)
 
-fn parse_address(network: NetworkType, address: ByteView[StaticConstantOrigin]) raises -> (ByteView[StaticConstantOrigin], UInt16):
+fn parse_address[origin: ImmutableOrigin](network: NetworkType, address: ByteView[origin]) raises -> (ByteView[origin], UInt16):
     """Parse an address string into a host and port.
 
     Args:
-        network: The network type (tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix)
-        address: The address string
+        network: The network type (tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix).
+        address: The address string.
 
     Returns:
-        Tuple containing the host and port
+        Tuple containing the host and port.
     """
+    if address == AddressConstants.EMPTY.as_bytes():
+        raise Error("missing host")
+
     if network.is_ip_protocol():
-        var host = resolve_localhost(address, network)
-        if host == AddressConstants.EMPTY.as_bytes():
-            raise Error("missing host")
-            
         # For IPv6 addresses in IP protocol mode, we need to handle the address as-is
-        if network == NetworkType.ip6 and host.find(Byte(ord(":"))) != -1:
-            return host, DEFAULT_IP_PORT
+        if network == NetworkType.ip6 and address.find(Byte(ord(":"))) != -1:
+            return address, DEFAULT_IP_PORT
             
         # For other IP protocols, no colons allowed
-        if host.find(Byte(ord(":"))) != -1:
+        if address.find(Byte(ord(":"))) != -1:
             raise Error("IP protocol addresses should not include ports")
             
-        return host, DEFAULT_IP_PORT
+        return address, DEFAULT_IP_PORT
 
     var colon_index = address.rfind(Byte(ord(":")))
     if colon_index == -1:
         raise MissingPortError
 
-    var host: ByteView[StaticConstantOrigin]
     var bracket_offset: UInt16 = 0
 
-    # Handle IPv6 addresses
     if address[0] == Byte(ord("[")):
         try:
             (host, bracket_offset) = parse_ipv6_bracketed_address(address)
@@ -491,11 +476,13 @@ fn parse_address(network: NetworkType, address: ByteView[StaticConstantOrigin]) 
             raise TooManyColonsError
 
     var port = parse_port(address[colon_index + 1:])
-
-    host = resolve_localhost(host, network)
-    if host == AddressConstants.EMPTY.as_bytes():
-        raise Error("missing host")
-
+    
+    if address == AddressConstants.LOCALHOST.as_bytes():
+        if network.is_ipv4():
+            return ByteView[origin].from_static_span(AddressConstants.IPV4_LOCALHOST.as_bytes()), port
+        elif network.is_ipv6():
+            return ByteView[origin].from_static_span(AddressConstants.IPV6_LOCALHOST.as_bytes()), port
+    
     return host, port
 
 
@@ -611,7 +598,7 @@ fn getaddrinfo[
     ```
 
     #### Notes:
-    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
+    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.htm .
     """
     var result = _getaddrinfo(
         node.unsafe_ptr(), service.unsafe_ptr(), Pointer.address_of(hints), Pointer.address_of(res)

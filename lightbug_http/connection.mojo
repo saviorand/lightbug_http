@@ -2,7 +2,7 @@ from time import sleep
 from memory import Span
 from sys.info import os_is_macos
 from lightbug_http.address import NetworkType
-from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.io.bytes import Bytes, ByteView, bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.address import parse_address, TCPAddr, UDPAddr
 from lightbug_http._libc import (
@@ -87,8 +87,8 @@ struct ListenConfig:
     fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self._keep_alive = keep_alive
 
-    fn listen[network: NetworkType = NetworkType.tcp4](mut self, address: StringLiteral) raises -> NoTLSListener:
-        var local = parse_address(network, address.as_bytes())
+    fn listen[network: NetworkType = NetworkType.tcp4](mut self, address: String) raises -> NoTLSListener:
+        var local = parse_address[__origin_of(address)](network, address.as_bytes())
         var addr = TCPAddr(str(local[0]), local[1])
         var socket: Socket[TCPAddr]
         try:

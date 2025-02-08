@@ -81,7 +81,7 @@ struct Server(Movable):
         """
         return self.max_concurrent_connections
 
-    fn listen_and_serve[T: HTTPService](mut self, address: StringLiteral, mut handler: T) raises:
+    fn listen_and_serve[T: HTTPService](mut self, address: String, mut handler: T) raises:
         """Listen for incoming connections and serve HTTP requests.
 
         Parameters:

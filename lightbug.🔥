@@ -1,6 +1,11 @@
 from lightbug_http import Welcome, Server
+from os.env import getenv
 
 fn main() raises:
     var server = Server()
     var handler = Welcome()
-    server.listen_and_serve("localhost:8080", handler)
+    
+    var host = getenv("DEFAULT_SERVER_HOST", "localhost")
+    var port = getenv("DEFAULT_SERVER_PORT", "8080")
+
+    server.listen_and_serve(host + ":" + port, handler)
