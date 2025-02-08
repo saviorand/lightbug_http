@@ -23,7 +23,6 @@ jobs:
 
   docker:
     needs: package
-    if: github.event_name == 'push'
     uses: ./.github/workflows/docker-build.yml
     with:
       tags: |
