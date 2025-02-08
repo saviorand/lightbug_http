@@ -314,7 +314,7 @@ fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr) r
     return UDPConnection[network](socket^)
 
 
-fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: StringLiteral) raises -> UDPConnection[network]:
+fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: String) raises -> UDPConnection[network]:
     """Creates a new UDP listener.
 
     Args:
@@ -361,7 +361,7 @@ fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr[netw
     return UDPConnection(Socket[UDPAddr[network]](local_address=local_address, socket_type=SOCK_DGRAM))
 
 
-fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: StringLiteral) raises -> UDPConnection[network]:
+fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: String) raises -> UDPConnection[network]:
     """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
 
     Args:
