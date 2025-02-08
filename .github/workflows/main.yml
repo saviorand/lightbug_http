@@ -19,4 +19,14 @@ jobs:
     secrets:
       PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
   
-
+  docker:
+    needs: [package, publish]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      tags: |
+        type=raw,value=edge
+        type=raw,value=stable
+        type=sha,prefix=stable-
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

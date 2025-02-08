@@ -1,5 +1,5 @@
 from utils import StringSlice
-from memory.span import Span, _SpanIter
+from memory.span import Span, _SpanIter, UnsafePointer
 from lightbug_http.strings import BytesConstant
 from lightbug_http.connection import default_buffer_size
 
@@ -89,6 +89,12 @@ struct ByteView[origin: Origin]():
 
     var _inner: Span[Byte, origin]
 
+    @staticmethod
+    fn from_static_span(span: Span[Byte, StaticConstantOrigin]) -> ByteView[origin]:
+        var ptr = UnsafePointer[Byte].address_of(span[0])
+        var new_span = Span[Byte, origin](ptr=ptr, length=len(span))
+        return ByteView[origin](new_span)
+
     @implicit
     fn __init__(out self, b: Span[Byte, origin]):
         self._inner = b
@@ -146,7 +152,7 @@ struct ByteView[origin: Origin]():
 
     fn __iter__(self) -> _SpanIter[Byte, origin]:
         return self._inner.__iter__()
-    
+
     fn find(self, target: Byte) -> Int:
         """Finds the index of a byte in a byte span.
 
@@ -177,7 +183,7 @@ struct ByteView[origin: Origin]():
             if self[i] == target:
                 return i
             i -= 1
-        
+
         return -1
 
     fn to_bytes(self) -> Bytes:

@@ -28,12 +28,15 @@ alias MAX_PORT = 65535
 alias MIN_PORT = 0
 alias DEFAULT_IP_PORT = UInt16(0)
 
+
 struct AddressConstants:
     """Constants used in address parsing."""
+
     alias LOCALHOST = "localhost"
     alias IPV4_LOCALHOST = "127.0.0.1"
     alias IPV6_LOCALHOST = "::1"
     alias EMPTY = ""
+
 
 trait Addr(Stringable, Representable, Writable, EqualityComparableCollectionElement):
     alias _type: StringLiteral
@@ -43,7 +46,7 @@ trait Addr(Stringable, Representable, Writable, EqualityComparableCollectionElem
 
     fn __init__(out self, ip: String, port: UInt16):
         ...
-    
+
     @always_inline
     fn address_family(self) -> Int:
         ...
@@ -51,11 +54,11 @@ trait Addr(Stringable, Representable, Writable, EqualityComparableCollectionElem
     @always_inline
     fn is_v4(self) -> Bool:
         ...
-    
+
     @always_inline
     fn is_v6(self) -> Bool:
         ...
-    
+
     @always_inline
     fn is_unix(self) -> Bool:
         ...
@@ -67,6 +70,7 @@ trait AnAddrInfo:
         implemented in the `addrinfo_macos` and `addrinfo_unix` structs.
         """
         ...
+
 
 @value
 struct NetworkType(EqualityComparableCollectionElement):
@@ -116,7 +120,7 @@ struct NetworkType(EqualityComparableCollectionElement):
 
     fn __ne__(self, other: NetworkType) -> Bool:
         return self.value != other.value
-    
+
     fn is_ip_protocol(self) -> Bool:
         """Check if the network type is an IP protocol."""
         return self in (NetworkType.ip, NetworkType.ip4, NetworkType.ip6)
@@ -128,6 +132,7 @@ struct NetworkType(EqualityComparableCollectionElement):
     fn is_ipv6(self) -> Bool:
         """Check if the network type is IPv6."""
         return self in (NetworkType.tcp6, NetworkType.udp6, NetworkType.ip6)
+
 
 @value
 struct TCPAddr[network: NetworkType = NetworkType.tcp4](Addr):
@@ -150,7 +155,7 @@ struct TCPAddr[network: NetworkType = NetworkType.tcp4](Addr):
         self.ip = ip
         self.port = port
         self.zone = zone
-    
+
     @always_inline
     fn address_family(self) -> Int:
         if network == NetworkType.tcp4:
@@ -159,15 +164,15 @@ struct TCPAddr[network: NetworkType = NetworkType.tcp4](Addr):
             return AF_INET6
         else:
             return AF_UNSPEC
-    
+
     @always_inline
     fn is_v4(self) -> Bool:
         return network == NetworkType.tcp4
-    
+
     @always_inline
     fn is_v6(self) -> Bool:
         return network == NetworkType.tcp6
-    
+
     @always_inline
     fn is_unix(self) -> Bool:
         return False
@@ -211,7 +216,7 @@ struct UDPAddr[network: NetworkType = NetworkType.udp4](Addr):
         self.ip = ip
         self.port = port
         self.zone = ""
-    
+
     @always_inline
     fn address_family(self) -> Int:
         if network == NetworkType.udp4:
@@ -220,15 +225,15 @@ struct UDPAddr[network: NetworkType = NetworkType.udp4](Addr):
             return AF_INET6
         else:
             return AF_UNSPEC
-    
+
     @always_inline
     fn is_v4(self) -> Bool:
         return network == NetworkType.udp4
-    
+
     @always_inline
     fn is_v6(self) -> Bool:
         return network == NetworkType.udp6
-    
+
     @always_inline
     fn is_unix(self) -> Bool:
         return False
@@ -249,6 +254,7 @@ struct UDPAddr[network: NetworkType = NetworkType.udp4](Addr):
 
     fn write_to[W: Writer, //](self, mut writer: W):
         writer.write("UDPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
+
 
 @value
 @register_passable("trivial")
@@ -370,131 +376,133 @@ struct addrinfo_unix(AnAddrInfo):
         freeaddrinfo(result)
         return ip
 
+
 fn is_ip_protocol(network: NetworkType) -> Bool:
     """Check if the network type is an IP protocol."""
     return network in (NetworkType.ip, NetworkType.ip4, NetworkType.ip6)
+
 
 fn is_ipv4(network: NetworkType) -> Bool:
     """Check if the network type is IPv4."""
     return network in (NetworkType.tcp4, NetworkType.udp4, NetworkType.ip4)
 
+
 fn is_ipv6(network: NetworkType) -> Bool:
     """Check if the network type is IPv6."""
     return network in (NetworkType.tcp6, NetworkType.udp6, NetworkType.ip6)
 
-fn resolve_localhost(host: ByteView[StaticConstantOrigin], network: NetworkType) -> ByteView[StaticConstantOrigin]:
-    """Resolve localhost to the appropriate IP address based on network type."""
-    if host != AddressConstants.LOCALHOST.as_bytes():
-        return host
-        
-    if network.is_ipv4():
-        return AddressConstants.IPV4_LOCALHOST.as_bytes()
-    elif network.is_ipv6():
-        return AddressConstants.IPV6_LOCALHOST.as_bytes()
 
-    return host
-
-fn parse_ipv6_bracketed_address(address: ByteView[StaticConstantOrigin]) raises -> (ByteView[StaticConstantOrigin], UInt16):
+fn parse_ipv6_bracketed_address[
+    origin: ImmutableOrigin
+](address: ByteView[origin]) raises -> (ByteView[origin], UInt16):
     """Parse an IPv6 address enclosed in brackets.
-    
+
     Returns:
-        Tuple of (host, colon_index_offset)
+        Tuple of (host, colon_index_offset).
     """
     if address[0] != Byte(ord("[")):
         return address, UInt16(0)
-        
+
     var end_bracket_index = address.find(Byte(ord("]")))
     if end_bracket_index == -1:
         raise Error("missing ']' in address")
-        
+
     if end_bracket_index + 1 == len(address):
         raise MissingPortError
-        
+
     var colon_index = end_bracket_index + 1
     if address[colon_index] != Byte(ord(":")):
         raise MissingPortError
-        
-    return (
-        address[1:end_bracket_index],
-        UInt16(end_bracket_index + 1)
-    )
 
-fn validate_no_brackets(address: ByteView[StaticConstantOrigin], start_idx: UInt16, end_idx: Optional[UInt16] = None) raises:
+    return (address[1:end_bracket_index], UInt16(end_bracket_index + 1))
+
+
+fn validate_no_brackets[
+    origin: ImmutableOrigin
+](address: ByteView[origin], start_idx: UInt16, end_idx: Optional[UInt16] = None) raises:
     """Validate that the address segment contains no brackets."""
-    var segment: ByteView[StaticConstantOrigin]
-    
+    var segment: ByteView[origin]
+
     if end_idx is None:
-        segment = address[int(start_idx):]
+        segment = address[int(start_idx) :]
     else:
-        segment = address[int(start_idx):int(end_idx.value())]
-    
+        segment = address[int(start_idx) : int(end_idx.value())]
+
     if segment.find(Byte(ord("["))) != -1:
         raise Error("unexpected '[' in address")
     if segment.find(Byte(ord("]"))) != -1:
         raise Error("unexpected ']' in address")
 
-fn parse_port(port_str: ByteView[StaticConstantOrigin]) raises -> UInt16:
+
+fn parse_port[origin: ImmutableOrigin](port_str: ByteView[origin]) raises -> UInt16:
     """Parse and validate port number."""
     if port_str == AddressConstants.EMPTY.as_bytes():
         raise MissingPortError
-        
+
     var port = int(str(port_str))
     if port < MIN_PORT or port > MAX_PORT:
         raise Error("Port number out of range (0-65535)")
-        
+
     return UInt16(port)
 
-fn parse_address(network: NetworkType, address: ByteView[StaticConstantOrigin]) raises -> (ByteView[StaticConstantOrigin], UInt16):
+
+fn parse_address[
+    origin: ImmutableOrigin
+](network: NetworkType, address: ByteView[origin]) raises -> (ByteView[origin], UInt16):
     """Parse an address string into a host and port.
 
     Args:
-        network: The network type (tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix)
-        address: The address string
+        network: The network type (tcp, tcp4, tcp6, udp, udp4, udp6, ip, ip4, ip6, unix).
+        address: The address string.
 
     Returns:
-        Tuple containing the host and port
+        Tuple containing the host and port.
     """
+    if address == AddressConstants.EMPTY.as_bytes():
+        raise Error("missing host")
+
+    if address == AddressConstants.LOCALHOST.as_bytes():
+        if network.is_ipv4():
+            return ByteView[origin].from_static_span(AddressConstants.IPV4_LOCALHOST.as_bytes()), DEFAULT_IP_PORT
+        elif network.is_ipv6():
+            return ByteView[origin].from_static_span(AddressConstants.IPV6_LOCALHOST.as_bytes()), DEFAULT_IP_PORT
+
     if network.is_ip_protocol():
-        var host = resolve_localhost(address, network)
-        if host == AddressConstants.EMPTY.as_bytes():
-            raise Error("missing host")
-            
-        # For IPv6 addresses in IP protocol mode, we need to handle the address as-is
-        if network == NetworkType.ip6 and host.find(Byte(ord(":"))) != -1:
+        var host = address
+        if network == NetworkType.ip6 and address.find(Byte(ord(":"))) != -1:
             return host, DEFAULT_IP_PORT
-            
-        # For other IP protocols, no colons allowed
-        if host.find(Byte(ord(":"))) != -1:
+
+        if address.find(Byte(ord(":"))) != -1:
             raise Error("IP protocol addresses should not include ports")
-            
+
         return host, DEFAULT_IP_PORT
 
     var colon_index = address.rfind(Byte(ord(":")))
     if colon_index == -1:
         raise MissingPortError
 
-    var host: ByteView[StaticConstantOrigin]
-    var bracket_offset: UInt16 = 0
+    var host: ByteView[origin]
+    var port: UInt16
 
-    # Handle IPv6 addresses
     if address[0] == Byte(ord("[")):
         try:
+            var bracket_offset: UInt16
             (host, bracket_offset) = parse_ipv6_bracketed_address(address)
+            validate_no_brackets(address, bracket_offset)
         except e:
             raise e
-        
-        validate_no_brackets(address, bracket_offset)
     else:
-        # For IPv4, simply split at the last colon
         host = address[:colon_index]
         if host.find(Byte(ord(":"))) != -1:
             raise TooManyColonsError
 
-    var port = parse_port(address[colon_index + 1:])
+    port = parse_port(address[colon_index + 1 :])
 
-    host = resolve_localhost(host, network)
-    if host == AddressConstants.EMPTY.as_bytes():
-        raise Error("missing host")
+    if host == AddressConstants.LOCALHOST.as_bytes():
+        if network.is_ipv4():
+            return ByteView[origin].from_static_span(AddressConstants.IPV4_LOCALHOST.as_bytes()), port
+        elif network.is_ipv6():
+            return ByteView[origin].from_static_span(AddressConstants.IPV6_LOCALHOST.as_bytes()), port
 
     return host, port
 
@@ -508,6 +516,7 @@ fn join_host_port(host: String, port: String) -> String:
 
 alias MissingPortError = Error("missing port in address")
 alias TooManyColonsError = Error("too many colons in address")
+
 
 fn binary_port_to_int(port: UInt16) -> Int:
     """Convert a binary port to an integer.
@@ -611,7 +620,7 @@ fn getaddrinfo[
     ```
 
     #### Notes:
-    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.html
+    * Reference: https://man7.org/linux/man-pages/man3/getaddrinfo.3p.htm .
     """
     var result = _getaddrinfo(
         node.unsafe_ptr(), service.unsafe_ptr(), Pointer.address_of(hints), Pointer.address_of(res)

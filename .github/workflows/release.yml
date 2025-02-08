@@ -40,3 +40,15 @@ jobs:
           file: lightbug_http.mojopkg
           tag: ${{ steps.get_version.outputs.VERSION }}
           overwrite: true
+
+  docker:
+    needs: [package, upload-to-release]
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      tags: |
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=raw,value=latest
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

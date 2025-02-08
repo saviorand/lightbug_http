@@ -2,7 +2,7 @@ from time import sleep
 from memory import Span
 from sys.info import os_is_macos
 from lightbug_http.address import NetworkType
-from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.io.bytes import Bytes, ByteView, bytes
 from lightbug_http.io.sync import Duration
 from lightbug_http.address import parse_address, TCPAddr, UDPAddr
 from lightbug_http._libc import (
@@ -51,6 +51,7 @@ trait Connection(Movable):
     fn remote_addr(self) -> TCPAddr:
         ...
 
+
 struct NoTLSListener:
     """A TCP listener that listens for incoming connections and can accept them."""
 
@@ -87,8 +88,8 @@ struct ListenConfig:
     fn __init__(out self, keep_alive: Duration = default_tcp_keep_alive):
         self._keep_alive = keep_alive
 
-    fn listen[network: NetworkType = NetworkType.tcp4](mut self, address: StringLiteral) raises -> NoTLSListener:
-        var local = parse_address(network, address.as_bytes())
+    fn listen[network: NetworkType = NetworkType.tcp4](mut self, address: String) raises -> NoTLSListener:
+        var local = parse_address[__origin_of(address)](network, address.as_bytes())
         var addr = TCPAddr(str(local[0]), local[1])
         var socket: Socket[TCPAddr]
         try:
@@ -274,6 +275,7 @@ struct UDPConnection[network: NetworkType]:
     fn remote_addr(self) -> ref [self.socket._remote_address] UDPAddr[network]:
         return self.socket.remote_address()
 
+
 fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
     """Connect to a server using a socket.
 
@@ -297,6 +299,7 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
 
     return TCPConnection(socket^)
 
+
 fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr) raises -> UDPConnection[network]:
     """Creates a new UDP listener.
 
@@ -314,7 +317,7 @@ fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr) r
     return UDPConnection[network](socket^)
 
 
-fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: StringLiteral) raises -> UDPConnection[network]:
+fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: String) raises -> UDPConnection[network]:
     """Creates a new UDP listener.
 
     Args:
@@ -361,7 +364,7 @@ fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr[netw
     return UDPConnection(Socket[UDPAddr[network]](local_address=local_address, socket_type=SOCK_DGRAM))
 
 
-fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: StringLiteral) raises -> UDPConnection[network]:
+fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: String) raises -> UDPConnection[network]:
     """Connects to the address on the named network. The network must be "udp", "udp4", or "udp6".
 
     Args:
