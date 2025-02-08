@@ -1,4 +1,4 @@
-from small_time.small_time import now
+from small-time.small-time import now
 from lightbug_http.uri import URI
 from lightbug_http.utils import ByteReader, ByteWriter
 from lightbug_http.io.bytes import Bytes, bytes, Byte, byte

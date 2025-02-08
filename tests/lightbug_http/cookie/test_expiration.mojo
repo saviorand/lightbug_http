@@ -1,6 +1,6 @@
 import testing
 from lightbug_http.cookie.expiration import Expiration
-from small_time import SmallTime
+from small-time import SmallTime
 
 
 def test_ctors():
