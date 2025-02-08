@@ -152,7 +152,7 @@ struct ByteView[origin: Origin]():
 
     fn __iter__(self) -> _SpanIter[Byte, origin]:
         return self._inner.__iter__()
-    
+
     fn find(self, target: Byte) -> Int:
         """Finds the index of a byte in a byte span.
 
@@ -183,7 +183,7 @@ struct ByteView[origin: Origin]():
             if self[i] == target:
                 return i
             i -= 1
-        
+
         return -1
 
     fn to_bytes(self) -> Bytes:

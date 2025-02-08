@@ -573,9 +573,7 @@ fn inet_pton[address_family: Int32](src: UnsafePointer[c_char]) raises -> c_uint
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     * This function is valid for `AF_INET` and `AF_INET6`.
     """
-    constrained[
-        int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."
-    ]()
+    constrained[int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
     var ip_buffer: UnsafePointer[c_void]
 
     @parameter

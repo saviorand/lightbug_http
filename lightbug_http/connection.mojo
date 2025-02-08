@@ -51,6 +51,7 @@ trait Connection(Movable):
     fn remote_addr(self) -> TCPAddr:
         ...
 
+
 struct NoTLSListener:
     """A TCP listener that listens for incoming connections and can accept them."""
 
@@ -274,6 +275,7 @@ struct UDPConnection[network: NetworkType]:
     fn remote_addr(self) -> ref [self.socket._remote_address] UDPAddr[network]:
         return self.socket.remote_address()
 
+
 fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
     """Connect to a server using a socket.
 
@@ -296,6 +298,7 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
         raise Error("Failed to establish a connection to the server.")
 
     return TCPConnection(socket^)
+
 
 fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: UDPAddr) raises -> UDPConnection[network]:
     """Creates a new UDP listener.
