@@ -1,23 +1,13 @@
 from collections import Dict
+from utils import StringSlice
 from memory import UnsafePointer
-from lightbug_http.libc import (
-    c_int,
-    AF_INET,
-    SOCK_STREAM,
-    socket,
-    connect,
-    send,
-    recv,
-    close,
-)
-from lightbug_http.strings import to_string
-from lightbug_http.net import default_buffer_size
+from lightbug_http.connection import TCPConnection, default_buffer_size, create_connection
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.header import Headers, HeaderKey
-from lightbug_http.net import create_connection, TCPConnection
-from lightbug_http.io.bytes import Bytes
-from lightbug_http.utils import ByteReader, logger
-from lightbug_http.pool_manager import PoolManager
+from lightbug_http.io.bytes import Bytes, ByteReader
+from lightbug_http._logger import logger
+from lightbug_http.pool_manager import PoolManager, PoolKey
+from lightbug_http.uri import URI, Scheme
 
 
 struct Client:
@@ -41,7 +31,7 @@ struct Client:
         self.allow_redirects = allow_redirects
         self._connections = PoolManager[TCPConnection](cached_connections)
 
-    fn do(mut self, owned req: HTTPRequest) raises -> HTTPResponse:
+    fn do(mut self, owned request: HTTPRequest) raises -> HTTPResponse:
         """The `do` method is responsible for sending an HTTP request to a server and receiving the corresponding response.
 
         It performs the following steps:
@@ -54,7 +44,7 @@ struct Client:
         Note: The code assumes that the `HTTPRequest` object passed as an argument has a valid URI with a host and port specified.
 
         Args:
-            req: An `HTTPRequest` object representing the request to be sent.
+            request: An `HTTPRequest` object representing the request to be sent.
 
         Returns:
             The received response.
@@ -62,73 +52,69 @@ struct Client:
         Raises:
             Error: If there is a failure in sending or receiving the message.
         """
-        if req.uri.host == "":
-            raise Error("Client.do: Request failed because the host field is empty.")
+        if request.uri.host == "":
+            raise Error("Client.do: Host must not be empty.")
+
         var is_tls = False
-
-        if req.uri.is_https():
+        var scheme = Scheme.HTTP
+        if request.uri.is_https():
             is_tls = True
+            scheme = Scheme.HTTPS
 
-        var host_str: String
-        var port: Int
-        if ":" in req.uri.host:
-            var host_port: List[String]
-            try:
-                host_port = req.uri.host.split(":")
-            except:
-                raise Error("Client.do: Failed to split host and port.")
-            host_str = host_port[0]
-            port = atol(host_port[1])
+        var port: UInt16
+        if request.uri.port:
+            port = request.uri.port.value()
         else:
-            host_str = req.uri.host
-            if is_tls:
+            if request.uri.scheme == Scheme.HTTP.value:
+                port = 80
+            elif request.uri.scheme == Scheme.HTTPS.value:
                 port = 443
             else:
-                port = 80
+                raise Error("Client.do: Invalid scheme received in the URI.")
 
+        var pool_key = PoolKey(request.uri.host, port, scheme)
         var cached_connection = False
         var conn: TCPConnection
         try:
-            conn = self._connections.take(host_str)
+            conn = self._connections.take(pool_key)
             cached_connection = True
         except e:
             if str(e) == "PoolManager.take: Key not found.":
-                conn = create_connection(host_str, port)
+                conn = create_connection(request.uri.host, port)
             else:
                 logger.error(e)
                 raise Error("Client.do: Failed to create a connection to host.")
 
         var bytes_sent: Int
         try:
-            bytes_sent = conn.write(encode(req))
+            bytes_sent = conn.write(encode(request))
         except e:
             # Maybe peer reset ungracefully, so try a fresh connection
             if str(e) == "SendError: Connection reset by peer.":
                 logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
                 conn.teardown()
                 if cached_connection:
-                    return self.do(req^)
+                    return self.do(request^)
             logger.error("Client.do: Failed to send message.")
             raise e
 
         # TODO: What if the response is too large for the buffer? We should read until the end of the response. (@thatstoasty)
         var new_buf = Bytes(capacity=default_buffer_size)
-
         try:
             _ = conn.read(new_buf)
         except e:
             if str(e) == "EOF":
                 conn.teardown()
                 if cached_connection:
-                    return self.do(req^)
+                    return self.do(request^)
                 raise Error("Client.do: No response received from the server.")
             else:
                 logger.error(e)
                 raise Error("Client.do: Failed to read response from peer.")
 
-        var res: HTTPResponse
+        var response: HTTPResponse
         try:
-            res = HTTPResponse.from_bytes(new_buf, conn)
+            response = HTTPResponse.from_bytes(new_buf, conn)
         except e:
             logger.error("Failed to parse a response...")
             try:
@@ -138,19 +124,19 @@ struct Client:
             raise e
 
         # Redirects should not keep the connection alive, as redirects can send the client to a different server.
-        if self.allow_redirects and res.is_redirect():
+        if self.allow_redirects and response.is_redirect():
             conn.teardown()
-            return self._handle_redirect(req^, res^)
+            return self._handle_redirect(request^, response^)
         # Server told the client to close the connection, we can assume the server closed their side after sending the response.
-        elif res.connection_close():
+        elif response.connection_close():
             conn.teardown()
         # Otherwise, persist the connection by giving it back to the pool manager.
         else:
-            self._connections.give(host_str, conn^)
-        return res
+            self._connections.give(pool_key, conn^)
+        return response
 
     fn _handle_redirect(
-        mut self, owned original_req: HTTPRequest, owned original_response: HTTPResponse
+        mut self, owned original_request: HTTPRequest, owned original_response: HTTPResponse
     ) raises -> HTTPResponse:
         var new_uri: URI
         var new_location: String
@@ -160,10 +146,13 @@ struct Client:
             raise Error("Client._handle_redirect: `Location` header was not received in the response.")
 
         if new_location and new_location.startswith("http"):
-            new_uri = URI.parse(new_location)
-            original_req.headers[HeaderKey.HOST] = new_uri.host
+            try:
+                new_uri = URI.parse(new_location)
+            except e:
+                raise Error("Client._handle_redirect: Failed to parse the new URI: " + str(e))
+            original_request.headers[HeaderKey.HOST] = new_uri.host
         else:
-            new_uri = original_req.uri
+            new_uri = original_request.uri
             new_uri.path = new_location
-        original_req.uri = new_uri
-        return self.do(original_req^)
+        original_request.uri = new_uri
+        return self.do(original_request^)

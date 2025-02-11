@@ -15,8 +15,10 @@ struct Printer(HTTPService):
         print("Request URI:", req.uri.request_uri)
         print("Request protocol:", req.protocol)
         print("Request method:", req.method)
-        print("Request Content-Type:", req.headers[HeaderKey.CONTENT_TYPE])
-        print("Request Body:", to_string(req.body_raw))
+        if HeaderKey.CONTENT_TYPE in req.headers:
+            print("Request Content-Type:", req.headers[HeaderKey.CONTENT_TYPE])
+        if req.body_raw:
+            print("Request Body:", to_string(req.body_raw))
 
         return OK(req.body_raw)
 

@@ -1,9 +1,9 @@
 from memory import Span
 from lightbug_http.io.sync import Duration
-from lightbug_http.io.bytes import Bytes, bytes
-from lightbug_http.strings import NetworkType
-from lightbug_http.utils import ByteReader, logger
-from lightbug_http.net import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig
+from lightbug_http.io.bytes import Bytes, bytes, ByteReader
+from lightbug_http.address import NetworkType
+from lightbug_http._logger import logger
+from lightbug_http.connection import NoTLSListener, default_buffer_size, TCPConnection, ListenConfig
 from lightbug_http.socket import Socket
 from lightbug_http.http import HTTPRequest, encode
 from lightbug_http.http.common_response import InternalError
@@ -91,8 +91,8 @@ struct Server(Movable):
             address: The address (host:port) to listen on.
             handler: An object that handles incoming HTTP requests.
         """
-        var net = ListenConfig()
-        var listener = net.listen(address)
+        var config = ListenConfig()
+        var listener = config.listen(address)
         self.set_address(address)
         self.serve(listener^, handler)
 
@@ -161,14 +161,15 @@ struct Server(Movable):
             var response: HTTPResponse
             try:
                 response = handler.func(request)
-            except:
+            except e:
+                logger.error("Unexpected error in the handler:", e)
+
                 if not conn.is_closed():
                     # Try to send back an internal server error, but always attempt to teardown the connection.
                     try:
                         # TODO: Move InternalError response to an alias when Mojo can support Dict operations at compile time. (@thatstoasty)
                         _ = conn.write(encode(InternalError()))
                     except e:
-                        logger.error(e)
                         raise Error("Failed to send InternalError response")
                     finally:
                         conn.teardown()

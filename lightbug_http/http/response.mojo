@@ -1,7 +1,9 @@
-from small-time.small-time import now
+from utils import StringSlice
+from collections import Optional
+from small_time.small_time import now
 from lightbug_http.uri import URI
-from lightbug_http.utils import ByteReader, ByteWriter
-from lightbug_http.io.bytes import Bytes, bytes, Byte, byte
+from lightbug_http.io.bytes import Bytes, bytes, byte, ByteReader, ByteWriter
+from lightbug_http.connection import TCPConnection, default_buffer_size
 from lightbug_http.strings import (
     strHttp11,
     strHttp,
@@ -12,9 +14,6 @@ from lightbug_http.strings import (
     lineBreak,
     to_string,
 )
-from collections import Optional
-from utils import StringSlice
-from lightbug_http.net import TCPConnection, default_buffer_size
 
 
 struct StatusCode:
@@ -95,7 +94,7 @@ struct HTTPResponse(Writable, Stringable):
 
         var transfer_encoding = response.headers.get(HeaderKey.TRANSFER_ENCODING)
         if transfer_encoding and transfer_encoding.value() == "chunked":
-            var b = Bytes(reader.read_bytes())
+            var b = reader.read_bytes().to_bytes()
             var buff = Bytes(capacity=default_buffer_size)
             try:
                 while conn.read(buff) > 0:
@@ -168,7 +167,7 @@ struct HTTPResponse(Writable, Stringable):
         self.status_code = status_code
         self.status_text = status_text
         self.protocol = protocol
-        self.body_raw = reader.read_bytes()
+        self.body_raw = reader.read_bytes().to_bytes()
         self.set_content_length(len(self.body_raw))
         if HeaderKey.CONNECTION not in self.headers:
             self.set_connection_keep_alive()
@@ -220,16 +219,16 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn read_body(mut self, mut r: ByteReader) raises -> None:
-        self.body_raw = r.read_bytes(self.content_length())
+        self.body_raw = r.read_bytes(self.content_length()).to_bytes()
         self.set_content_length(len(self.body_raw))
 
     fn read_chunks(mut self, chunks: Span[Byte]) raises:
         var reader = ByteReader(chunks)
         while True:
-            var size = atol(StringSlice(unsafe_from_utf8=reader.read_line()), 16)
+            var size = atol(str(reader.read_line()), 16)
             if size == 0:
                 break
-            var data = reader.read_bytes(size)
+            var data = reader.read_bytes(size).to_bytes()
             reader.skip_carriage_return()
             self.set_content_length(self.content_length() + len(data))
             self.body_raw += data
@@ -265,8 +264,9 @@ struct HTTPResponse(Writable, Stringable):
             except:
                 pass
         writer.write(self.headers, self.cookies, lineBreak)
-        writer.consuming_write(self^.body_raw)
-        return writer.consume()
+        writer.consuming_write(self.body_raw^)
+        self.body_raw = Bytes()
+        return writer^.consume()
 
     fn __str__(self) -> String:
         return String.write(self)

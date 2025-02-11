@@ -31,102 +31,6 @@ struct BytesConstant:
     alias nChar = byte(nChar)
 
 
-@value
-struct NetworkType(EqualityComparableCollectionElement):
-    var value: String
-
-    alias empty = NetworkType("")
-    alias tcp = NetworkType("tcp")
-    alias tcp4 = NetworkType("tcp4")
-    alias tcp6 = NetworkType("tcp6")
-    alias udp = NetworkType("udp")
-    alias udp4 = NetworkType("udp4")
-    alias udp6 = NetworkType("udp6")
-    alias ip = NetworkType("ip")
-    alias ip4 = NetworkType("ip4")
-    alias ip6 = NetworkType("ip6")
-    alias unix = NetworkType("unix")
-
-    alias SUPPORTED_TYPES = [
-        Self.tcp,
-        Self.tcp4,
-        Self.tcp6,
-        Self.udp,
-        Self.udp4,
-        Self.udp6,
-        Self.ip,
-        Self.ip4,
-        Self.ip6,
-    ]
-    alias TCP_TYPES = [
-        Self.tcp,
-        Self.tcp4,
-        Self.tcp6,
-    ]
-    alias UDP_TYPES = [
-        Self.udp,
-        Self.udp4,
-        Self.udp6,
-    ]
-    alias IP_TYPES = [
-        Self.ip,
-        Self.ip4,
-        Self.ip6,
-    ]
-
-    fn __eq__(self, other: NetworkType) -> Bool:
-        return self.value == other.value
-
-    fn __ne__(self, other: NetworkType) -> Bool:
-        return self.value != other.value
-
-
-@value
-struct ConnType:
-    var value: String
-
-    alias empty = ConnType("")
-    alias http = ConnType("http")
-    alias websocket = ConnType("websocket")
-
-
-@value
-struct RequestMethod:
-    var value: String
-
-    alias get = RequestMethod("GET")
-    alias post = RequestMethod("POST")
-    alias put = RequestMethod("PUT")
-    alias delete = RequestMethod("DELETE")
-    alias head = RequestMethod("HEAD")
-    alias patch = RequestMethod("PATCH")
-    alias options = RequestMethod("OPTIONS")
-
-
-@value
-struct CharSet:
-    var value: String
-
-    alias utf8 = CharSet("utf-8")
-
-
-@value
-struct MediaType:
-    var value: String
-
-    alias empty = MediaType("")
-    alias plain = MediaType("text/plain")
-    alias json = MediaType("application/json")
-
-
-@value
-struct Message:
-    var type: String
-
-    alias empty = Message("")
-    alias http_start = Message("http.response.start")
-
-
 fn to_string[T: Writable](value: T) -> String:
     return String.write(value)
 
@@ -150,3 +54,12 @@ fn to_string(owned bytes: Bytes) -> String:
     if bytes[-1] != 0:
         bytes.append(0)
     return String(bytes^)
+
+
+fn find_all(s: String, sub_str: String) -> List[Int]:
+    match_idxs = List[Int]()
+    var current_idx: Int = s.find(sub_str)
+    while current_idx > -1:
+        match_idxs.append(current_idx)
+        current_idx = s.find(sub_str, start=current_idx + 1)
+    return match_idxs^

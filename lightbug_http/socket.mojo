@@ -3,7 +3,7 @@ from utils import StaticTuple
 from sys import sizeof, external_call
 from sys.info import os_is_macos
 from memory import Pointer, UnsafePointer
-from lightbug_http.libc import (
+from lightbug_http._libc import (
     socket,
     connect,
     recv,
@@ -45,16 +45,16 @@ from lightbug_http.libc import (
     ShutdownInvalidArgumentError,
 )
 from lightbug_http.io.bytes import Bytes
-from lightbug_http.strings import NetworkType
-from lightbug_http.net import (
+from lightbug_http.address import (
+    NetworkType,
     Addr,
-    default_buffer_size,
     binary_port_to_int,
     binary_ip_to_string,
     addrinfo_macos,
     addrinfo_unix,
 )
-from lightbug_http.utils import logger
+from lightbug_http.connection import default_buffer_size
+from lightbug_http._logger import logger
 
 
 alias SocketClosedError = "Socket: Socket is already closed"
@@ -106,7 +106,6 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         """
         self.socket_type = socket_type
         self.protocol = protocol
-
         self.fd = socket(address_family, socket_type, 0)
         self._local_address = local_address
         self._remote_address = remote_address
@@ -148,10 +147,16 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         self.fd = existing.fd
         self.socket_type = existing.socket_type
         self.protocol = existing.protocol
+
         self._local_address = existing._local_address^
+        existing._local_address = AddrType()
         self._remote_address = existing._remote_address^
+        existing._remote_address = AddrType()
+
         self._closed = existing._closed
+        existing._closed = True
         self._connected = existing._connected
+        existing._connected = False
 
     fn teardown(mut self) raises:
         """Close the socket and free the file descriptor."""
@@ -162,26 +167,17 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
                 logger.debug("Socket.teardown: Failed to shutdown socket: " + str(e))
 
         if not self._closed:
-            try:
-                self.close()
-            except e:
-                logger.error("Socket.teardown: Failed to close socket.")
-                raise e
+            self.close()
 
     fn __enter__(owned self) -> Self:
         return self^
 
-    fn __exit__(mut self) raises:
-        self.teardown()
-
-    # TODO: Seems to be bugged if this is included. Mojo tries to delete a mystical 0 fd socket that was never initialized?
-    # fn __del__(owned self):
-    #     """Close the socket when the object is deleted."""
-    #     logger.info("In socket del", self)
-    #     try:
-    #         self.teardown()
-    #     except e:
-    #         logger.debug("Socket.__del__: Failed to close socket during deletion:", str(e))
+    fn __del__(owned self):
+        """Close the socket when the object is deleted."""
+        try:
+            self.teardown()
+        except e:
+            logger.debug("Socket.__del__: Failed to close socket during deletion:", e)
 
     fn __str__(self) -> String:
         return String.write(self)

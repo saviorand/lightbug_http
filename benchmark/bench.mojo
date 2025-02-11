@@ -2,7 +2,7 @@ from memory import Span
 from benchmark import *
 from lightbug_http.io.bytes import bytes, Bytes
 from lightbug_http.header import Headers, Header
-from lightbug_http.utils import ByteReader, ByteWriter
+from lightbug_http.io.bytes import ByteReader, ByteWriter
 from lightbug_http.http import HTTPRequest, HTTPResponse, encode
 from lightbug_http.uri import URI
 
@@ -11,9 +11,7 @@ alias headers = "GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mo
 alias body = "I am the body of an HTTP request" * 5
 alias body_bytes = bytes(body)
 alias Request = "GET /index.html HTTP/1.1\r\nHost: example.com\r\nUser-Agent: Mozilla/5.0\r\nContent-Type: text/html\r\nContent-Length: 1234\r\nConnection: close\r\nTrailer: end-of-message\r\n\r\n" + body
-alias Response = "HTTP/1.1 200 OK\r\nserver: lightbug_http\r\ncontent-type:"
-    " application/octet-stream\r\nconnection: keep-alive\r\ncontent-length:"
-    " 13\r\ndate: 2024-06-02T13:41:50.766880+00:00\r\n\r\n" + body
+alias Response = "HTTP/1.1 200 OK\r\nserver: lightbug_http\r\ncontent-type: application/octet-stream\r\nconnection: keep-alive\r\ncontent-length: 13\r\ndate: 2024-06-02T13:41:50.766880+00:00\r\n\r\n" + body
 
 
 fn main():
@@ -26,24 +24,12 @@ fn run_benchmark():
         config.verbose_timing = True
         config.tabular_view = True
         var m = Bench(config)
-        m.bench_function[lightbug_benchmark_header_encode](
-            BenchId("HeaderEncode")
-        )
-        m.bench_function[lightbug_benchmark_header_parse](
-            BenchId("HeaderParse")
-        )
-        m.bench_function[lightbug_benchmark_request_encode](
-            BenchId("RequestEncode")
-        )
-        m.bench_function[lightbug_benchmark_request_parse](
-            BenchId("RequestParse")
-        )
-        m.bench_function[lightbug_benchmark_response_encode](
-            BenchId("ResponseEncode")
-        )
-        m.bench_function[lightbug_benchmark_response_parse](
-            BenchId("ResponseParse")
-        )
+        m.bench_function[lightbug_benchmark_header_encode](BenchId("HeaderEncode"))
+        m.bench_function[lightbug_benchmark_header_parse](BenchId("HeaderParse"))
+        m.bench_function[lightbug_benchmark_request_encode](BenchId("RequestEncode"))
+        m.bench_function[lightbug_benchmark_request_parse](BenchId("RequestParse"))
+        m.bench_function[lightbug_benchmark_response_encode](BenchId("ResponseEncode"))
+        m.bench_function[lightbug_benchmark_response_parse](BenchId("ResponseParse"))
         m.dump_report()
     except:
         print("failed to start benchmark")
@@ -99,15 +85,19 @@ fn lightbug_benchmark_request_parse(mut b: Bencher):
 fn lightbug_benchmark_request_encode(mut b: Bencher):
     @always_inline
     @parameter
-    fn request_encode():
+    fn request_encode() raises:
+        var uri = URI.parse("http://127.0.0.1:8080/some-path")
         var req = HTTPRequest(
-            URI.parse("http://127.0.0.1:8080/some-path"),
+            uri=uri,
             headers=headers_struct,
             body=body_bytes,
         )
         _ = encode(req^)
 
-    b.iter[request_encode]()
+    try:
+        b.iter[request_encode]()
+    except e:
+        print("failed to encode request, error: ", e)
 
 
 @parameter
@@ -130,8 +120,7 @@ fn lightbug_benchmark_header_parse(mut b: Bencher):
             var header = Headers()
             var reader = ByteReader(headers.as_bytes())
             _ = header.parse_raw(reader)
-        except:
-            print("failed")
+        except e:
+            print("failed", e)
 
     b.iter[header_parse]()
-

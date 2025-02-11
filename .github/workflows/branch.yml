@@ -20,3 +20,15 @@ jobs:
 
   package:
     uses: ./.github/workflows/package.yml
+
+  docker:
+    needs: package
+    uses: ./.github/workflows/docker-build.yml
+    with:
+      tags: |
+        type=ref,event=branch
+        type=sha,format=long
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+

@@ -1,6 +1,6 @@
 import testing
 from collections import Dict, List
-from lightbug_http.io.bytes import Bytes, bytes
+from lightbug_http.io.bytes import Bytes, ByteView, bytes
 
 
 fn test_string_literal_to_bytes() raises:
@@ -35,3 +35,4 @@ fn test_string_to_bytes() raises:
 
     for c in cases.items():
         testing.assert_equal(Bytes(c[].key.as_bytes()), c[].value)
+
