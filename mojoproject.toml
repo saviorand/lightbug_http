@@ -1,6 +1,6 @@
 [project]
 authors = ["saviorand"]
-channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo-community"]
+channels = ["conda-forge", "https://conda.modular.com/max", "https://repo.prefix.dev/modular-community"]
 description = "Simple and fast HTTP framework for Mojo!"
 name = "lightbug_http"
 platforms = ["osx-arm64", "linux-64"]
@@ -19,4 +19,4 @@ format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 
 [dependencies]
 max = ">=24.6.0,<25"
-small_time = "==0.1.6"
+small_time = "==0.0.1"
