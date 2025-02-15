@@ -34,7 +34,7 @@ struct Expiration(CollectionElement):
     fn is_datetime(self) -> Bool:
         return self.variant == 1
 
-    fn http_date_timestamp(self) -> Optional[String]:
+    fn http_date_timestamp(self) raises -> Optional[String]:
         if not self.datetime:
             return Optional[String](None)
 

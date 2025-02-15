@@ -185,14 +185,14 @@ struct TCPAddr[network: NetworkType = NetworkType.tcp4](Addr):
 
     fn __str__(self) -> String:
         if self.zone != "":
-            return join_host_port(self.ip + "%" + self.zone, str(self.port))
-        return join_host_port(self.ip, str(self.port))
+            return join_host_port(self.ip + "%" + self.zone, String(self.port))
+        return join_host_port(self.ip, String(self.port))
 
     fn __repr__(self) -> String:
         return String.write(self)
 
     fn write_to[W: Writer, //](self, mut writer: W):
-        writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
+        writer.write("TCPAddr(", "ip=", repr(self.ip), ", port=", String(self.port), ", zone=", repr(self.zone), ")")
 
 
 @value
@@ -246,14 +246,14 @@ struct UDPAddr[network: NetworkType = NetworkType.udp4](Addr):
 
     fn __str__(self) -> String:
         if self.zone != "":
-            return join_host_port(self.ip + "%" + self.zone, str(self.port))
-        return join_host_port(self.ip, str(self.port))
+            return join_host_port(self.ip + "%" + self.zone, String(self.port))
+        return join_host_port(self.ip, String(self.port))
 
     fn __repr__(self) -> String:
         return String.write(self)
 
     fn write_to[W: Writer, //](self, mut writer: W):
-        writer.write("UDPAddr(", "ip=", repr(self.ip), ", port=", str(self.port), ", zone=", repr(self.zone), ")")
+        writer.write("UDPAddr(", "ip=", repr(self.ip), ", port=", String(self.port), ", zone=", repr(self.zone), ")")
 
 
 @value
@@ -424,9 +424,9 @@ fn validate_no_brackets[
     var segment: ByteView[origin]
 
     if end_idx is None:
-        segment = address[int(start_idx) :]
+        segment = address[Int(start_idx) :]
     else:
-        segment = address[int(start_idx) : int(end_idx.value())]
+        segment = address[Int(start_idx) : Int(end_idx.value())]
 
     if segment.find(Byte(ord("["))) != -1:
         raise Error("unexpected '[' in address")
@@ -439,7 +439,7 @@ fn parse_port[origin: ImmutableOrigin](port_str: ByteView[origin]) raises -> UIn
     if port_str == AddressConstants.EMPTY.as_bytes():
         raise MissingPortError
 
-    var port = int(str(port_str))
+    var port = Int(String(port_str))
     if port < MIN_PORT or port > MAX_PORT:
         raise Error("Port number out of range (0-65535)")
 
@@ -527,7 +527,7 @@ fn binary_port_to_int(port: UInt16) -> Int:
     Returns:
         The port as an integer.
     """
-    return int(ntohs(port))
+    return Int(ntohs(port))
 
 
 fn binary_ip_to_string[address_family: Int32](owned ip_address: UInt32) raises -> String:
@@ -542,7 +542,7 @@ fn binary_ip_to_string[address_family: Int32](owned ip_address: UInt32) raises -
     Returns:
         The IP address as a string.
     """
-    constrained[int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
+    constrained[Int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
     var ip: String
 
     @parameter

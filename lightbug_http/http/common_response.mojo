@@ -1,3 +1,5 @@
+from lightbug_http.io.bytes import Bytes
+
 fn OK(body: String, content_type: String = "text/plain") -> HTTPResponse:
     return HTTPResponse(
         headers=Headers(Header(HeaderKey.CONTENT_TYPE, content_type)),

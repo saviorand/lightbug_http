@@ -14,7 +14,7 @@ fn byte(s: String) -> Byte:
 
 @always_inline
 fn bytes(s: String) -> Bytes:
-    return s.as_bytes()
+    return Bytes(s.as_bytes())
 
 
 @always_inline

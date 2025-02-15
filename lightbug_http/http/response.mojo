@@ -51,7 +51,7 @@ struct HTTPResponse(Writable, Stringable):
             cookies.from_headers(properties[3])
             reader.skip_carriage_return()
         except e:
-            raise Error("Failed to parse response headers: " + str(e))
+            raise Error("Failed to parse response headers: " + String(e))
 
         try:
             return HTTPResponse(
@@ -59,7 +59,7 @@ struct HTTPResponse(Writable, Stringable):
                 headers=headers,
                 cookies=cookies,
                 protocol=protocol,
-                status_code=int(status_code),
+                status_code=Int(status_code),
                 status_text=status_text,
             )
         except e:
@@ -81,14 +81,14 @@ struct HTTPResponse(Writable, Stringable):
             cookies.from_headers(properties[3])
             reader.skip_carriage_return()
         except e:
-            raise Error("Failed to parse response headers: " + str(e))
+            raise Error("Failed to parse response headers: " + String(e))
 
         var response = HTTPResponse(
             Bytes(),
             headers=headers,
             cookies=cookies,
             protocol=protocol,
-            status_code=int(status_code),
+            status_code=Int(status_code),
             status_text=status_text,
         )
 
@@ -139,14 +139,14 @@ struct HTTPResponse(Writable, Stringable):
         self.status_code = status_code
         self.status_text = status_text
         self.protocol = protocol
-        self.body_raw = body_bytes
+        self.body_raw = Bytes(body_bytes)
         if HeaderKey.CONNECTION not in self.headers:
             self.set_connection_keep_alive()
         if HeaderKey.CONTENT_LENGTH not in self.headers:
             self.set_content_length(len(body_bytes))
         if HeaderKey.DATE not in self.headers:
             try:
-                var current_time = str(now(utc=True))
+                var current_time = String(now(utc=True))
                 self.headers[HeaderKey.DATE] = current_time
             except:
                 logger.debug("DATE header not set, unable to get current time and it was instead omitted.")
@@ -175,7 +175,7 @@ struct HTTPResponse(Writable, Stringable):
             self.set_content_length(len(self.body_raw))
         if HeaderKey.DATE not in self.headers:
             try:
-                var current_time = str(now(utc=True))
+                var current_time = String(now(utc=True))
                 self.headers[HeaderKey.DATE] = current_time
             except:
                 pass
@@ -199,12 +199,12 @@ struct HTTPResponse(Writable, Stringable):
 
     @always_inline
     fn set_content_length(mut self, l: Int):
-        self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
+        self.headers[HeaderKey.CONTENT_LENGTH] = String(l)
 
     @always_inline
     fn content_length(self) -> Int:
         try:
-            return int(self.headers[HeaderKey.CONTENT_LENGTH])
+            return Int(self.headers[HeaderKey.CONTENT_LENGTH])
         except:
             return 0
 
@@ -225,7 +225,7 @@ struct HTTPResponse(Writable, Stringable):
     fn read_chunks(mut self, chunks: Span[Byte]) raises:
         var reader = ByteReader(chunks)
         while True:
-            var size = atol(str(reader.read_line()), 16)
+            var size = atol(String(reader.read_line()), 16)
             if size == 0:
                 break
             var data = reader.read_bytes(size).to_bytes()
@@ -251,7 +251,7 @@ struct HTTPResponse(Writable, Stringable):
         writer.write(
             self.protocol,
             whitespace,
-            str(self.status_code),
+            String(self.status_code),
             whitespace,
             self.status_text,
             lineBreak,
@@ -260,7 +260,7 @@ struct HTTPResponse(Writable, Stringable):
         )
         if HeaderKey.DATE not in self.headers:
             try:
-                write_header(writer, HeaderKey.DATE, str(now(utc=True)))
+                write_header(writer, HeaderKey.DATE, String(now(utc=True)))
             except:
                 pass
         writer.write(self.headers, self.cookies, lineBreak)

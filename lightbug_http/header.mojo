@@ -80,7 +80,7 @@ struct Headers(Writable, Stringable):
 
     fn content_length(self) -> Int:
         try:
-            return int(self[HeaderKey.CONTENT_LENGTH])
+            return Int(self[HeaderKey.CONTENT_LENGTH])
         except:
             return 0
 
@@ -103,13 +103,13 @@ struct Headers(Writable, Stringable):
                 r.increment()
             # TODO (bgreni): Handle possible trailing whitespace
             var value = r.read_line()
-            var k = str(key).lower()
+            var k = String(key).lower()
             if k == HeaderKey.SET_COOKIE:
-                cookies.append(str(value))
+                cookies.append(String(value))
                 continue
 
-            self._inner[k] = str(value)
-        return (str(first), str(second), str(third), cookies)
+            self._inner[k] = String(value)
+        return (String(first), String(second), String(third), cookies)
 
     fn write_to[T: Writer, //](self, mut writer: T):
         for header in self._inner.items():

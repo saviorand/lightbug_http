@@ -32,7 +32,7 @@ struct Cookie(CollectionElement):
         if len(parts) < 1:
             raise Error("invalid Cookie")
 
-        var cookie = Cookie("", parts[0], path=str("/"))
+        var cookie = Cookie("", parts[0], path=String("/"))
         if Cookie.EQUAL in parts[0]:
             var name_value = parts[0].split(Cookie.EQUAL)
             cookie.name = name_value[0]
@@ -116,17 +116,25 @@ struct Cookie(CollectionElement):
         self.max_age = Optional[Duration](None)
         self.expires = Expiration.invalidate()
 
-    fn to_header(self) -> Header:
+    fn to_header(self) raises -> Header:
         return Header(HeaderKey.SET_COOKIE, self.build_header_value())
 
     fn build_header_value(self) -> String:
         var header_value = String.write(self.name, Cookie.EQUAL, self.value)
         if self.expires.is_datetime():
-            var v = self.expires.http_date_timestamp()
+            var v: Optional[String] = None
+            try:
+                v = self.expires.http_date_timestamp()
+            except:
+                v = None
+                # TODO: This should be a hardfail however Writeable trait write_to method does not raise
+                # the call flow needs to be refactored
+                pass
+
             if v:
                 header_value.write(Cookie.SEPERATOR, Cookie.EXPIRES, Cookie.EQUAL, v.value())
         if self.max_age:
-            header_value.write(Cookie.SEPERATOR, Cookie.MAX_AGE, Cookie.EQUAL, str(self.max_age.value().total_seconds))
+            header_value.write(Cookie.SEPERATOR, Cookie.MAX_AGE, Cookie.EQUAL, String(self.max_age.value().total_seconds))
         if self.domain:
             header_value.write(Cookie.SEPERATOR, Cookie.DOMAIN, Cookie.EQUAL, self.domain.value())
         if self.path:
@@ -136,7 +144,7 @@ struct Cookie(CollectionElement):
         if self.http_only:
             header_value.write(Cookie.SEPERATOR, Cookie.HTTP_ONLY)
         if self.same_site:
-            header_value.write(Cookie.SEPERATOR, Cookie.SAME_SITE, Cookie.EQUAL, str(self.same_site.value()))
+            header_value.write(Cookie.SEPERATOR, Cookie.SAME_SITE, Cookie.EQUAL, String(self.same_site.value()))
         if self.partitioned:
             header_value.write(Cookie.SEPERATOR, Cookie.PARTITIONED)
         return header_value

@@ -145,7 +145,7 @@ struct Server(Movable):
             except e:
                 conn.teardown()
                 # 0 bytes were read from the peer, which indicates their side of the connection was closed.
-                if str(e) == "EOF":
+                if String(e) == "EOF":
                     break
                 else:
                     logger.error(e)
@@ -182,7 +182,7 @@ struct Server(Movable):
 
             logger.debug(
                 conn.socket._remote_address.ip,
-                str(conn.socket._remote_address.port),
+                String(conn.socket._remote_address.port),
                 request.method,
                 request.uri.path,
                 response.status_code,

@@ -11,6 +11,6 @@ struct Duration:
     @staticmethod
     fn from_string(str: String) -> Optional[Self]:
         try:
-            return Duration(seconds=int(str))
+            return Duration(seconds=Int(str))
         except:
             return Optional[Self](None)

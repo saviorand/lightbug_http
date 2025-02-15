@@ -164,7 +164,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             try:
                 self.shutdown()
             except e:
-                logger.debug("Socket.teardown: Failed to shutdown socket: " + str(e))
+                logger.debug("Socket.teardown: Failed to shutdown socket: " + String(e))
 
         if not self._closed:
             self.close()
@@ -201,15 +201,15 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             "]",
             "(",
             "fd=",
-            str(self.fd),
+            String(self.fd),
             ", _local_address=",
             repr(self._local_address),
             ", _remote_address=",
             repr(self._remote_address),
             ", _closed=",
-            str(self._closed),
+            String(self._closed),
             ", _connected=",
-            str(self._connected),
+            String(self._connected),
             ")",
         )
 
@@ -469,7 +469,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         # Try to send all the data in the buffer. If it did not send all the data, keep trying but start from the offset of the last successful send.
         while total_bytes_sent < len(src):
             if attempts > max_attempts:
-                raise Error("Failed to send message after " + str(max_attempts) + " attempts.")
+                raise Error("Failed to send message after " + String(max_attempts) + " attempts.")
 
             var sent: Int
             try:
@@ -477,7 +477,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             except e:
                 logger.error(e)
                 raise Error(
-                    "Socket.send_all: Failed to send message, wrote" + str(total_bytes_sent) + "bytes before failing."
+                    "Socket.send_all: Failed to send message, wrote" + String(total_bytes_sent) + "bytes before failing."
                 )
 
             total_bytes_sent += sent
@@ -524,10 +524,11 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
             EOF: If 0 bytes are received, return EOF.
         """
         var bytes_received: Int
+        var size = buffer.size
         try:
             bytes_received = recv(
                 self.fd,
-                buffer.unsafe_ptr().offset(buffer.size),
+                buffer.unsafe_ptr().offset(size),
                 buffer.capacity - buffer.size,
                 0,
             )
@@ -585,8 +586,9 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         var remote_address = stack_allocation[1, sockaddr]()
         var bytes_received: UInt
         try:
+            var size = buffer.size
             bytes_received = recvfrom(
-                self.fd, buffer.unsafe_ptr().offset(buffer.size), buffer.capacity - buffer.size, 0, remote_address
+                self.fd, buffer.unsafe_ptr().offset(size), buffer.capacity - buffer.size, 0, remote_address
             )
             buffer.size += bytes_received
         except e:
@@ -640,7 +642,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         except e:
             # For the other errors, either the socket is already closed or the descriptor is invalid.
             # At that point we can feasibly say that the socket is already shut down.
-            if str(e) == ShutdownInvalidArgumentError:
+            if String(e) == ShutdownInvalidArgumentError:
                 logger.error("Socket.shutdown: Failed to shutdown socket.")
                 raise e
             logger.debug(e)
@@ -660,7 +662,7 @@ struct Socket[AddrType: Addr, address_family: Int = AF_INET](Representable, Stri
         except e:
             # If the file descriptor is invalid, then it was most likely already closed.
             # Other errors indicate a failure while attempting to close the socket.
-            if str(e) != CloseInvalidDescriptorError:
+            if String(e) != CloseInvalidDescriptorError:
                 logger.error("Socket.close: Failed to close socket.")
                 raise e
             logger.debug(e)

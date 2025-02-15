@@ -90,7 +90,7 @@ struct ListenConfig:
 
     fn listen[network: NetworkType = NetworkType.tcp4](mut self, address: String) raises -> NoTLSListener:
         var local = parse_address[__origin_of(address)](network, address.as_bytes())
-        var addr = TCPAddr(str(local[0]), local[1])
+        var addr = TCPAddr(String(local[0]), local[1])
         var socket: Socket[TCPAddr]
         try:
             socket = Socket[TCPAddr]()
@@ -130,10 +130,10 @@ struct ListenConfig:
             socket.listen(128)
         except e:
             logger.error(e)
-            raise Error("ListenConfig.listen: Listen failed on sockfd: " + str(socket.fd))
+            raise Error("ListenConfig.listen: Listen failed on sockfd: " + String(socket.fd))
 
         var listener = NoTLSListener(socket^)
-        var msg = String.write("\n🔥🐝 Lightbug is listening on ", "http://", addr.ip, ":", str(addr.port))
+        var msg = String.write("\n🔥🐝 Lightbug is listening on ", "http://", addr.ip, ":", String(addr.port))
         print(msg)
         print("Ready to accept connections...")
 
@@ -153,7 +153,7 @@ struct TCPConnection:
         try:
             return self.socket.receive(buf)
         except e:
-            if str(e) == "EOF":
+            if String(e) == "EOF":
                 raise e
             else:
                 logger.error(e)
@@ -294,7 +294,7 @@ fn create_connection(host: String, port: UInt16) raises -> TCPConnection:
         try:
             socket.shutdown()
         except e:
-            logger.error("Failed to shutdown socket: " + str(e))
+            logger.error("Failed to shutdown socket: " + String(e))
         raise Error("Failed to establish a connection to the server.")
 
     return TCPConnection(socket^)
@@ -330,7 +330,7 @@ fn listen_udp[network: NetworkType = NetworkType.udp4](local_address: String) ra
         Error: If the address is invalid or failed to bind the socket.
     """
     var address = parse_address(NetworkType.udp4, local_address.as_bytes())
-    return listen_udp[network](UDPAddr[network](str(address[0]), address[1]))
+    return listen_udp[network](UDPAddr[network](String(address[0]), address[1]))
 
 
 fn listen_udp[network: NetworkType = NetworkType.udp4](host: String, port: UInt16) raises -> UDPConnection[network]:
@@ -377,7 +377,7 @@ fn dial_udp[network: NetworkType = NetworkType.udp4](local_address: String) rais
         Error: If the network type is not supported or failed to connect to the address.
     """
     var address = parse_address(network, local_address.as_bytes())
-    return dial_udp[network](UDPAddr[network](str(address[0]), address[1]))
+    return dial_udp[network](UDPAddr[network](String(address[0]), address[1]))
 
 
 fn dial_udp[network: NetworkType = NetworkType.udp4](host: String, port: UInt16) raises -> UDPConnection[network]:

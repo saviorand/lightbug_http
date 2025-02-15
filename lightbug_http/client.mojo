@@ -79,7 +79,7 @@ struct Client:
             conn = self._connections.take(pool_key)
             cached_connection = True
         except e:
-            if str(e) == "PoolManager.take: Key not found.":
+            if String(e) == "PoolManager.take: Key not found.":
                 conn = create_connection(request.uri.host, port)
             else:
                 logger.error(e)
@@ -90,7 +90,7 @@ struct Client:
             bytes_sent = conn.write(encode(request))
         except e:
             # Maybe peer reset ungracefully, so try a fresh connection
-            if str(e) == "SendError: Connection reset by peer.":
+            if String(e) == "SendError: Connection reset by peer.":
                 logger.debug("Client.do: Connection reset by peer. Trying a fresh connection.")
                 conn.teardown()
                 if cached_connection:
@@ -103,7 +103,7 @@ struct Client:
         try:
             _ = conn.read(new_buf)
         except e:
-            if str(e) == "EOF":
+            if String(e) == "EOF":
                 conn.teardown()
                 if cached_connection:
                     return self.do(request^)
@@ -149,7 +149,7 @@ struct Client:
             try:
                 new_uri = URI.parse(new_location)
             except e:
-                raise Error("Client._handle_redirect: Failed to parse the new URI: " + str(e))
+                raise Error("Client._handle_redirect: Failed to parse the new URI: " + String(e))
             original_request.headers[HeaderKey.HOST] = new_uri.host
         else:
             new_uri = original_request.uri
