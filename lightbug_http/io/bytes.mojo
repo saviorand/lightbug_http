@@ -65,7 +65,7 @@ struct ByteWriter(Writer):
 
     @always_inline
     fn consuming_write(mut self, owned s: String):
-        # kind of cursed but seems to work?
+        # kind of cursed but seems to work? pops the null terminator
         _ = s._buffer.pop()
         self._inner.extend(s._buffer^)
         s._buffer = s._buffer_type()
@@ -144,6 +144,18 @@ struct ByteView[origin: Origin](Testable):
             if self[i] != other[i]:
                 return False
         return True
+    
+    fn __eq__(self, other: Bytes) -> Bool:
+        # Check if lengths match
+        if len(self) != len(other):
+            return False
+        
+        # Compare each byte
+        for i in range(len(self)):
+            if self[i] != other[i]:
+                return False
+        return True
+
 
     fn __ne__(self, other: Self) -> Bool:
         return not self == other
