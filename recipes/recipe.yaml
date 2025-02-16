@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
 
 context:
-  version: "13.4.2"
+  version: "0.1.12"
 
 package:
   name: "lightbug_http"
-  version: 0.1.11
+  version: 0.1.12
 
 source:
   - path: ../lightbug_http
