@@ -1,4 +1,5 @@
 from utils import StringSlice
+from testing.testing import Testable
 from memory.span import Span, _SpanIter, UnsafePointer
 from lightbug_http.strings import BytesConstant
 from lightbug_http.connection import default_buffer_size
@@ -84,7 +85,7 @@ alias OutOfBoundsError = "Tried to read past the end of the ByteReader."
 
 
 @value
-struct ByteView[origin: Origin]():
+struct ByteView[origin: Origin](Testable):
     """Convenience wrapper around a Span of Bytes."""
 
     var _inner: Span[Byte, origin]
@@ -284,4 +285,4 @@ struct ByteReader[origin: Origin]:
 
     @always_inline
     fn consume(owned self, bytes_len: Int = -1) -> Bytes:
-        return self^._inner[self.read_pos : self.read_pos + len(self) + 1]
+        return Bytes(self^._inner[self.read_pos : self.read_pos + len(self) + 1])

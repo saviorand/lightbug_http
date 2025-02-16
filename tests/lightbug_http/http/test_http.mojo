@@ -15,7 +15,7 @@ def test_encode_http_request():
     var uri = URI.parse(default_server_conn_string + "/foobar?baz")
     var req = HTTPRequest(
         uri,
-        body=String("Hello world!").as_bytes(),
+        body=Bytes(String("Hello world!").as_bytes()),
         cookies=RequestCookieJar(
             Cookie(name="session_id", value="123", path=String("/"), secure=True, max_age=Duration(minutes=10)),
             Cookie(name="token", value="abc", domain=String("localhost"), path=String("/api"), http_only=True),
