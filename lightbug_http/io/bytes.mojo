@@ -1,4 +1,5 @@
 from utils import StringSlice
+from testing.testing import Testable
 from memory.span import Span, _SpanIter, UnsafePointer
 from lightbug_http.strings import BytesConstant
 from lightbug_http.connection import default_buffer_size
@@ -14,7 +15,7 @@ fn byte(s: String) -> Byte:
 
 @always_inline
 fn bytes(s: String) -> Bytes:
-    return s.as_bytes()
+    return Bytes(s.as_bytes())
 
 
 @always_inline
@@ -64,7 +65,7 @@ struct ByteWriter(Writer):
 
     @always_inline
     fn consuming_write(mut self, owned s: String):
-        # kind of cursed but seems to work?
+        # kind of cursed but seems to work? pops the null terminator
         _ = s._buffer.pop()
         self._inner.extend(s._buffer^)
         s._buffer = s._buffer_type()
@@ -84,7 +85,7 @@ alias OutOfBoundsError = "Tried to read past the end of the ByteReader."
 
 
 @value
-struct ByteView[origin: Origin]():
+struct ByteView[origin: Origin](Testable):
     """Convenience wrapper around a Span of Bytes."""
 
     var _inner: Span[Byte, origin]
@@ -143,6 +144,18 @@ struct ByteView[origin: Origin]():
             if self[i] != other[i]:
                 return False
         return True
+    
+    fn __eq__(self, other: Bytes) -> Bool:
+        # Check if lengths match
+        if len(self) != len(other):
+            return False
+        
+        # Compare each byte
+        for i in range(len(self)):
+            if self[i] != other[i]:
+                return False
+        return True
+
 
     fn __ne__(self, other: Self) -> Bool:
         return not self == other
@@ -284,4 +297,4 @@ struct ByteReader[origin: Origin]:
 
     @always_inline
     fn consume(owned self, bytes_len: Int = -1) -> Bytes:
-        return self^._inner[self.read_pos : self.read_pos + len(self) + 1]
+        return Bytes(self^._inner[self.read_pos : self.read_pos + len(self) + 1])

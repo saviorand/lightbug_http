@@ -5,7 +5,7 @@ struct HttpVersion(EqualityComparable, Stringable):
     var _v: Int
 
     fn __init__(out self, version: String) raises:
-        self._v = int(version[version.find("/") + 1])
+        self._v = Int(version[version.find("/") + 1])
 
     fn __eq__(self, other: Self) -> Bool:
         return self._v == other._v
@@ -21,5 +21,5 @@ struct HttpVersion(EqualityComparable, Stringable):
 
     fn __str__(self) -> String:
         # Only support version 1.1 so don't need to account for 1.0
-        v = "1.1" if self._v == 1 else str(self._v)
+        v = "1.1" if self._v == 1 else String(self._v)
         return "HTTP/" + v

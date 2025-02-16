@@ -54,13 +54,13 @@ struct HTTPRequest(Writable, Stringable):
             var rest = headers.parse_raw(reader)
             method, uri, protocol = rest[0], rest[1], rest[2]
         except e:
-            raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + str(e))
+            raise Error("HTTPRequest.from_bytes: Failed to parse request headers: " + String(e))
 
         var cookies = RequestCookieJar()
         try:
             cookies.parse_cookies(headers)
         except e:
-            raise Error("HTTPRequest.from_bytes: Failed to parse cookies: " + str(e))
+            raise Error("HTTPRequest.from_bytes: Failed to parse cookies: " + String(e))
 
         var content_length = headers.content_length()
         if content_length > 0 and max_body_size > 0 and content_length > max_body_size:
@@ -75,7 +75,7 @@ struct HTTPRequest(Writable, Stringable):
                 reader.skip_carriage_return()
                 request.read_body(reader, content_length, max_body_size)
             except e:
-                raise Error("HTTPRequest.from_bytes: Failed to read request body: " + str(e))
+                raise Error("HTTPRequest.from_bytes: Failed to read request body: " + String(e))
 
         return request
 
@@ -103,7 +103,7 @@ struct HTTPRequest(Writable, Stringable):
             self.headers[HeaderKey.CONNECTION] = "keep-alive"
         if HeaderKey.HOST not in self.headers:
             if uri.port:
-                var host = String.write(uri.host, ":", str(uri.port.value()))
+                var host = String.write(uri.host, ":", String(uri.port.value()))
                 self.headers[HeaderKey.HOST] = host
             else:
                 self.headers[HeaderKey.HOST] = uri.host
@@ -115,7 +115,7 @@ struct HTTPRequest(Writable, Stringable):
         self.headers[HeaderKey.CONNECTION] = "close"
 
     fn set_content_length(mut self, l: Int):
-        self.headers[HeaderKey.CONTENT_LENGTH] = str(l)
+        self.headers[HeaderKey.CONTENT_LENGTH] = String(l)
 
     fn connection_close(self) -> Bool:
         var result = self.headers.get(HeaderKey.CONNECTION)

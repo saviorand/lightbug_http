@@ -59,7 +59,7 @@ fn unquote[expand_plus: Bool = False](input_str: String, disallowed_escapes: Lis
 
         if len(str_bytes) > 0:
             str_bytes.append(0x00)
-            var sub_str_from_bytes = String(str_bytes)
+            var sub_str_from_bytes = String(Bytes(str_bytes))
             for disallowed in disallowed_escapes:
                 sub_str_from_bytes = sub_str_from_bytes.replace(disallowed[], "")
             sub_strings.append(sub_str_from_bytes)
@@ -70,7 +70,7 @@ fn unquote[expand_plus: Bool = False](input_str: String, disallowed_escapes: Lis
 
     sub_strings.append(encoded_str[slice_start:])
 
-    return str("").join(sub_strings)
+    return String("").join(sub_strings)
 
 
 alias QueryMap = Dict[String, String]
@@ -153,14 +153,14 @@ struct URI(Writable, Stringable, Representable):
         # Assume http if no scheme is provided, fairly safe given the context of lightbug.
         var scheme: String = "http"
         if "://" in uri:
-            scheme = str(reader.read_until(ord(URIDelimiters.SCHEME)))
+            scheme = String(reader.read_until(ord(URIDelimiters.SCHEME)))
             if reader.read_bytes(3) != "://".as_bytes():
                 raise Error("URI.parse: Invalid URI format, scheme should be followed by `://`. Received: " + uri)
 
         # Parse the user info, if exists.
         var user_info: String = ""
         if ord(URIDelimiters.AUTHORITY) in reader:
-            user_info = str(reader.read_until(ord(URIDelimiters.AUTHORITY)))
+            user_info = String(reader.read_until(ord(URIDelimiters.AUTHORITY)))
             reader.increment(1)
 
         # TODOs (@thatstoasty)
@@ -173,16 +173,16 @@ struct URI(Writable, Stringable, Representable):
         var host: String
         var port: Optional[UInt16] = None
         if colon != -1:
-            host = str(host_and_port[:colon])
+            host = String(host_and_port[:colon])
             var port_end = colon + 1
             # loop through the post colon chunk until we find a non-digit character
             for b in host_and_port[colon + 1 :]:
                 if b[] < PortBounds.ZERO or b[] > PortBounds.NINE:
                     break
                 port_end += 1
-            port = UInt16(atol(str(host_and_port[colon + 1 : port_end])))
+            port = UInt16(atol(String(host_and_port[colon + 1 : port_end])))
         else:
-            host = str(host_and_port)
+            host = String(host_and_port)
 
         # Reads until either the start of the query string, or the end of the uri.
         var unquote_reader = reader.copy()
@@ -191,7 +191,7 @@ struct URI(Writable, Stringable, Representable):
         if not original_path_bytes:
             original_path = "/"
         else:
-            original_path = unquote(str(original_path_bytes), disallowed_escapes=List(str("/")))
+            original_path = unquote(String(original_path_bytes), disallowed_escapes=List(String("/")))
 
         # Parse the path
         var path: String = "/"
@@ -199,15 +199,15 @@ struct URI(Writable, Stringable, Representable):
         if reader.available() and reader.peek() == ord(URIDelimiters.PATH):
             # Copy the remaining bytes to read the request uri.
             var request_uri_reader = reader.copy()
-            request_uri = str(request_uri_reader.read_bytes())
+            request_uri = String(request_uri_reader.read_bytes())
             # Read until the query string, or the end if there is none.
-            path = unquote(str(reader.read_until(ord(URIDelimiters.QUERY))), disallowed_escapes=List(str("/")))
+            path = unquote(String(reader.read_until(ord(URIDelimiters.QUERY))), disallowed_escapes=List(String("/")))
 
         # Parse query
         var query: String = ""
         if reader.available() and reader.peek() == ord(URIDelimiters.QUERY):
             # TODO: Handle fragments for anchors
-            query = str(reader.read_bytes()[1:])
+            query = String(reader.read_bytes()[1:])
 
         var queries = QueryMap()
         if query:

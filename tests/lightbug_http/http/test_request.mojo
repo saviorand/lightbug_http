@@ -1,4 +1,6 @@
 import testing
+from memory import Span
+from collections.string import StringSlice
 from lightbug_http.http import HTTPRequest, StatusCode
 from lightbug_http.strings import to_string
 
@@ -26,7 +28,7 @@ def test_read_body():
     testing.assert_equal(request.headers["Host"], "127.0.0.1:8080")
     testing.assert_equal(request.headers["User-Agent"], "python-requests/2.32.3")
 
-    testing.assert_equal(request.get_body(), "This is the body!")
+    testing.assert_equal(String(request.get_body()), String("This is the body!"))
 
 
 def test_encode():

@@ -15,15 +15,15 @@ def test_encode_http_request():
     var uri = URI.parse(default_server_conn_string + "/foobar?baz")
     var req = HTTPRequest(
         uri,
-        body=String("Hello world!").as_bytes(),
+        body=Bytes(String("Hello world!").as_bytes()),
         cookies=RequestCookieJar(
-            Cookie(name="session_id", value="123", path=str("/"), secure=True, max_age=Duration(minutes=10)),
-            Cookie(name="token", value="abc", domain=str("localhost"), path=str("/api"), http_only=True),
+            Cookie(name="session_id", value="123", path=String("/"), secure=True, max_age=Duration(minutes=10)),
+            Cookie(name="token", value="abc", domain=String("localhost"), path=String("/api"), http_only=True),
         ),
         headers=Headers(Header("Connection", "keep-alive")),
     )
 
-    var as_str = str(req)
+    var as_str = String(req)
     var req_encoded = to_string(encode(req^))
 
     var expected = "GET /foobar?baz HTTP/1.1\r\nconnection: keep-alive\r\ncontent-length: 12\r\nhost: localhost:8080\r\ncookie: session_id=123; token=abc\r\n\r\nHello world!"
@@ -37,11 +37,11 @@ def test_encode_http_response():
     res.headers[HeaderKey.DATE] = "2024-06-02T13:41:50.766880+00:00"
 
     res.cookies = ResponseCookieJar(
-        Cookie(name="session_id", value="123", path=str("/api"), secure=True),
-        Cookie(name="session_id", value="abc", path=str("/"), secure=True, max_age=Duration(minutes=10)),
-        Cookie(name="token", value="123", domain=str("localhost"), path=str("/api"), http_only=True),
+        Cookie(name="session_id", value="123", path=String("/api"), secure=True),
+        Cookie(name="session_id", value="abc", path=String("/"), secure=True, max_age=Duration(minutes=10)),
+        Cookie(name="token", value="123", domain=String("localhost"), path=String("/api"), http_only=True),
     )
-    var as_str = str(res)
+    var as_str = String(res)
     var res_encoded = to_string(encode(res^))
     var expected_full = "HTTP/1.1 200 OK\r\nserver: lightbug_http\r\ncontent-type: application/octet-stream\r\nconnection: keep-alive\r\ncontent-length: 13\r\ndate: 2024-06-02T13:41:50.766880+00:00\r\nset-cookie: session_id=123; Path=/api; Secure\r\nset-cookie: session_id=abc; Max-Age=600; Path=/; Secure\r\nset-cookie: token=123; Domain=localhost; Path=/api; HttpOnly\r\n\r\nHello, World!"
 

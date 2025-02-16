@@ -18,5 +18,7 @@ bench_server = { cmd = "bash scripts/bench_server.sh" }
 format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 
 [dependencies]
-max = ">=24.6.0,<25"
-small_time = "==0.0.1"
+max = ">=25.1.0,<26"
+small_time = "==0.0.2"
+requests = ">=2.32.3,<3"
+fastapi = ">=0.115.8,<0.116"

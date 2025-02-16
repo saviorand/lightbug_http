@@ -28,11 +28,11 @@ struct Welcome(HTTPService):
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         if req.uri.path == "/":
             with open("static/lightbug_welcome.html", "r") as f:
-                return OK(f.read_bytes(), "text/html; charset=utf-8")
+                return OK(Bytes(f.read_bytes()), "text/html; charset=utf-8")
 
         if req.uri.path == "/logo.png":
             with open("static/logo.png", "r") as f:
-                return OK(f.read_bytes(), "image/png")
+                return OK(Bytes(f.read_bytes()), "image/png")
 
         return NotFound(req.uri.path)
 
@@ -72,4 +72,4 @@ struct Counter(HTTPService):
 
     fn func(mut self, req: HTTPRequest) raises -> HTTPResponse:
         self.counter += 1
-        return OK("I have been called: " + str(self.counter) + " times")
+        return OK("I have been called: " + String(self.counter) + " times")

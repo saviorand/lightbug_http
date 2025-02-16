@@ -482,7 +482,7 @@ fn inet_ntop[
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     """
     constrained[
-        int(address_family) in [AF_INET, AF_INET6], "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
+        Int(address_family) in [AF_INET, AF_INET6], "Address family must be either INET_ADDRSTRLEN or INET6_ADDRSTRLEN."
     ]()
     constrained[
         address_length in [INET_ADDRSTRLEN, INET6_ADDRSTRLEN],
@@ -511,7 +511,7 @@ fn inet_ntop[
                 " address."
             )
         else:
-            raise Error("inet_ntop Error: An error occurred while converting the address. Error code: " + str(errno))
+            raise Error("inet_ntop Error: An error occurred while converting the address. Error code: " + String(errno))
 
     # We want the string representation of the address, so it's ok to take ownership of the pointer here.
     return dst
@@ -573,7 +573,7 @@ fn inet_pton[address_family: Int32](src: UnsafePointer[c_char]) raises -> c_uint
     * Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html
     * This function is valid for `AF_INET` and `AF_INET6`.
     """
-    constrained[int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
+    constrained[Int(address_family) in [AF_INET, AF_INET6], "Address family must be either AF_INET or AF_INET6."]()
     var ip_buffer: UnsafePointer[c_void]
 
     @parameter
@@ -587,7 +587,7 @@ fn inet_pton[address_family: Int32](src: UnsafePointer[c_char]) raises -> c_uint
         raise Error("inet_pton Error: The input is not a valid address.")
     elif result == -1:
         var errno = get_errno()
-        raise Error("inet_pton Error: An error occurred while converting the address. Error code: " + str(errno))
+        raise Error("inet_pton Error: An error occurred while converting the address. Error code: " + String(errno))
 
     return ip_buffer.bitcast[c_uint]().take_pointee()
 
@@ -664,7 +664,7 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) raises -> c_int:
             raise Error(
                 "SocketError (ENFILE): The system-wide limit on the total number of open files has been reached."
             )
-        elif int(errno) in [ENOBUFS, ENOMEM]:
+        elif Int(errno) in [ENOBUFS, ENOMEM]:
             raise Error(
                 "SocketError (ENOBUFS or ENOMEM): Insufficient memory is available. The socket cannot be created until"
                 " sufficient resources are freed."
@@ -675,7 +675,7 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) raises -> c_int:
                 " this domain."
             )
         else:
-            raise Error("SocketError: An error occurred while creating the socket. Error code: " + str(errno))
+            raise Error("SocketError: An error occurred while creating the socket. Error code: " + String(errno))
 
     return fd
 
@@ -766,7 +766,7 @@ fn setsockopt(
         elif errno == ENOTSOCK:
             raise Error("setsockopt: The argument `socket` is not a socket.")
         else:
-            raise Error("setsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
+            raise Error("setsockopt: An error occurred while setting the socket option. Error code: " + String(errno))
 
 
 fn _getsockopt[
@@ -858,7 +858,7 @@ fn getsockopt(
         elif errno == ENOTSOCK:
             raise Error("getsockopt: The argument `socket` is not a socket.")
         else:
-            raise Error("getsockopt: An error occurred while setting the socket option. Error code: " + str(errno))
+            raise Error("getsockopt: An error occurred while setting the socket option. Error code: " + String(errno))
 
     return option_value.bitcast[Int]().take_pointee()
 
@@ -935,7 +935,7 @@ fn getsockname[
         elif errno == ENOTSOCK:
             raise Error("getsockname: The argument `socket` is not a socket, it is a file.")
         else:
-            raise Error("getsockname: An error occurred while getting the socket name. Error code: " + str(errno))
+            raise Error("getsockname: An error occurred while getting the socket name. Error code: " + String(errno))
 
 
 fn _getpeername[
@@ -1010,7 +1010,7 @@ fn getpeername(file_descriptor: c_int) raises -> sockaddr_in:
         elif errno == ENOTSOCK:
             raise Error("getpeername: The argument `socket` is not a socket, it is a file.")
         else:
-            raise Error("getpeername: An error occurred while getting the socket name. Error code: " + str(errno))
+            raise Error("getpeername: An error occurred while getting the socket name. Error code: " + String(errno))
 
     # Cast sockaddr struct to sockaddr_in
     return remote_address.bitcast[sockaddr_in]().take_pointee()
@@ -1110,7 +1110,7 @@ fn bind(socket: c_int, mut address: sockaddr_in) raises:
         #     elif errno == EROFS:
         #         raise Error("bind: The socket inode would reside on a read-only file system.")
 
-        raise Error("bind: An error occurred while binding the socket. Error code: " + str(errno))
+        raise Error("bind: An error occurred while binding the socket. Error code: " + String(errno))
 
 
 fn _listen(socket: c_int, backlog: c_int) -> c_int:
@@ -1168,7 +1168,7 @@ fn listen(socket: c_int, backlog: c_int) raises:
         elif errno == EOPNOTSUPP:
             raise Error("listen: The socket is not of a type that supports the `listen()` operation.")
         else:
-            raise Error("listen: An error occurred while listening on the socket. Error code: " + str(errno))
+            raise Error("listen: An error occurred while listening on the socket. Error code: " + String(errno))
 
 
 fn _accept[
@@ -1233,7 +1233,7 @@ fn accept(socket: c_int) raises -> c_int:
     var result = _accept(socket, Pointer.address_of(remote_address), Pointer.address_of(socklen_t(sizeof[socklen_t]())))
     if result == -1:
         var errno = get_errno()
-        if int(errno) in [EAGAIN, EWOULDBLOCK]:
+        if Int(errno) in [EAGAIN, EWOULDBLOCK]:
             raise Error(
                 "accept: The socket is marked nonblocking and no connections are present to be accepted. POSIX.1-2001"
                 " allows either error to be returned for this case, and does not require these constants to have the"
@@ -1258,7 +1258,7 @@ fn accept(socket: c_int) raises -> c_int:
             raise Error("accept: The per-process limit of open file descriptors has been reached.")
         elif errno == ENFILE:
             raise Error("accept: The system limit on the total number of open files has been reached.")
-        elif int(errno) in [ENOBUFS, ENOMEM]:
+        elif Int(errno) in [ENOBUFS, ENOMEM]:
             raise Error(
                 "accept: Not enough free memory. This often means that the memory allocation is limited by the socket"
                 " buffer limits, not by the system memory."
@@ -1274,7 +1274,7 @@ fn accept(socket: c_int) raises -> c_int:
         if os_is_linux():
             if errno == EPERM:
                 raise Error("accept: Firewall rules forbid connection.")
-        raise Error("accept: An error occurred while listening on the socket. Error code: " + str(errno))
+        raise Error("accept: An error occurred while listening on the socket. Error code: " + String(errno))
 
     return result
 
@@ -1376,7 +1376,7 @@ fn connect(socket: c_int, address: sockaddr_in) raises:
                 "connect: Timeout while attempting connection. The server may be too busy to accept new connections."
             )
         else:
-            raise Error("connect: An error occurred while connecting to the socket. Error code: " + str(errno))
+            raise Error("connect: An error occurred while connecting to the socket. Error code: " + String(errno))
 
 
 fn _recv(
@@ -1442,7 +1442,7 @@ fn recv(
     var result = _recv(socket, buffer, length, flags)
     if result == -1:
         var errno = get_errno()
-        if int(errno) in [EAGAIN, EWOULDBLOCK]:
+        if Int(errno) in [EAGAIN, EWOULDBLOCK]:
             raise Error(
                 "ReceiveError: The socket is marked nonblocking and the receive operation would block, or a receive"
                 " timeout had been set and the timeout expired before data was received."
@@ -1467,7 +1467,7 @@ fn recv(
         else:
             raise Error(
                 "ReceiveError: An error occurred while attempting to receive data from the socket. Error code: "
-                + str(errno)
+                + String(errno)
             )
 
     return result
@@ -1560,7 +1560,7 @@ fn recvfrom(
     var result = _recvfrom(socket, buffer, length, flags, address, Pointer[socklen_t].address_of(sizeof[sockaddr]()))
     if result == -1:
         var errno = get_errno()
-        if int(errno) in [EAGAIN, EWOULDBLOCK]:
+        if Int(errno) in [EAGAIN, EWOULDBLOCK]:
             raise "ReceiveError: The socket's file descriptor is marked `O_NONBLOCK` and no data is waiting to be received; or MSG_OOB is set and no out-of-band data is available and either the socket's file descriptor is marked `O_NONBLOCK` or the socket does not support blocking to await out-of-band data."
         elif errno == EBADF:
             raise "ReceiveError: The socket argument is not a valid file descriptor."
@@ -1585,7 +1585,7 @@ fn recvfrom(
         elif errno == ENOMEM:
             raise "ReceiveError: Insufficient memory was available to fulfill the request."
         else:
-            raise "ReceiveError: An error occurred while attempting to receive data from the socket. Error code: " + str(
+            raise "ReceiveError: An error occurred while attempting to receive data from the socket. Error code: " + String(
                 errno
             )
 
@@ -1657,7 +1657,7 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
     var result = _send(socket, buffer, length, flags)
     if result == -1:
         var errno = get_errno()
-        if int(errno) in [EAGAIN, EWOULDBLOCK]:
+        if Int(errno) in [EAGAIN, EWOULDBLOCK]:
             raise Error(
                 "SendError: The socket is marked nonblocking and the receive operation would block, or a receive"
                 " timeout had been set and the timeout expired before data was received."
@@ -1711,7 +1711,7 @@ fn send(socket: c_int, buffer: UnsafePointer[c_void], length: c_size_t, flags: c
         else:
             raise Error(
                 "SendError: An error occurred while attempting to receive data from the socket. Error code: "
-                + str(errno)
+                + String(errno)
             )
 
     return result
@@ -1816,7 +1816,7 @@ fn sendto(
         var errno = get_errno()
         if errno == EAFNOSUPPORT:
             raise "SendToError (EAFNOSUPPORT): Addresses in the specified address family cannot be used with this socket."
-        elif int(errno) in [EAGAIN, EWOULDBLOCK]:
+        elif Int(errno) in [EAGAIN, EWOULDBLOCK]:
             raise "SendToError (EAGAIN/EWOULDBLOCK): The socket's file descriptor is marked `O_NONBLOCK` and the requested operation would block."
         elif errno == EBADF:
             raise "SendToError (EBADF): The socket argument is not a valid file descriptor."
@@ -1857,7 +1857,7 @@ fn sendto(
         elif errno == ENAMETOOLONG:
             raise "SendToError (ENAMETOOLONG): The length of a pathname exceeds `PATH_MAX`, or pathname resolution of a symbolic link produced an intermediate result with a length that exceeds `PATH_MAX`."
         else:
-            raise "SendToError: An error occurred while attempting to send data to the socket. Error code: " + str(
+            raise "SendToError: An error occurred while attempting to send data to the socket. Error code: " + String(
                 errno
             )
 
@@ -1927,7 +1927,7 @@ fn shutdown(socket: c_int, how: c_int) raises:
         else:
             raise Error(
                 "ShutdownError: An error occurred while attempting to receive data from the socket. Error code: "
-                + str(errno)
+                + String(errno)
             )
 
 
@@ -2016,10 +2016,10 @@ fn close(file_descriptor: c_int) raises:
             raise CloseInterruptedError
         elif errno == EIO:
             raise CloseRWError
-        elif int(errno) in [ENOSPC, EDQUOT]:
+        elif Int(errno) in [ENOSPC, EDQUOT]:
             raise CloseOutOfSpaceError
         else:
-            raise Error("SocketError: An error occurred while creating the socket. Error code: " + str(errno))
+            raise Error("SocketError: An error occurred while creating the socket. Error code: " + String(errno))
 
 
 fn get_errno() -> c_int:

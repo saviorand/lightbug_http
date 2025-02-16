@@ -173,7 +173,7 @@ struct OwningList[T: Movable](Movable, Sized, Boolable):
     fn __str__[U: RepresentableCollectionElement, //](self: OwningList[U, *_]) -> String:
         """Returns a string representation of a `List`.
 
-        When the compiler supports conditional methods, then a simple `str(my_list)` will
+        When the compiler supports conditional methods, then a simple `String(my_list)` will
         be enough.
 
         The elements' type must implement the `__repr__()` method for this to work.

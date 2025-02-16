@@ -34,7 +34,7 @@ struct PoolKey(Hashable, KeyElement):
 
     fn __str__(self) -> String:
         var result = String()
-        result.write(self.scheme.value, "://", self.host, ":", str(self.port))
+        result.write(self.scheme.value, "://", self.host, ":", String(self.port))
         return result
 
     fn __repr__(self) -> String:
@@ -42,7 +42,7 @@ struct PoolKey(Hashable, KeyElement):
 
     fn write_to[W: Writer, //](self, mut writer: W) -> None:
         writer.write(
-            "PoolKey(", "scheme=", repr(self.scheme.value), ", host=", repr(self.host), ", port=", str(self.port), ")"
+            "PoolKey(", "scheme=", repr(self.scheme.value), ", host=", repr(self.host), ", port=", String(self.port), ")"
         )
 
 
@@ -72,7 +72,7 @@ struct PoolManager[ConnectionType: Connection]():
 
         self._connections.append(value^)
         self.mapping[key] = self._connections.size - 1
-        logger.debug("Checked in connection for peer:", str(key) + ", at index:", self._connections.size)
+        logger.debug("Checked in connection for peer:", String(key) + ", at index:", self._connections.size)
 
     fn take(mut self, key: PoolKey) raises -> ConnectionType:
         var index: Int
@@ -88,7 +88,7 @@ struct PoolManager[ConnectionType: Connection]():
             if kv[].value > index:
                 self.mapping[kv[].key] -= 1
 
-        logger.debug("Checked out connection for peer:", str(key) + ", from index:", self._connections.size + 1)
+        logger.debug("Checked out connection for peer:", String(key) + ", from index:", self._connections.size + 1)
         return connection^
 
     fn clear(mut self):
