@@ -21,3 +21,4 @@ format = { cmd = "magic run mojo format -l 120 lightbug_http" }
 max = ">=25.1.0,<26"
 small_time = "==0.0.2"
 requests = ">=2.32.3,<3"
+fastapi = ">=0.115.8,<0.116"
