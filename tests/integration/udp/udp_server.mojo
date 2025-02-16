@@ -12,4 +12,4 @@ fn main() raises:
         print("Message received:", message)
 
         # Response with the same message in uppercase
-        _ = listener.write_to(String.upper(message).as_bytes(), host, port)
+        _ = listener.write_to(String.upper(String(message)).as_bytes(), host, port)
